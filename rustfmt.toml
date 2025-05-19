@@ -1,0 +1,25 @@
+max_width                    = 100
+tab_spaces                   = 2
+blank_lines_upper_bound      = 2
+wrap_comments                = false
+condense_wildcard_suffixes   = true
+enum_discrim_align_threshold = 10
+struct_field_align_threshold = 10
+format_macro_matchers        = true
+use_field_init_shorthand     = false
+format_code_in_doc_comments  = true
+format_strings               = true
+where_single_line            = true
+imports_indent               = "Visual"
+hard_tabs                    = false
+combine_control_expr         = false
+fn_args_layout               = "Compressed"
+
+fn_call_width                  = 90
+single_line_if_else_max_width  = 80
+single_line_let_else_max_width = 80
+attr_fn_like_width             = 90
+struct_lit_width               = 25
+struct_variant_width           = 60
+array_width                    = 60
+chain_width                    = 100
