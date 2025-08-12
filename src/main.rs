@@ -16,8 +16,8 @@ mod simple_cli;
 use device::Device;
 use program::Program;
 
-use rp2040_panic_usb_boot as _;
 use rp_pico as bsp;
+use rp2040_panic_usb_boot as _;
 
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————

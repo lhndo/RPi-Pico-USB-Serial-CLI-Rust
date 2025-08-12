@@ -188,8 +188,8 @@ hal::bsp_pins!(
   Gpio25 {
     name: led,
     aliases: {
+      FunctionSioOutput, PullDown: Led
         // Function, PullType: Type Alias
-        FunctionSioOutput, PullDown: Led
         // Examples:
         // FunctionSioInput, PullUp: LedSioIPU,
         // FunctionUart, PullNone: LedUart1Cts,

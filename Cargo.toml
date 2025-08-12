@@ -1,6 +1,6 @@
 [package]
-edition = "2021"
-name    = "rp_template"
+edition = "2024"
+name    = "rust_rp2040_cli"
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
 
@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 cortex-m     = "0.7.7"
 cortex-m-rt  = "0.7.5"
 embedded-hal = "1.0.0"
-rp-pico      = "0.9"
+rp-pico      = "0.9.0"
 
 # defmt       = "1.0.1"
 # defmt-rtt   = "1.0.0"

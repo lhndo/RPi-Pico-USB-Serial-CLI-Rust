@@ -3,9 +3,9 @@
 // -----------------------------------------------------------------------------
 pub mod cli_commands;
 
-use crate::prelude::{print, println};
+use crate::prelude::*;
 
-use core::fmt::{self, Write};
+use core::fmt;
 use core::str::FromStr;
 use heapless::{String, Vec};
 
@@ -17,9 +17,9 @@ use heapless::{String, Vec};
 
 pub const CLI_READ_BUFFER_LENGTH: usize = 128;
 const MAX_CMD_CALL_LENGTH: usize = 24;
+const MAX_NUMBER_PARAMS: usize = 5;
 const MAX_PARAM_LENGTH: usize = 16;
 const MAX_VALUE_LENGTH: usize = 64;
-const MAX_NUMBER_PARAMS: usize = 5;
 const ERR_STR_LENGTH: usize = 64;
 
 
@@ -42,7 +42,6 @@ pub enum CliError {
   Exit,
 }
 
-#[allow(unreachable_patterns)]
 impl fmt::Display for CliError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
@@ -61,7 +60,6 @@ impl fmt::Display for CliError {
       CliError::CriticalFail => write!(f, "critical failure"),
       CliError::Exit => write!(f, "exit"),
       CliError::Other => write!(f, "internal error"),
-      _ => write!(f, "unexpected error"),
     }
   }
 }
@@ -73,7 +71,7 @@ impl fmt::Display for CliError {
 pub struct Command {
   pub name: &'static str,
   pub desc: &'static str,
-  pub func: fn(&[Arg]) -> Result<()>,
+  pub func: fn(&[Arg], &mut Device) -> Result<()>,
 }
 
 #[derive(Debug, Default)]
@@ -103,43 +101,15 @@ impl Cli {
     Self { commands }
   }
 
-  pub fn init(&mut self) {
-    println!("\nSimple CLI - type 'help' for commands");
-  }
-
-  // --------------------------------- Run -----------------------------------
-
-  pub fn run(&mut self) -> Result<()> {
-    println!("\nEnter Command >> ");
-
-    // CLI Input
-    // let input = self.io_reader.read_line();
-    let input = "self.io_reader.read_line()"; // TODO: Port to Program
-
-    println!("--------------------");
-
-    // Quick System Commands
-    if input.eq_ignore_ascii_case("exit") {
-      return Err(CliError::Exit);
-    }
-
-    // CLI Execution
-    self.execute(input)?;
-
-    println!("--------------------");
-
-    Ok(())
-  }
-
   // ------------------------------- Execute ---------------------------------
 
-  pub fn execute(&mut self, input: &str) -> Result<()> {
+  pub fn execute(&mut self, input: &str, device: &mut Device) -> Result<()> {
     let command = split_into_cmd_args(input)?;
-    self.execute_cmd(&command)?;
+    self.execute_cmd(&command, device)?;
     Ok(())
   }
 
-  fn execute_cmd(&mut self, in_cmd: &CmdWithArgs) -> Result<()> {
+  fn execute_cmd(&mut self, in_cmd: &CmdWithArgs, device: &mut Device) -> Result<()> {
     let cmd_name = in_cmd.cmd.as_str();
     let cmd_arg = &in_cmd.args;
 
@@ -149,7 +119,7 @@ impl Cli {
       })?;
 
     // Executing command
-    (cmd.func)(cmd_arg)?;
+    (cmd.func)(cmd_arg, device)?;
     Ok(())
   }
 }
@@ -161,7 +131,8 @@ impl Cli {
 // ---------------------- Split into command and arguments -------------------------
 
 fn split_into_cmd_args(input: &str) -> Result<CmdWithArgs> {
-  // --- Stage 1: Process quotes and case, building intermediate String ---
+  // --- Stage 1: All text to lowercase, detect and strip quotes
+  // and switch spaces inside with a key (0x1E) symbol ---
   let mut processed_buf: String<CLI_READ_BUFFER_LENGTH> = String::new();
   let mut in_quotes = false;
   for char in input.chars() {
@@ -181,9 +152,9 @@ fn split_into_cmd_args(input: &str) -> Result<CmdWithArgs> {
     }
   }
 
-  // --- Stage 2: Split and parse command/args ---
+  // --- Stage 2: Split at witespace, split main command, split arguments ---
   let mut iter = processed_buf.split_ascii_whitespace();
-  let cmd_str = iter.next().unwrap_or("help");
+  let cmd_str = iter.next().unwrap_or("help"); // defaulting to help command on error
   let command: String<MAX_CMD_CALL_LENGTH> =
     String::try_from(cmd_str).map_err(|_| CliError::BufferWrite)?;
 

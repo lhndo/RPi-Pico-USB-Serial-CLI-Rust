@@ -5,6 +5,8 @@
 
 
 use crate::prelude::*;
+use crate::simple_cli::Cli;
+use crate::simple_cli::cli_commands::CMDS;
 
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
@@ -33,6 +35,7 @@ impl Program {
     let command_buf = FifoBuffer::<CMD_BUFF_SIZE>::new();
     let command_read = false;
 
+
     Self { command_buf, command_read }
   }
 
@@ -50,7 +53,7 @@ impl Program {
 
       if device.timer.get_counter().ticks() >= 2_000_000 {
         said_hello = true;
-        print!("Hello, World!\n");
+        print!("\nHello!\n");
 
         let time = device.timer.get_counter().ticks();
         print!("Current timer ticks: {} (T: {})", time, device.timer.print_time());
@@ -68,6 +71,8 @@ impl Program {
   pub fn run(&mut self, device: &mut Device) {
     device.pins.led.set_high().unwrap();
 
+    let mut cli = Cli::new(&CMDS);
+
     loop {
       // ————————————————————————————————————— Read Command ———————————————————————————————————————
 
@@ -79,8 +84,8 @@ impl Program {
         let v_adc: u16 = device.adc.read(&mut device.pins.adc_pin).unwrap();
         let temp = 27.0 - (temp_adc.to_voltage() - 0.706) / 0.001721;
 
-        print!("\n| Temp: {:.1}C Voltage: {:.2}V |\n", temp, v_adc.to_voltage());
-        print!("Enter Command: \n");
+        print!("\n| Temp: {:.1}C Voltage: {:.2}V | ", temp, v_adc.to_voltage());
+        print!("Enter Command >>> \n");
 
         // Blocking wait for command
         self.command_buf.clear();
@@ -88,39 +93,24 @@ impl Program {
         if len > 0 {
           self.command_buf.advance(len);
           self.command_read = true;
-
-          print!("\n>> Command Received. (T: {}) \n>> ", device.timer.print_time());
-          println!("{}", self.command_buf.data().as_str());
+          println!("\n>> Received Command: (T: {}) ", device.timer.print_time());
         }
       }
 
       // ——————————————————————————————————————— Process ——————————————————————————————————————————
 
       if self.command_read {
-        // Quick draft commands
-        if self.command_buf.contains_str("reset").is_some() {
-          print!("\nResetting...\n");
-          DELAY.delay_ms(1500); // Waiting for reset msg to appear
-          device_reset();
-        }
-        if self.command_buf.contains_str("flash").is_some() {
-          print!("\nRestarting in USB Flash mode!...\n");
-          device_reset_to_usb();
-        }
+        let input = self.command_buf.data().as_str();
+        println!(">> '{}' \n", input);
+        cli.execute(input, device).unwrap_or_else(|e| println!("Err: {}", e));
 
 
-        println!("\nTransferring buffer ...");
-        print!("Echo: \n");
-        print!("{}", self.command_buf.data().as_str());
+        // ——————————————————————————————————————— End ——————————————————————————————————————————
 
-        // ——————————————————————————————————————— Write ——————————————————————————————————————————
-
-        if self.command_read {
-          SERIAL.flush_write();
-          self.command_buf.clear();
-          self.command_read = false; // Done, accepting new cmds
-          print!("\n==================== (T: {}) \n", device.timer.print_time());
-        }
+        SERIAL.flush_write();
+        self.command_buf.clear();
+        self.command_read = false; // Done, accepting new cmds
+        print!("\n========= DONE =========== (T: {}) \n", device.timer.print_time());
       }
 
       device.pins.led.toggle().unwrap();

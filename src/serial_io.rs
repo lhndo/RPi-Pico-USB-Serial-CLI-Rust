@@ -169,10 +169,10 @@ impl Serialio {
     if self.usb_dev.poll(&mut [&mut self.serial]) {
       let mut buffer = [0u8; 64];
 
-      if let Ok(count) = self.serial.read(&mut buffer) {
-        if let Some(index) = buffer.iter().position(|&b| b == 0x03 || b == b'c') {
-          interrupt_received = true;
-        }
+      if let Ok(count) = self.serial.read(&mut buffer)
+        && let Some(index) = buffer.iter().position(|&b| b == 0x03 || b == b'c')
+      {
+        interrupt_received = true;
       }
     }
     interrupt_received
