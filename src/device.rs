@@ -3,8 +3,6 @@
 //                                           Device
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-// We no longer need this attribute for the ALARM global
-// #![allow(static_mut_refs)]
 use core::cell::RefCell;
 use core::fmt::Write;
 use critical_section::Mutex;
