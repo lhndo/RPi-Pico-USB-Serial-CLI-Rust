@@ -1,13 +1,11 @@
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-//                                            Program
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-// Contains the main program logic
-
+//! Main CLI program logic
+/// ————————————————————————————————————————————————————————————————————————————————————————————————
+///                                            Program
+/// ————————————————————————————————————————————————————————————————————————————————————————————————
+use super::cli_commands::CMDS;
+use super::*;
 
 use crate::prelude::*;
-use crate::simple_cli::Cli;
-use crate::simple_cli::cli_commands::CMDS;
-
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                            Globals
@@ -49,7 +47,7 @@ impl Program {
 
     while !said_hello {
       SERIAL.poll_usb();
-      DELAY.delay_us(10);
+      DELAY.us(10);
 
       if device.timer.get_counter().ticks() >= 2_000_000 {
         said_hello = true;
@@ -58,7 +56,7 @@ impl Program {
         let time = device.timer.get_counter().ticks();
         print!("Current timer ticks: {} (T: {})", time, device.timer.print_time());
 
-        device.pins.led.set_high().unwrap();
+        device.outputs.led.set_high().unwrap();
       }
     }
   }
@@ -69,7 +67,7 @@ impl Program {
   // ——————————————————————————————————————————————————————————————————————————————————————————————
 
   pub fn run(&mut self, device: &mut Device) {
-    device.pins.led.set_high().unwrap();
+    device.outputs.led.set_high().unwrap();
 
     let mut cli = Cli::new(&CMDS);
 
@@ -80,11 +78,11 @@ impl Program {
 
       if !self.command_read {
         // Print Device Status
-        let temp_adc: u16 = device.adc.read(&mut device.pins.temp_sense).unwrap();
-        let v_adc: u16 = device.adc.read(&mut device.pins.adc_pin).unwrap();
-        let temp = 27.0 - (temp_adc.to_voltage() - 0.706) / 0.001721;
+        let temp_adc_raw: u16 = device.hal_adc.read(&mut device.acds.acd4_temp_sense).unwrap();
+        let vsys_adc_raw: u16 = device.hal_adc.read(&mut device.acds.adc3).unwrap();
+        let sys_temp = 27.0 - (temp_adc_raw.to_voltage() - 0.706) / 0.001721;
 
-        print!("\n| Temp: {:.1}C Voltage: {:.2}V | ", temp, v_adc.to_voltage());
+        print!("\n| Temp: {:.1}C Voltage: {:.2}V | ", sys_temp, vsys_adc_raw.to_voltage());
         print!("Enter Command >>> \n");
 
         // Blocking wait for command
@@ -107,13 +105,12 @@ impl Program {
 
         // ——————————————————————————————————————— End ——————————————————————————————————————————
 
-        SERIAL.flush_write();
         self.command_buf.clear();
         self.command_read = false; // Done, accepting new cmds
         print!("\n========= DONE =========== (T: {}) \n", device.timer.print_time());
       }
 
-      device.pins.led.toggle().unwrap();
+      device.outputs.led.toggle().unwrap();
     }
   }
 }

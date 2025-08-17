@@ -2,12 +2,13 @@
 //                                 SIMPLE CLI
 // -----------------------------------------------------------------------------
 pub mod cli_commands;
-
-use crate::prelude::*;
+pub mod program;
 
 use core::fmt;
 use core::str::FromStr;
 use heapless::{String, Vec};
+
+use crate::prelude::*;
 
 
 // -----------------------------------------------------------------------------
@@ -35,7 +36,7 @@ pub enum CliError {
   IoInput,
   Parse(String<ERR_STR_LENGTH>),
   MissingArg(String<ERR_STR_LENGTH>),
-  CmdExec,
+  CmdExec(String<ERR_STR_LENGTH>),
   CmdNotFound(String<ERR_STR_LENGTH>),
   CriticalFail,
   Other,
@@ -45,21 +46,21 @@ pub enum CliError {
 impl fmt::Display for CliError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      CliError::BufferWrite => write!(f, "buffer write"),
-      CliError::IoInput => write!(f, "IO Input"),
+      CliError::BufferWrite => write!(f, "failed to process the buffer into a valid command!"),
+      CliError::IoInput => write!(f, "IO Input!"),
       CliError::Parse(e) => {
         write!(f, "argument parse, arg: {}", e.as_str())
       }
       CliError::MissingArg(e) => {
         write!(f, "missing argument <{}>", e.as_str())
       }
-      CliError::CmdExec => write!(f, "command failed execution"),
+      CliError::CmdExec(e) => write!(f, "command failed with: {}", e.as_str()),
       CliError::CmdNotFound(e) => {
         write!(f, "command not found: {}", e.as_str())
       }
-      CliError::CriticalFail => write!(f, "critical failure"),
-      CliError::Exit => write!(f, "exit"),
-      CliError::Other => write!(f, "internal error"),
+      CliError::CriticalFail => write!(f, "critical failure!"),
+      CliError::Exit => write!(f, "exit!"),
+      CliError::Other => write!(f, "internal error!"),
     }
   }
 }
