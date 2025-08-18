@@ -17,6 +17,8 @@ use device::Device;
 use rp_pico as bsp;
 use rp2040_panic_usb_boot as _;
 
+static RUN_STANDALONE: bool = false;
+
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                              Main
 // ————————————————————————————————————————————————————————————————————————————————————————————————
@@ -25,7 +27,7 @@ use rp2040_panic_usb_boot as _;
 fn main() -> ! {
   let mut device = Device::new();
 
-  if true {
+  if !RUN_STANDALONE {
     let mut program = simple_cli::program::Program::new();
 
     program.init(&mut device);

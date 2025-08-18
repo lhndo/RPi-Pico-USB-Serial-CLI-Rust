@@ -28,29 +28,34 @@ impl Program {
     let command_buf = FifoBuffer::<CMD_BUFF_SIZE>::new();
     let command_read = false;
 
-
     Self { command_buf, command_read }
   }
 
   // ———————————————————————————————————————————— Init ——————————————————————————————————————————————
 
   pub fn init(&mut self, device: &mut Device) {
-    let mut said_hello = false;
-
-    while !said_hello {
+    // Blocking wait until we receive a serial monitor connection
+    while !SERIAL.get_drt() {
+      DELAY.ms(80);
+      device.outputs.led.toggle().unwrap();
       SERIAL.poll_usb();
-      DELAY.us(10);
-
-      if device.timer.get_counter().ticks() >= 2_000_000 {
-        said_hello = true;
-        print!("\nHello!\n");
-
-        let time = device.timer.get_counter().ticks();
-        print!("Current timer ticks: {} (T: {})", time, device.timer.print_time());
-
-        device.outputs.led.set_high().unwrap();
-      }
     }
+
+    SERIAL.set_connected(true);
+
+    // Blink leds four times to notify
+    // This also warms up the USB device, which otherwise will skip the print msg below
+    for _ in 0..4 {
+      device.outputs.led.set_low().unwrap();
+      DELAY.ms(200);
+      device.outputs.led.set_high().unwrap();
+      DELAY.ms(200);
+    }
+
+    println!("\n========= HELLO =========== ");
+    let time = device.timer.get_counter().ticks();
+    println!("Current timer ticks: {} (T: {})", time, device.timer.print_time());
+    println!("Type \"help\" for the command lists\n");
   }
 
   // ———————————————————————————————————————————— Run ———————————————————————————————————————————————

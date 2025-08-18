@@ -27,6 +27,7 @@ pub static SERIAL: SerialHandle = SerialHandle;
 
 pub static SERIAL_CELL: Mutex<RefCell<Option<Serialio>>> = Mutex::new(RefCell::new(None));
 
+// Used with poll_for_break_cmd()
 const INTERRUPT_CHAR: u8 = 0x03;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
@@ -86,6 +87,16 @@ impl SerialHandle {
   pub fn write(&self, data: &[u8]) -> Result<()> {
     self.with_serial(|s| s.write(data))
   }
+
+  /// Get drt status when serial monitor connection established
+  pub fn get_drt(&self) -> bool {
+    self.with_serial(|s| s.get_drt())
+  }
+
+  /// Set serial monitor connection flag
+  pub fn set_connected(&self, value: bool) {
+    self.with_serial(|s| s.set_connected(value));
+  }
 }
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
@@ -101,14 +112,18 @@ pub type Result<T> = core::result::Result<T, UsbError>;
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Serialio {
-  pub serial:  SerialDev,
-  pub usb_dev: UsbDev,
+  pub serial:    SerialDev,
+  pub usb_dev:   UsbDev,
+  pub connected: bool,
 }
-
 
 impl Serialio {
   fn new(serial: SerialDev, usb_dev: UsbDev) -> Self {
-    Self { serial, usb_dev }
+    Self {
+      serial,
+      usb_dev,
+      connected: false,
+    }
   }
 
   // ——————————————————————————————————————————————————————————————————————————————————————————————
@@ -231,6 +246,16 @@ impl Serialio {
         }
       }
     }
+  }
+
+  /// Get drt status when serial monitor connection established
+  fn get_drt(&mut self) -> bool {
+    self.serial.dtr()
+  }
+
+  /// Set serial monitor connection flag
+  fn set_connected(&mut self, value: bool) {
+    self.connected = value;
   }
 }
 

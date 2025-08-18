@@ -9,7 +9,6 @@ pub struct FifoBuffer<const BUF_SIZE: usize> {
   pub used: usize,
 }
 
-
 impl Default for FifoBuffer<128> {
   fn default() -> Self {
     FifoBuffer {
@@ -44,13 +43,11 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
     self.used == self.buffer.len()
   }
 
-
   /// Return length of currently stored buffer
   #[inline(always)]
   pub fn len(&self) -> usize {
     self.used
   }
-
 
   /// Get available size
   #[inline(always)]
@@ -58,14 +55,12 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
     self.buffer.len() - self.used
   }
 
-
   /// Return mutable slice to the non-filled part of the buffer
   /// To be used with advance()
   #[inline(always)]
   pub fn receive_buffer(&mut self) -> &mut [u8] {
     &mut self.buffer[self.used..]
   }
-
 
   /// Add a single byte, return flase if full
   #[inline(always)]
@@ -78,7 +73,6 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
     self.used += 1;
     true
   }
-
 
   /// Append / Write `buf` to the non-filled part of the buffer
   /// Return none if buffer is full
@@ -97,7 +91,6 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
     Some(len)
   }
 
-
   /// Moves the used cursor forward
   ///
   /// This can be used after filling part of the non-filled buffer returned by `receive_buffer`.
@@ -106,13 +99,11 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
     self.used = (self.used + n).clamp(0, self.buffer.len());
   }
 
-
   /// Returns the filled part of the buffer
   #[inline(always)]
   pub fn data(&self) -> &[u8] {
     &self.buffer[0..self.used]
   }
-
 
   /// Moves the data into a provided slice. Pops the read count. Returns transfered size.
   #[inline(always)]
@@ -126,7 +117,6 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
     len
   }
 
-
   /// Read and pop the first byte
   #[inline(always)]
   pub fn read_byte(&mut self, data: &mut [u8]) -> Option<u8> {
@@ -138,7 +128,6 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
     self.pop(1);
     Some(byte)
   }
-
 
   /// Removes `n` bytes from the front of the buffer
   ///
@@ -153,7 +142,6 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
     self.used = len;
   }
 
-
   /// Returns first byte index found or None
   #[inline(always)]
   pub fn contains_byte(&self, byte: u8) -> Option<usize> {
@@ -165,14 +153,12 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
     None
   }
 
-
   /// Searches for a string slice and returns Some(usize) if found, None if not
   #[inline(always)]
   pub fn contains_str(&self, word: &str) -> Option<usize> {
     let pattern = word.as_bytes();
     self.contains_slice(pattern)
   }
-
 
   /// Searches for a string slice and returns Some(usize) if found, None if not
   #[inline(always)]
@@ -190,13 +176,11 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
     None
   }
 
-
   /// Sets buffer end point at index
   #[inline(always)]
   pub fn set_end(&mut self, index: usize) {
     self.used = index.clamp(0, self.buffer.len());
   }
-
 
   /// Clears the buffer
   #[inline(always)]
@@ -204,7 +188,6 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
     self.used = 0;
   }
 }
-
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                             Traits

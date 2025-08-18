@@ -1,6 +1,6 @@
 max_width                    = 100
 tab_spaces                   = 2
-blank_lines_upper_bound      = 2
+blank_lines_upper_bound      = 1
 wrap_comments                = false
 condense_wildcard_suffixes   = true
 enum_discrim_align_threshold = 10

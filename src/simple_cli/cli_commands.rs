@@ -9,7 +9,6 @@ use crate::prelude::*;
 
 use embedded_hal::pwm::SetDutyCycle;
 
-
 // -----------------------------------------------------------------------------
 //                              Commands Config
 // -----------------------------------------------------------------------------
@@ -18,23 +17,23 @@ const NUM_COMMANDS: usize = 7;
 
 pub const CMDS: [Command; NUM_COMMANDS] = [
   Command {
-    name: "test",
-    desc: "test | <arg:float> [opt:int] [on <true|false>] [path:string]",
-    func: test,
+    name: "example",
+    desc: "Print Example | <arg(float)> [opt=0(u8)] [on=false(bool)] [path=\"\"(string)]",
+    func: example,
   },
   Command {
     name: "blink",
-    desc: "Blink Onboard Led | [times]",
+    desc: "Blink Onboard Led | [times=10]",
     func: blink,
   },
   Command {
     name: "servo",
-    desc: "Set Servo PWM | [pause] [us]",
+    desc: "Set Servo PWM | [us=1500(us)] [pause=3000(ms)] ",
     func: servo,
   },
   Command {
     name: "read_adc",
-    desc: "Read ADC | [ref_res]",
+    desc: "Read ADC | [ref_res=10000(ohm)]",
     func: read_adc,
   },
   Command {
@@ -62,14 +61,13 @@ type Result<T> = core::result::Result<T, CliError>;
 
 // ———————————————————————————————————————————— Test ——————————————————————————————————————————————
 
-fn test(args: &[Arg], device: &mut Device) -> Result<()> {
+fn example(args: &[Arg], device: &mut Device) -> Result<()> {
   let arg: f32 = get_parsed_param("arg", args)?;
   let opt: u8 = get_parsed_param("opt", args).unwrap_or(0); // With default
   let on: bool = get_parsed_param("on", args).unwrap_or(false);
   let path: &str = get_str_param("path", args).unwrap_or("");
 
-  println!("Running 'test': \n");
-
+  println!("---- Running 'Example' ---- \n");
 
   println!("arg = {arg}");
   println!("opt = {opt}");
@@ -85,8 +83,7 @@ fn test(args: &[Arg], device: &mut Device) -> Result<()> {
 fn blink(args: &[Arg], device: &mut Device) -> Result<()> {
   let times: u8 = get_parsed_param("times", args).unwrap_or(10); // 10 default
 
-  println!("Blinking Led!");
-
+  println!("---- Blinking Led! ----");
 
   for n in 1..(times + 1) {
     print!("Blink {} | ", n);
@@ -96,7 +93,6 @@ fn blink(args: &[Arg], device: &mut Device) -> Result<()> {
 
   Ok(())
 }
-
 
 // —————————————————————————————————————————— Servo —————————————————————————————————————————————
 // ex: blink times=4
@@ -119,13 +115,10 @@ fn servo(args: &[Arg], device: &mut Device) -> Result<()> {
   pin.disable();
   println!("Done!");
 
-
   Ok(())
 }
 
-
 // —————————————————————————————————————————— Read ADC —————————————————————————————————————————————
-
 
 fn read_adc(args: &[Arg], device: &mut Device) -> Result<()> {
   let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000); // 3s default
@@ -171,7 +164,6 @@ fn help(args: &[Arg], device: &mut Device) -> Result<()> {
 }
 
 // ——————————————————————————————————————————— Reset ——————————————————————————————————————————————
-
 
 fn reset(args: &[Arg], device: &mut Device) -> Result<()> {
   print!("\nResetting...\n");
