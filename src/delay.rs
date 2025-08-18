@@ -2,9 +2,8 @@
 //! A better choice is to use device.timer.delay_ms
 
 use core::cell::RefCell;
-use cortex_m::{delay::Delay as CortexmDelay,
-               interrupt::{self, Mutex}};
-
+use cortex_m::delay::Delay as CortexmDelay;
+use critical_section::Mutex;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                            Globals
@@ -12,9 +11,6 @@ use cortex_m::{delay::Delay as CortexmDelay,
 
 /// The global instance of the `DelayHandle`.
 pub const DELAY: DelayHandle = DelayHandle;
-
-/// A zero-cost global delay handler for a basic spinning delay
-pub struct DelayHandle;
 
 // Use a Mutex to safely wrap the RefCell, making it thread-safe (Sync).
 // The Option handles the uninitialized vs. initialized state.
@@ -28,7 +24,7 @@ static DELAY_CELL: Mutex<RefCell<Option<CortexmDelay>>> = Mutex::new(RefCell::ne
 /// Initialise the DELAY global object once
 pub fn init(delay: CortexmDelay) {
   // Panic if Some, initialize if None
-  interrupt::free(|cs| {
+  critical_section::with(|cs| {
     let mut cell = DELAY_CELL.borrow(cs).borrow_mut();
     if cell.is_some() {
       panic!("DELAY already initialized");
@@ -41,12 +37,15 @@ pub fn init(delay: CortexmDelay) {
 //                                          DelayHandle
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
+/// A zero-cost global delay handler for a basic spinning delay
+pub struct DelayHandle;
+
 impl DelayHandle {
   /// Executes a closure with a mutable reference to the delay object.
   /// Panics if the DELAY has not been initialized.
   fn with_delay<F>(&self, f: F)
   where F: FnOnce(&mut CortexmDelay) {
-    interrupt::free(|cs| {
+    critical_section::with(|cs| {
       if let Some(delay) = DELAY_CELL.borrow(cs).borrow_mut().as_mut() {
         f(delay);
       } else {

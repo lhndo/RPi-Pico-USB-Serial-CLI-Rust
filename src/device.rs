@@ -1,12 +1,10 @@
-//rust
+//! Hardware Device Configuration
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                           Device
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 use core::cell::RefCell;
 use core::fmt::Write;
-use critical_section::Mutex;
-use heapless::String;
 
 use crate::delay;
 use crate::delay::DELAY;
@@ -26,10 +24,11 @@ use bsp::hal::{clocks, pac, pac::interrupt, pwm, sio, timer, usb, watchdog};
 
 use cortex_m::delay::Delay;
 use cortex_m::prelude::*;
+use critical_section::Mutex;
+use heapless::String;
 use usb_device::class_prelude::*;
 use usb_device::prelude::*;
 use usbd_serial::SerialPort;
-
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                           Globals
@@ -38,35 +37,15 @@ use usbd_serial::SerialPort;
 static ALARM: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(None));
 
 const USB_INTERRUPT_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(10_000);
+
 pub const ADC_BITS: u32 = 12;
 pub const ADC_MAX: f32 = ((1 << ADC_BITS) - 1) as f32;
 pub const ADC_VREF: f32 = 3.3;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
-//                                            Macros
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-
-// PWM Setup
-macro_rules! setup_pwm {
-  ($pwm_slices:ident, $slice_num:ident, $channel:ident, $pin:expr, $hz:expr) => {{
-    let mut slice = $pwm_slices.$slice_num;
-    let div_int = (125_000_000 / ($hz as u64 * 131072)) as u8;
-
-    slice.set_ph_correct();
-    slice.set_div_int(div_int);
-    slice.enable();
-
-    let mut channel = slice.$channel;
-    channel.output_to($pin);
-
-    channel
-  }};
-}
-
-// ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                        Device Struct
 // ————————————————————————————————————————————————————————————————————————————————————————————————
-
+//
 //WeAct Studio RP2040 - https://mischianti.org/weact-studio-rp2040-high-resolution-pinout-and-specs/
 // https://mischianti.org/wp-content/uploads/2022/09/weact-studio-rp2040-raspberry-pi-pico-alternative-pinout-high-resolution.png
 // RPi Pico - https://randomnerdtutorials.com/raspberry-pi-pico-w-pinout-gpios/
@@ -185,10 +164,10 @@ impl Device {
       &mut pac.RESETS,
     ));
 
+    // quick persistent singleton creation
     let usb_bus_ref = cortex_m::singleton!(: UsbBusAllocator<usb::UsbBus> = usb_bus).unwrap();
 
     DELAY.us(200);
-
 
     // ————————————————————————————————————— Serial Device ————————————————————————————————————————
 
@@ -208,7 +187,6 @@ impl Device {
     // ————————————————————————————————————— SERIAL Handle ————————————————————————————————————————
 
     serial_io::init(serial, usb_dev);
-
 
     // ——————————————————————————————————— USB Poll Interrupt —————————————————————————————————————
 
@@ -244,6 +222,23 @@ impl Device {
     };
 
     // —————————————————————————————————————————— PWM —————————————————————————————————————————————
+
+    // PWM Setup Macro
+    macro_rules! setup_pwm {
+      ($pwm_slices:ident, $slice_num:ident, $channel:ident, $pin:expr, $hz:expr) => {{
+        let mut slice = $pwm_slices.$slice_num;
+        let div_int = (125_000_000 / ($hz as u64 * 131072)) as u8;
+
+        slice.set_ph_correct();
+        slice.set_div_int(div_int);
+        slice.enable();
+
+        let mut channel = slice.$channel;
+        channel.output_to($pin);
+
+        channel
+      }};
+    }
 
     let pwm_slices = pwm::Slices::new(pac.PWM, &mut pac.RESETS);
 
@@ -306,6 +301,7 @@ impl Device {
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 // ————————————————————————————————————————— Timer Ext ————————————————————————————————————————————
+
 pub trait TimerExt {
   fn now(&self) -> Duration<u64, 1, 1_000_000>;
   fn print_time(&self) -> String<16>;
@@ -391,9 +387,8 @@ pub fn device_reset() {
 //                                           Interrupts
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-/// Polling the USB device to keep the connection alive even if we stall in main
-/// SERIAL and USB methods use critical section, so this interrupt will not trigger
-/// during their operations
+/// Polling the USB device to keep the connection alive even if we stall
+/// SERIAL and USB methods use critical section, so this interrupt will not trigger during their operations
 #[pac::interrupt]
 fn TIMER_IRQ_0() {
   SERIAL.poll_usb();

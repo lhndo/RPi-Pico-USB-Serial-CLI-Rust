@@ -1,8 +1,9 @@
-/// ————————————————————————————————————————————————————————————————————————————————————————————————
-///                                           Serial IO
-/// ————————————————————————————————————————————————————————————————————————————————————————————————
-/// This module owns the serial interface, the method of communicating outwards
-/// such as the usb device, and a write buffer
+//! This module owns the serial interface, the method of communicating outwards
+//! such as the usb device, and a write buffer
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+//                                           Serial IO
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+
 use core::cell::RefCell;
 use core::fmt;
 use core::fmt::Write;
@@ -18,15 +19,15 @@ use usb_device::UsbError;
 use usb_device::device::UsbDevice;
 use usbd_serial::SerialPort;
 
-
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                            Globals
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub static SERIAL: SerialHandle = SerialHandle;
-pub static SERIAL_CELL: Mutex<RefCell<Option<Serialio>>> = Mutex::new(RefCell::new(None));
-const INTERRUPT_CHAR: u8 = 0x03;
 
+pub static SERIAL_CELL: Mutex<RefCell<Option<Serialio>>> = Mutex::new(RefCell::new(None));
+
+const INTERRUPT_CHAR: u8 = 0x03;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                              Init
@@ -34,12 +35,13 @@ const INTERRUPT_CHAR: u8 = 0x03;
 
 /// Initialise the SERIAL global object once
 pub fn init(serial: SerialDev, usb_dev: UsbDev) {
-  // Panic if Some, initialize if None
   critical_section::with(|cs| {
     let mut cell = SERIAL_CELL.borrow(cs).borrow_mut();
+
     if cell.is_some() {
       panic!("SERIAL already initialized");
     }
+
     let serialio = Serialio::new(serial, usb_dev);
     *cell = Some(serialio);
   });
@@ -53,43 +55,38 @@ pub fn init(serial: SerialDev, usb_dev: UsbDev) {
 pub struct SerialHandle;
 
 impl SerialHandle {
-  /// Polls the USB device and returns true if data was exchanged
+  /// Executes a closure with a mutable reference to the serial peripheral.
+  fn with_serial<F, R>(&self, f: F) -> R
+  where F: FnOnce(&mut Serialio) -> R {
+    critical_section::with(|cs| {
+      if let Some(serial) = SERIAL_CELL.borrow(cs).borrow_mut().as_mut() {
+        f(serial)
+      } else {
+        panic!("SERIAL not initialized");
+      }
+    })
+  }
+
+  /// Polls the USB device and returns true if data was exchanged.
   pub fn poll_usb(&self) -> bool {
-    critical_section::with(|cs| {
-      SERIAL_CELL.borrow_ref_mut(cs).as_mut().map(|s| s.poll_usb()).unwrap_or(false)
-    })
+    self.with_serial(|s| s.poll_usb())
   }
 
-
-  /// Checks if an interrupt command was received via the USB serial
+  /// Checks if an interrupt command was received via the USB serial.
   pub fn poll_for_break_cmd(&self) -> bool {
-    critical_section::with(|cs| {
-      SERIAL_CELL.borrow_ref_mut(cs).as_mut().map(|s| s.poll_for_break_cmd()).unwrap_or(false)
-    })
+    self.with_serial(|s| s.poll_for_break_cmd())
   }
 
-
-  /// Reads a line from the USB serial into the provided buffer
-  /// Returns the number of bytes read (up to but not including the newline)
-  /// Discards the rest
+  /// Reads a line from the USB serial into the provided buffer.
   pub fn read_line(&self, buffer: &mut [u8]) -> usize {
-    critical_section::with(|cs| {
-      SERIAL_CELL.borrow_ref_mut(cs).as_mut().map(|s| s.read_line(buffer)).unwrap_or(0)
-    })
+    self.with_serial(|s| s.read_line(buffer))
   }
 
-
+  /// Writes data to the USB serial.
   pub fn write(&self, data: &[u8]) -> Result<()> {
-    critical_section::with(|cs| {
-      SERIAL_CELL
-        .borrow(cs)
-        .borrow_mut()
-        .as_mut()
-        .map_or(Err(UsbError::WouldBlock), |s| s.write(data))
-    })
+    self.with_serial(|s| s.write(data))
   }
 }
-
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                            Serial IO
@@ -98,7 +95,6 @@ impl SerialHandle {
 pub type SerialDev = SerialPort<'static, UsbBus>;
 pub type UsbDev = UsbDevice<'static, UsbBus>;
 pub type Result<T> = core::result::Result<T, UsbError>;
-
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                         Serialio Struct
@@ -115,7 +111,6 @@ impl Serialio {
     Self { serial, usb_dev }
   }
 
-
   // ——————————————————————————————————————————————————————————————————————————————————————————————
   //                                           Methods
   // ——————————————————————————————————————————————————————————————————————————————————————————————
@@ -125,7 +120,6 @@ impl Serialio {
   fn poll_usb(&mut self) -> bool {
     self.usb_dev.poll(&mut [&mut self.serial])
   }
-
 
   /// Polls serial read buffer for an excape character (INTERRUPT_CHAR - Ctrl+C )
   /// Runs once, non interrupting. Returns true if found.
@@ -145,7 +139,6 @@ impl Serialio {
     }
     interrupt_received
   }
-
 
   /// Appends as much as possible into the write buffer
   /// Writes an entire slice of data, blocking until it is all sent.
@@ -211,7 +204,6 @@ impl Serialio {
     used
   }
 
-
   /// Tries to flush the rest of the serial read into void. Not guaranteed
   /// it succeeds since we don't know if the host stopped sending messages
   fn flush_read_all(&mut self) {
@@ -242,14 +234,11 @@ impl Serialio {
   }
 }
 
-
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                             Traits
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-
 // ——————————————————————————————————————————— Write ——————————————————————————————————————————————
-
 
 impl Write for Serialio {
   fn write_str(&mut self, s: &str) -> fmt::Result {
@@ -261,7 +250,6 @@ impl Write for Serialio {
     core::fmt::write(self, args)
   }
 }
-
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                             Macros
