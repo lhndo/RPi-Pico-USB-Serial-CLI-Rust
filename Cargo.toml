@@ -20,7 +20,6 @@ rp2040-panic-usb-boot = "0.6.0"
 rp2040-rom            = "0.1.0"
 usb-device            = "0.3.2"
 usbd-serial           = "0.2.2"
-critical-section      = "1.2.0"
 nb                    = "1.1.0"
 heapless              = "0.8.0"
 

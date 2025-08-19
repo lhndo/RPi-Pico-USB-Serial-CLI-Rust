@@ -10,7 +10,7 @@ use crate::prelude::*;
 use embedded_hal::pwm::SetDutyCycle;
 
 // -----------------------------------------------------------------------------
-//                              Commands Config
+//                              Commands List
 // -----------------------------------------------------------------------------
 
 const NUM_COMMANDS: usize = 7;
@@ -54,7 +54,7 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
 ];
 
 // -----------------------------------------------------------------------------
-//                               Functions Config
+//                               Commands Config
 // -----------------------------------------------------------------------------
 
 type Result<T> = core::result::Result<T, CliError>;
@@ -95,7 +95,7 @@ fn blink(args: &[Arg], device: &mut Device) -> Result<()> {
 }
 
 // —————————————————————————————————————————— Servo —————————————————————————————————————————————
-// ex: blink times=4
+// ex: servo us=1200 pause=1000
 
 fn servo(args: &[Arg], device: &mut Device) -> Result<()> {
   let pause: u16 = get_parsed_param("pause", args).unwrap_or(2 * 1000); // 3s default

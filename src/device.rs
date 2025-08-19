@@ -23,8 +23,8 @@ use bsp::hal::timer::Timer;
 use bsp::hal::{clocks, pac, pac::interrupt, pwm, sio, timer, usb, watchdog};
 
 use cortex_m::delay::Delay;
+use cortex_m::interrupt::{Mutex, free};
 use cortex_m::prelude::*;
-use critical_section::Mutex;
 use heapless::String;
 use usb_device::class_prelude::*;
 use usb_device::prelude::*;
@@ -34,9 +34,9 @@ use usbd_serial::SerialPort;
 //                                           Globals
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-static ALARM: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(None));
+static ALARM_0: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(None));
 
-const USB_INTERRUPT_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(10_000);
+const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(100_000); // 100ms - 10hz
 
 pub const ADC_BITS: u32 = 12;
 pub const ADC_MAX: f32 = ((1 << ADC_BITS) - 1) as f32;
@@ -180,7 +180,7 @@ impl Device {
       .strings(&[StringDescriptors::default()
         .manufacturer("LH_Eng")
         .product("embedded_serial_cli")
-        .serial_number("static")])
+        .serial_number("TEST")])
       .unwrap()
       .device_class(usbd_serial::USB_CLASS_CDC)
       .build();
@@ -189,16 +189,27 @@ impl Device {
 
     serial_io::init(serial, usb_dev);
 
-    // ——————————————————————————————————— USB Poll Interrupt —————————————————————————————————————
+    // ————————————————————————————————————— USB Interrupt ————————————————————————————————————————
+
+    // Enable the USB interrupt
+    unsafe {
+      pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
+    };
+
+    // Priming USB otherwise connection is not established with the hosts
+    SERIAL.poll_usb();
+
+    // ————————————————————————————————————————— Interrupts ———————————————————————————————————————
 
     let mut alarm0 = timer.alarm_0().unwrap();
-    alarm0.schedule(USB_INTERRUPT_US).unwrap();
+    alarm0.schedule(INTERRUPT_0_US).unwrap();
     alarm0.enable_interrupt();
 
-    critical_section::with(|cs| {
-      ALARM.borrow(cs).borrow_mut().replace(alarm0);
+    free(|cs| {
+      ALARM_0.borrow(cs).borrow_mut().replace(alarm0);
     });
 
+    // Enable Interrupt
     unsafe {
       pac::NVIC::unmask(pac::Interrupt::TIMER_IRQ_0);
     }
@@ -229,6 +240,7 @@ impl Device {
       ($pwm_slices:ident, $slice_num:ident, $channel:ident, $pin:expr, $hz:expr) => {{
         let mut slice = $pwm_slices.$slice_num;
         let div_int = (125_000_000 / ($hz as u64 * 131072)) as u8;
+        // clocks.system_clock.freq().to_Hz()
 
         slice.set_ph_correct();
         slice.set_div_int(div_int);
@@ -388,17 +400,24 @@ pub fn device_reset() {
 //                                           Interrupts
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-/// Polling the USB device to keep the connection alive even if we stall
-/// SERIAL and USB methods use critical section, so this interrupt will not trigger during their operations
+/// Interrupt 0
 #[pac::interrupt]
 fn TIMER_IRQ_0() {
-  SERIAL.poll_usb();
+  // Do something here
 
   // Reset interrupt timer safely
-  critical_section::with(|cs| {
-    if let Some(alarm) = ALARM.borrow(cs).borrow_mut().as_mut() {
+  free(|cs| {
+    if let Some(alarm) = ALARM_0.borrow(cs).borrow_mut().as_mut() {
       alarm.clear_interrupt();
-      alarm.schedule(USB_INTERRUPT_US).unwrap();
+      alarm.schedule(INTERRUPT_0_US).unwrap();
     };
   })
+}
+
+/// Polling the USB device to keep the connection alive even if we stall
+#[pac::interrupt]
+fn USBCTRL_IRQ() {
+  SERIAL.poll_usb();
+  let connection = SERIAL.get_drt();
+  SERIAL.set_connected(connection);
 }

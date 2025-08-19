@@ -36,21 +36,21 @@ impl Program {
   pub fn init(&mut self, device: &mut Device) {
     // Blocking wait until we receive a serial monitor connection
     while !SERIAL.get_drt() {
-      DELAY.ms(80);
       device.outputs.led.toggle().unwrap();
       SERIAL.poll_usb();
+      DELAY.ms(80);
     }
-
-    SERIAL.set_connected(true);
 
     // Blink leds four times to notify
     // This also warms up the USB device, which otherwise will skip the print msg below
     for _ in 0..4 {
       device.outputs.led.set_low().unwrap();
-      DELAY.ms(200);
+      device.timer.delay_ms(200);
       device.outputs.led.set_high().unwrap();
-      DELAY.ms(200);
+      device.timer.delay_ms(200);
     }
+
+    SERIAL.set_connected(true);
 
     println!("\n========= HELLO =========== ");
     let time = device.timer.get_counter().ticks();
@@ -103,7 +103,12 @@ impl Program {
         print!("\n========= DONE =========== (T: {}) \n", device.timer.print_time());
       }
 
-      device.outputs.led.toggle().unwrap();
+      for _ in 0..3 {
+        device.outputs.led.set_low().unwrap();
+        device.timer.delay_ms(50);
+        device.outputs.led.set_high().unwrap();
+        device.timer.delay_ms(50);
+      }
     }
   }
 }

@@ -14,7 +14,7 @@ use rp_pico as bsp;
 //
 use bsp::hal::usb::UsbBus;
 
-use critical_section::Mutex;
+use cortex_m::interrupt::{Mutex, free};
 use usb_device::UsbError;
 use usb_device::device::UsbDevice;
 use usbd_serial::SerialPort;
@@ -36,7 +36,7 @@ const INTERRUPT_CHAR: u8 = 0x03;
 
 /// Initialise the SERIAL global object once
 pub fn init(serial: SerialDev, usb_dev: UsbDev) {
-  critical_section::with(|cs| {
+  free(|cs| {
     let mut cell = SERIAL_CELL.borrow(cs).borrow_mut();
 
     if cell.is_some() {
@@ -59,7 +59,7 @@ impl SerialHandle {
   /// Executes a closure with a mutable reference to the serial peripheral.
   fn with_serial<F, R>(&self, f: F) -> R
   where F: FnOnce(&mut Serialio) -> R {
-    critical_section::with(|cs| {
+    free(|cs| {
       if let Some(serial) = SERIAL_CELL.borrow(cs).borrow_mut().as_mut() {
         f(serial)
       } else {
@@ -283,12 +283,12 @@ impl Write for Serialio {
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {
-            critical_section::with(|cs|  {
-            $crate::serial_io::SERIAL_CELL
-            .borrow_ref_mut(cs).as_mut()
-            .map(|s_cell| s_cell.write_fmt(format_args!($($arg)*)))
-
-    })}
+        ::cortex_m::interrupt::free(|cs| {
+            if let Some(s) = $crate::serial_io::SERIAL_CELL.borrow(cs).borrow_mut().as_mut() {
+                let _ = s.write_fmt(format_args!($($arg)*));
+            }
+        })
+    }
 }
 
 #[macro_export]

@@ -3,7 +3,7 @@
 
 use core::cell::RefCell;
 use cortex_m::delay::Delay as CortexmDelay;
-use critical_section::Mutex;
+use cortex_m::interrupt::{Mutex, free};
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                            Globals
@@ -24,7 +24,7 @@ static DELAY_CELL: Mutex<RefCell<Option<CortexmDelay>>> = Mutex::new(RefCell::ne
 /// Initialise the DELAY global object once
 pub fn init(delay: CortexmDelay) {
   // Panic if Some, initialize if None
-  critical_section::with(|cs| {
+  free(|cs| {
     let mut cell = DELAY_CELL.borrow(cs).borrow_mut();
     if cell.is_some() {
       panic!("DELAY already initialized");
@@ -45,7 +45,7 @@ impl DelayHandle {
   /// Panics if the DELAY has not been initialized.
   fn with_delay<F>(&self, f: F)
   where F: FnOnce(&mut CortexmDelay) {
-    critical_section::with(|cs| {
+    free(|cs| {
       if let Some(delay) = DELAY_CELL.borrow(cs).borrow_mut().as_mut() {
         f(delay);
       } else {
