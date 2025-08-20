@@ -90,12 +90,20 @@ impl SerialHandle {
 
   /// Get drt status when serial monitor connection established
   pub fn get_drt(&self) -> bool {
-    self.with_serial(|s| s.get_drt())
+    self.with_serial(|s| s.serial.dtr())
   }
 
   /// Set serial monitor connection flag
   pub fn set_connected(&self, value: bool) {
-    self.with_serial(|s| s.set_connected(value));
+    self.with_serial(|s| s.connected = value);
+  }
+
+  pub fn update_connected(&self) {
+    self.with_serial(|s| s.connected = s.serial.dtr());
+  }
+
+  pub fn is_connected(&self) -> bool {
+    self.with_serial(|s| s.connected)
   }
 }
 
@@ -246,16 +254,6 @@ impl Serialio {
         }
       }
     }
-  }
-
-  /// Get drt status when serial monitor connection established
-  fn get_drt(&mut self) -> bool {
-    self.serial.dtr()
-  }
-
-  /// Set serial monitor connection flag
-  fn set_connected(&mut self, value: bool) {
-    self.connected = value;
   }
 }
 

@@ -2,9 +2,7 @@
 /// ————————————————————————————————————————————————————————————————————————————————————————————————
 ///                                            Program
 /// ————————————————————————————————————————————————————————————————————————————————————————————————
-use super::cli_commands::CMDS;
 use super::*;
-use crate::prelude::*;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                            Globals
@@ -35,7 +33,7 @@ impl Program {
 
   pub fn init(&mut self, device: &mut Device) {
     // Blocking wait until we receive a serial monitor connection
-    while !SERIAL.get_drt() {
+    while !SERIAL.is_connected() {
       device.outputs.led.toggle().unwrap();
       SERIAL.poll_usb();
       DELAY.ms(80);
@@ -66,10 +64,13 @@ impl Program {
     let mut cli = Cli::new(&CMDS);
 
     loop {
-      // Read command
+      if !SERIAL.is_connected() {
+        continue;
+      }
 
       SERIAL.poll_usb();
 
+      // Read command
       if !self.command_read {
         // Print Device Status
         let temp_adc_raw: u16 = device.hal_adc.read(&mut device.acds.acd4_temp_sense).unwrap();
@@ -90,14 +91,12 @@ impl Program {
       }
 
       // Execute command
-
       if self.command_read {
         let input = self.command_buf.data().as_str();
         println!(">> '{}' \n", input);
         cli.execute(input, device).unwrap_or_else(|e| println!("Err: {}", e));
 
         // Cleanup
-
         self.command_buf.clear();
         self.command_read = false; // Done, accepting new cmds
         print!("\n========= DONE =========== (T: {}) \n", device.timer.print_time());

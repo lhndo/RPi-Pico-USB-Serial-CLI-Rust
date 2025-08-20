@@ -11,6 +11,7 @@ use crate::delay::DELAY;
 use crate::serial_io;
 use crate::serial_io::SERIAL;
 
+use embedded_hal::pwm::SetDutyCycle;
 use rp_pico as bsp;
 //
 use bsp::hal;
@@ -41,6 +42,7 @@ const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(100_000)
 pub const ADC_BITS: u32 = 12;
 pub const ADC_MAX: f32 = ((1 << ADC_BITS) - 1) as f32;
 pub const ADC_VREF: f32 = 3.3;
+pub const PWM_TOP: u16 = u16::MAX; // Standard 16-bit resolution
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                        Device Struct
@@ -57,16 +59,14 @@ pub const ADC_VREF: f32 = 3.3;
 // GPIO 23 - WA extra Button / OG -  Controls on-board SMPS (Switched Power Mode Supply)
 
 // PWM
-pub type PwmAType = pwm::Channel<pwm::Slice<pwm::Pwm1, pwm::FreeRunning>, pwm::A>; // gpio 2
-pub type PwmBType = pwm::Channel<pwm::Slice<pwm::Pwm3, pwm::FreeRunning>, pwm::A>; // gpio 6
-pub type PwmCType = pwm::Channel<pwm::Slice<pwm::Pwm5, pwm::FreeRunning>, pwm::B>; // gpio 11
-pub type PwmDType = pwm::Channel<pwm::Slice<pwm::Pwm2, pwm::FreeRunning>, pwm::B>; // gpio 21
+pub type Pwm1Type = pwm::Slice<pwm::Pwm1, pwm::FreeRunning>; // gpio 2 A
+pub type Pwm2Type = pwm::Slice<pwm::Pwm2, pwm::FreeRunning>; // gpio 21 B
+pub type Pwm3Type = pwm::Slice<pwm::Pwm3, pwm::FreeRunning>; // gpio 6 A
 
 pub struct Pwms {
-  pub pwm_a: PwmAType,
-  pub pwm_b: PwmBType,
-  pub pwm_c: PwmCType,
-  pub pwm_d: PwmDType,
+  pub pwm_1: Pwm1Type,
+  pub pwm_2: Pwm2Type,
+  pub pwm_3: Pwm3Type,
 }
 
 // ADC
@@ -239,33 +239,29 @@ impl Device {
     macro_rules! setup_pwm {
       ($pwm_slices:ident, $slice_num:ident, $channel:ident, $pin:expr, $hz:expr) => {{
         let mut slice = $pwm_slices.$slice_num;
-        let div_int = (125_000_000 / ($hz as u64 * 131072)) as u8;
-        // clocks.system_clock.freq().to_Hz()
 
+        slice.disable();
         slice.set_ph_correct();
-        slice.set_div_int(div_int);
+        slice.set_top(PWM_TOP);
+        let (int, frac) = calculate_pwm_dividers_w_top($hz, PWM_TOP);
+        slice.set_div_int(int);
+        slice.set_div_frac(frac);
+        slice.$channel.set_duty_cycle_percent(50).unwrap();
+        slice.$channel.output_to($pin);
         slice.enable();
 
-        let mut channel = slice.$channel;
-        channel.output_to($pin);
-
-        channel
+        slice
       }};
     }
 
     let pwm_slices = pwm::Slices::new(pac.PWM, &mut pac.RESETS);
 
-    let pwm_a = setup_pwm!(pwm_slices, pwm1, channel_a, pac_pins.gpio2, 50);
-    let pwm_b = setup_pwm!(pwm_slices, pwm3, channel_a, pac_pins.gpio6, 50);
-    let pwm_c = setup_pwm!(pwm_slices, pwm5, channel_b, pac_pins.gpio11, 50);
-    let pwm_d = setup_pwm!(pwm_slices, pwm2, channel_b, pac_pins.gpio21, 50);
+    let pwm_1: pwm::Slice<pwm::Pwm1, pwm::FreeRunning> =
+      setup_pwm!(pwm_slices, pwm1, channel_a, pac_pins.gpio2, 50.0);
+    let pwm_2 = setup_pwm!(pwm_slices, pwm2, channel_b, pac_pins.gpio21, 50.0);
+    let pwm_3 = setup_pwm!(pwm_slices, pwm3, channel_a, pac_pins.gpio6, 50.0);
 
-    let pwms = Pwms {
-      pwm_a,
-      pwm_b,
-      pwm_c,
-      pwm_d,
-    };
+    let pwms = Pwms { pwm_1, pwm_2, pwm_3 };
 
     // —————————————————————————————————————————— Pins ————————————————————————————————————————————
 
@@ -396,6 +392,20 @@ pub fn device_reset() {
   cortex_m::peripheral::SCB::sys_reset();
 }
 
+pub fn calculate_pwm_dividers(hz: f32) -> (u8, u8) {
+  calculate_pwm_dividers_w_top(hz, PWM_TOP)
+}
+
+pub fn calculate_pwm_dividers_w_top(hz: f32, top: u16) -> (u8, u8) {
+  let divider = bsp::XOSC_CRYSTAL_FREQ as f32 / (hz * (top as f32 + 1.0));
+  let clamped_divider = divider.clamp(1.0, 255.9375);
+
+  let div_int = clamped_divider as u8;
+  let div_frac = ((clamped_divider - div_int as f32) * 16.0) as u8;
+
+  (div_int, div_frac)
+}
+
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                           Interrupts
 // ————————————————————————————————————————————————————————————————————————————————————————————————
@@ -418,6 +428,5 @@ fn TIMER_IRQ_0() {
 #[pac::interrupt]
 fn USBCTRL_IRQ() {
   SERIAL.poll_usb();
-  let connection = SERIAL.get_drt();
-  SERIAL.set_connected(connection);
+  SERIAL.update_connected();
 }
