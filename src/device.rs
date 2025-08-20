@@ -39,6 +39,7 @@ static ALARM_0: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(
 
 const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(100_000); // 100ms - 10hz
 
+pub const SYS_CLK_HZ: u32 = 120_000_000;
 pub const ADC_BITS: u32 = 12;
 pub const ADC_MAX: f32 = ((1 << ADC_BITS) - 1) as f32;
 pub const ADC_VREF: f32 = 3.3;
@@ -241,9 +242,8 @@ impl Device {
         let mut slice = $pwm_slices.$slice_num;
 
         slice.disable();
-        slice.set_ph_correct();
         slice.set_top(PWM_TOP);
-        let (int, frac) = calculate_pwm_dividers_w_top($hz, PWM_TOP);
+        let (int, frac) = calculate_pwm_dividers($hz, PWM_TOP, false);
         slice.set_div_int(int);
         slice.set_div_frac(frac);
         slice.$channel.set_duty_cycle_percent(50).unwrap();
@@ -392,18 +392,20 @@ pub fn device_reset() {
   cortex_m::peripheral::SCB::sys_reset();
 }
 
-pub fn calculate_pwm_dividers(hz: f32) -> (u8, u8) {
-  calculate_pwm_dividers_w_top(hz, PWM_TOP)
-}
-
-pub fn calculate_pwm_dividers_w_top(hz: f32, top: u16) -> (u8, u8) {
-  let divider = bsp::XOSC_CRYSTAL_FREQ as f32 / (hz * (top as f32 + 1.0));
+/// Calculates pwm int and frac clock dividers  based on sys clock, top, and desired hz frequency
+pub fn calculate_pwm_dividers(hz: f32, top: u16, phase_correct: bool) -> (u8, u8) {
+  let hz = if phase_correct { hz * 2.0 } else { hz };
+  let divider = SYS_CLK_HZ as f32 / (hz * (top as f32 + 1.0));
   let clamped_divider = divider.clamp(1.0, 255.9375);
 
-  let div_int = clamped_divider as u8;
-  let div_frac = ((clamped_divider - div_int as f32) * 16.0) as u8;
+  let div_int = (clamped_divider + 0.5) as u8;
+  let div_frac = ((clamped_divider - div_int as f32) * 16.0 + 0.5) as u8;
 
   (div_int, div_frac)
+}
+
+pub fn calculate_pwm_dividers_simple(hz: f32) -> (u8, u8) {
+  calculate_pwm_dividers(hz, PWM_TOP, false)
 }
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————

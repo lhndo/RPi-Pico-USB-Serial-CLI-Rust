@@ -49,7 +49,8 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
   },
   Command {
     name: "set_pwm",
-    desc: "Sets PWM on GPIO 6 | [freq=50(hz)] [us=-1(us)] [duty=50(%)] [disable=false(bool)]",
+    desc: "Sets PWM on GPIO 6 | [freq=50(hz)] [us=-1(us)] [duty=50(%)] \n [top=-1(u16)] \
+           [phase=false(bool)][disable=false(bool)]",
     func: set_pwm_cmd,
   },
 ];
@@ -202,15 +203,19 @@ fn servo(device: &mut Context, us: u16, pause: u16) -> Result<()> {
 // ex:
 
 fn set_pwm_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
-  let us: i16 = get_parsed_param("us", args).unwrap_or(-1); //  -1 eq not set
+  let us: i32 = get_parsed_param("us", args).unwrap_or(-1); //  -1 eq not set
   let duty: u8 = get_parsed_param("duty", args).unwrap_or(50); //  50% default
   let freq: u32 = get_parsed_param("freq", args).unwrap_or(50); // hz
+  let top: i32 = get_parsed_param("top", args).unwrap_or(-1); // 
+  let phase: bool = get_parsed_param("phase", args).unwrap_or(false); // 
   let disable: bool = get_parsed_param("disable", args).unwrap_or(false); // false
 
-  set_pwm(device, us, duty, freq, disable)
+  set_pwm(device, us, duty, freq, top, phase, disable)
 }
 
-fn set_pwm(device: &mut Context, us: i16, duty: u8, freq: u32, disable: bool) -> Result<()> {
+fn set_pwm(
+  device: &mut Context, us: i32, duty: u8, freq: u32, top: i32, phase: bool, disable: bool,
+) -> Result<()> {
   println!("---- PWM ----");
 
   let pwm = &mut device.pwms.pwm_3; // GPIO 
@@ -221,25 +226,38 @@ fn set_pwm(device: &mut Context, us: i16, duty: u8, freq: u32, disable: bool) ->
     return Ok(());
   }
 
-  // set frequency
+  // Setting PWM
   pwm.disable();
-  let top = pwm.get_top();
-  let (int, frac) = calculate_pwm_dividers_w_top(freq as f32, top);
-  pwm.set_div_int(int);
-  pwm.set_div_frac(frac);
-  println!("Set PWM frequency to : {}hz", freq);
 
-  // setting percent duty if us not defined
-  if us < 0 {
-    pwm.channel_a.set_duty_cycle_percent(duty).unwrap();
-    println!("Set PWM duty to : {}%", duty);
+  let top = if top < 0 { pwm.get_top() } else { top.clamp(0, u16::MAX as i32) as u16 };
+  let (int, frac) = calculate_pwm_dividers(freq as f32, top, phase);
+
+  if phase {
+    pwm.set_ph_correct()
   } else {
-    // setting duty cycle to us size
-
-    pwm.channel_a.set_duty_cycle_fraction(us as u16, (1_000_000 / freq) as u16).unwrap();
-    println!("Set PWM duty to: {} µs pulse", us);
+    pwm.clr_ph_correct();
   }
 
+  pwm.set_top(top);
+  pwm.set_div_int(int);
+  pwm.set_div_frac(frac);
+
+  print!("Seting PWM | freq: {}hz, top: {}, phase: {}", freq, top, phase);
+
+  // Duty cycle
+  // setting duty percentage if us not defined (-1)
+  if us < 0 {
+    pwm.channel_a.set_duty_cycle_percent(duty).unwrap();
+    println!(", duty {}%", duty.clamp(0, 100));
+  } else {
+    // setting duty cycle to us size
+    let freq_us = (1_000_000 / freq) as u16;
+    let us = us.clamp(0, freq_us as i32) as u16;
+    pwm.channel_a.set_duty_cycle_fraction(us, freq_us).unwrap();
+    println!(", duty {}µs", us);
+  }
+
+  // End
   pwm.enable();
   Ok(())
 }
