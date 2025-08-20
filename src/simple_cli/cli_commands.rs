@@ -236,10 +236,7 @@ fn set_pwm(device: &mut Context, us: i16, duty: u8, freq: u32, disable: bool) ->
   } else {
     // setting duty cycle to us size
 
-    let num = us as u32;
-    let denom = 1_000_000 / freq;
-
-    pwm.channel_a.set_duty_cycle_fraction(num as u16, denom as u16).unwrap();
+    pwm.channel_a.set_duty_cycle_fraction(us as u16, (1_000_000 / freq) as u16).unwrap();
     println!("Set PWM duty to: {} µs pulse", us);
   }
 
