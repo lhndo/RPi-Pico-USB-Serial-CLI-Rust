@@ -37,7 +37,7 @@ use usbd_serial::SerialPort;
 
 static ALARM_0: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(None));
 
-const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(100_000); // 100ms - 10hz
+const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(10_000); // 100ms - 10hz
 
 pub const SYS_CLK_HZ: u32 = 120_000_000;
 pub const ADC_BITS: u32 = 12;
@@ -192,10 +192,13 @@ impl Device {
 
     // ————————————————————————————————————— USB Interrupt ————————————————————————————————————————
 
-    // Enable the USB interrupt
-    unsafe {
-      pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
-    };
+    // Disabling USB interrupt due to Fault/Bug and keeping polling into IRQ_0
+    // This happens even if we blink a simple led in a loop and send a msg though serial
+
+    // // Enable the USB interrupt
+    // unsafe {
+    //   pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
+    // };
 
     // Priming USB otherwise connection is not established with the hosts
     SERIAL.poll_usb();
@@ -412,11 +415,11 @@ pub fn calculate_pwm_dividers_simple(hz: f32) -> (u8, u8) {
 //                                           Interrupts
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-/// Interrupt 0
+// Interrupt 0
 #[pac::interrupt]
 fn TIMER_IRQ_0() {
-  // Do something here
-
+  SERIAL.poll_usb();
+  SERIAL.update_connected_status();
   // Reset interrupt timer safely
   free(|cs| {
     if let Some(alarm) = ALARM_0.borrow(cs).borrow_mut().as_mut() {
@@ -426,9 +429,12 @@ fn TIMER_IRQ_0() {
   })
 }
 
-/// Polling the USB device to keep the connection alive even if we stall
-#[pac::interrupt]
-fn USBCTRL_IRQ() {
-  SERIAL.poll_usb();
-  SERIAL.update_connected();
-}
+// Disabling USB interrupt due to Fault/Bug and keeping polling into IRQ_0
+// This happens even if we blink a simple led in a loop and send a msg though serial
+
+// // Polling the USB device to keep the connection alive even if we stall
+// #[pac::interrupt]
+// fn USBCTRL_IRQ() {
+//   SERIAL.poll_usb();
+//   // SERIAL.update_connected();
+// }

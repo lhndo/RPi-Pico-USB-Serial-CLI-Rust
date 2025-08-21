@@ -9,7 +9,7 @@ use super::*;
 //                                         Commands List
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-const NUM_COMMANDS: usize = 8;
+const NUM_COMMANDS: usize = 9;
 
 pub const CMDS: [Command; NUM_COMMANDS] = [
   Command {
@@ -41,6 +41,11 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
     name: "read_adc",
     desc: "Read ADC | [ref_res=10000(ohm)]",
     func: read_adc_cmd,
+  },
+  Command {
+    name: "sample_adc",
+    desc: "Samples ADC GPIO 26 | [ref_res=10000(ohm)]",
+    func: sample_adc_cmd,
   },
   Command {
     name: "servo",
@@ -123,8 +128,9 @@ fn blink(device: &mut Context, times: u8) -> Result<()> {
   for n in 1..(times + 1) {
     print!("Blink {} | ", n);
     device.outputs.led.set_high().unwrap();
-    device.timer.delay_ms(400);
+    device.timer.delay_ms(200);
     device.outputs.led.set_low().unwrap();
+    device.timer.delay_ms(200);
   }
 
   Ok(())
@@ -165,6 +171,33 @@ fn read_adc(device: &mut Context, ref_res: u32) -> Result<()> {
   let adc_res = adc_raw.to_resistance(ref_res);
   let sys_temp = 27.0 - (adc_raw.to_voltage() - 0.706) / 0.001721;
   println!("Temp Sense: {}, {:.2}V, {:.1}C", adc_raw, adc_vol, sys_temp);
+
+  Ok(())
+}
+
+// ————————————————————————————————————————— Sample Adc ———————————————————————————————————————————
+//GPIO 26
+
+fn sample_adc_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+  let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000); // 3s default
+
+  sample_adc(device, ref_res)
+}
+
+fn sample_adc(device: &mut Context, ref_res: u32) -> Result<()> {
+  println!("---- Sample ADC ----");
+  println!("Reference Pullup Resistor: {}ohm", ref_res);
+  println!("ADC 0 GPIO 26\n");
+
+  while !SERIAL.poll_for_break_cmd() {
+    let adc_raw: u16 = device.hal_adc.read(&mut device.acds.adc0).unwrap();
+    let adc_vol = adc_raw.to_voltage();
+    let adc_res = adc_raw.to_resistance(ref_res);
+    println!("> v:{:.2}, ohm:{:.1}, raw:{} \r", adc_vol, adc_res, adc_raw);
+    device.timer.delay_ms(400);
+  }
+
+  println!("Sampling Interrupted. Done!");
 
   Ok(())
 }
@@ -229,16 +262,16 @@ fn set_pwm(
   // Setting PWM
   pwm.disable();
 
-  let top = if top < 0 { pwm.get_top() } else { top.clamp(0, u16::MAX as i32) as u16 };
-  let (int, frac) = calculate_pwm_dividers(freq as f32, top, phase);
-
   if phase {
     pwm.set_ph_correct()
   } else {
     pwm.clr_ph_correct();
   }
 
+  let top = if top < 0 { pwm.get_top() } else { top.clamp(0, u16::MAX as i32) as u16 };
   pwm.set_top(top);
+
+  let (int, frac) = calculate_pwm_dividers(freq as f32, top, phase);
   pwm.set_div_int(int);
   pwm.set_div_frac(frac);
 

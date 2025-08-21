@@ -33,7 +33,7 @@ impl Program {
 
   pub fn init(&mut self, device: &mut Device) {
     // Blocking wait until we receive a serial monitor connection
-    while !SERIAL.is_connected() {
+    while !SERIAL.get_drt() {
       device.outputs.led.toggle().unwrap();
       SERIAL.poll_usb();
       DELAY.ms(80);
@@ -82,7 +82,7 @@ impl Program {
 
         // Blocking wait for command
         self.command_buf.clear();
-        let len = SERIAL.read_line(self.command_buf.receive_buffer());
+        let len = SERIAL.read_line(self.command_buf.receive_buffer()).unwrap_or(0);
         if len > 0 {
           self.command_buf.advance(len);
           self.command_read = true;

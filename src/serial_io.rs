@@ -28,7 +28,7 @@ pub static SERIAL: SerialHandle = SerialHandle;
 pub static SERIAL_CELL: Mutex<RefCell<Option<Serialio>>> = Mutex::new(RefCell::new(None));
 
 // Used with poll_for_break_cmd()
-const INTERRUPT_CHAR: u8 = 0x03;
+const INTERRUPT_CHAR: u8 = 0x7e; // char "~"
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                              Init
@@ -57,7 +57,7 @@ pub struct SerialHandle;
 
 impl SerialHandle {
   /// Executes a closure with a mutable reference to the serial peripheral.
-  fn with_serial<F, R>(&self, f: F) -> R
+  pub fn with_serial<F, R>(&self, f: F) -> R
   where F: FnOnce(&mut Serialio) -> R {
     free(|cs| {
       if let Some(serial) = SERIAL_CELL.borrow(cs).borrow_mut().as_mut() {
@@ -79,7 +79,7 @@ impl SerialHandle {
   }
 
   /// Reads a line from the USB serial into the provided buffer.
-  pub fn read_line(&self, buffer: &mut [u8]) -> usize {
+  pub fn read_line(&self, buffer: &mut [u8]) -> Result<usize> {
     self.with_serial(|s| s.read_line(buffer))
   }
 
@@ -98,7 +98,7 @@ impl SerialHandle {
     self.with_serial(|s| s.connected = value);
   }
 
-  pub fn update_connected(&self) {
+  pub fn update_connected_status(&self) {
     self.with_serial(|s| s.connected = s.serial.dtr());
   }
 
@@ -149,18 +149,18 @@ impl Serialio {
   /// To be used in loops that need to be interrupted from the command line
   /// WARNING: This will throw away the buffer
   fn poll_for_break_cmd(&mut self) -> bool {
-    let mut interrupt_received = false;
-
+    let mut found = false;
     if self.usb_dev.poll(&mut [&mut self.serial]) {
       let mut buffer = [0u8; 64];
 
-      if let Ok(count) = self.serial.read(&mut buffer)
-        && let Some(index) = buffer.iter().position(|&b| b == INTERRUPT_CHAR)
-      {
-        interrupt_received = true;
+      if let Ok(count) = self.serial.read(&mut buffer) {
+        let received_data = &buffer[..count];
+        if received_data.contains(&INTERRUPT_CHAR) {
+          found = true;
+        }
       }
     }
-    interrupt_received
+    found
   }
 
   /// Appends as much as possible into the write buffer
@@ -175,7 +175,12 @@ impl Serialio {
           data = &data[written..];
         }
         Err(UsbError::WouldBlock) => {
-          // The USB host isn't ready for data. This is normal.
+          // if we dropped serial we exit
+          if !self.serial.dtr() {
+            return Err(UsbError::WouldBlock);
+          }
+
+          // Otherwise The USB host isn't ready for data. This is normal.
           // We just need to wait and let the USB bus handle its events.
         }
         Err(e) => {
@@ -188,19 +193,20 @@ impl Serialio {
       // the device to respond to the host and manage the connection.
       self.usb_dev.poll(&mut [&mut self.serial]);
     }
+
     Ok(())
   }
 
   /// Blocking read from serial into provided buffer until new line. Discards the rest.
   /// Returns size written
   /// Remember to clear the read buffer beforehand
-  pub fn read_line(&mut self, buffer: &mut [u8]) -> usize {
+  pub fn read_line(&mut self, buffer: &mut [u8]) -> Result<usize> {
     let max_len = buffer.len();
     let mut used = 0;
 
     loop {
-      // Get a new usb package. Blocking loop
-      while !self.poll_usb() {
+      // Try grabbing a new usb package only if serial is established
+      while !self.poll_usb() && self.serial.dtr() {
         DELAY.us(5);
       }
 
@@ -212,24 +218,37 @@ impl Serialio {
             break;
           }
           used += count;
+
+          // if buffer is full but no new like, we error
           if used >= max_len {
-            break;
+            return Err(UsbError::BufferOverflow);
           }
         }
-        Ok(_) => {}
-        Err(usb_device::UsbError::WouldBlock) => {} // We ignore and keep waiting from data
-        Err(_) => {
-          break;
+        Ok(_) => {
+          // no data received, keep trying
+          continue;
+        }
+        Err(usb_device::UsbError::WouldBlock) => {
+          // if we dropped serial we exit
+          if !self.serial.dtr() {
+            return Err(UsbError::WouldBlock);
+          } else {
+            continue;
+          }
+        }
+        Err(e) => {
+          return Err(e);
         }
       }
     }
-    self.flush_read_all(); // Discarding the rest of the data since we got our line
-    used
+
+    self.flush_read_all()?; // Discarding the rest of the data since we got our line
+    Ok(used)
   }
 
   /// Tries to flush the rest of the serial read into void. Not guaranteed
   /// it succeeds since we don't know if the host stopped sending messages
-  fn flush_read_all(&mut self) {
+  fn flush_read_all(&mut self) -> Result<()> {
     const MAX_EMPTY_READ_ATTEMPTS: i32 = 20;
     let mut temp_buffer = [0u8; 64];
     let mut retries = MAX_EMPTY_READ_ATTEMPTS; // Limit retries to avoid infinite loop
@@ -241,19 +260,28 @@ impl Serialio {
       match self.serial.read(&mut temp_buffer[..]) {
         Ok(count) if count > 0 => {
           retries = MAX_EMPTY_READ_ATTEMPTS; // Got data, reset retry count
+          continue;
         }
         Ok(_) => {
           retries -= 1; // No data read, decrement retries
+          continue;
         }
         Err(UsbError::WouldBlock) => {
-          // No data available right now
-          retries -= 1;
+          if !self.serial.dtr() {
+            return Err(UsbError::WouldBlock);
+          } else {
+            // No data available right now
+            retries -= 1;
+            continue;
+          }
         }
-        Err(_) => {
-          break;
+        Err(e) => {
+          return Err(e);
         }
       }
     }
+
+    Ok(())
   }
 }
 
@@ -270,7 +298,8 @@ impl Write for Serialio {
   }
 
   fn write_fmt(&mut self, args: fmt::Arguments<'_>) -> fmt::Result {
-    core::fmt::write(self, args)
+    core::fmt::write(self, args)?;
+    Ok(())
   }
 }
 
@@ -282,7 +311,9 @@ impl Write for Serialio {
 macro_rules! print {
     ($($arg:tt)*) => {
         ::cortex_m::interrupt::free(|cs| {
+          // TODO: write only if there is a serial connection
             if let Some(s) = $crate::serial_io::SERIAL_CELL.borrow(cs).borrow_mut().as_mut() {
+                // If we cannot write due to the serial monitor dropping, we let the program continue
                 let _ = s.write_fmt(format_args!($($arg)*));
             }
         })
