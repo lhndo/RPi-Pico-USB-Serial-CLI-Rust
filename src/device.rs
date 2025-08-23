@@ -13,6 +13,7 @@ use crate::serial_io::SERIAL;
 
 use embedded_hal::pwm::SetDutyCycle;
 use rp_pico as bsp;
+use rp_pico::hal::Adc;
 //
 use bsp::hal;
 use bsp::hal::Clock;
@@ -44,6 +45,7 @@ pub const ADC_BITS: u32 = 12;
 pub const ADC_MAX: f32 = ((1 << ADC_BITS) - 1) as f32;
 pub const ADC_VREF: f32 = 3.3;
 pub const PWM_TOP: u16 = u16::MAX; // Standard 16-bit resolution
+pub const TEMP_SENSE_CHN: u8 = 255;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                        Device Struct
@@ -59,6 +61,15 @@ pub const PWM_TOP: u16 = u16::MAX; // Standard 16-bit resolution
 // GPIO 24 - WA extra GPIO / OG internal - Indicator for VBUS presence (high / low output)
 // GPIO 23 - WA extra Button / OG -  Controls on-board SMPS (Switched Power Mode Supply)
 
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+pub enum PinType {
+  Input,
+  Output,
+  PwmOut,
+  PWMIn,
+  Adc,
+}
+
 // PWM
 pub type Pwm1Type = pwm::Slice<pwm::Pwm1, pwm::FreeRunning>; // gpio 2 A
 pub type Pwm2Type = pwm::Slice<pwm::Pwm2, pwm::FreeRunning>; // gpio 21 B
@@ -71,17 +82,36 @@ pub struct Pwms {
 }
 
 // ADC
-pub type Adc0Type = AdcPin<gpio::Pin<gpio::bank0::Gpio26, gpio::FunctionNull, gpio::PullDown>>; // gpio 26
-pub type Adc1Type = AdcPin<gpio::Pin<gpio::bank0::Gpio27, gpio::FunctionNull, gpio::PullDown>>; // gpio 27
-pub type Adc2Type = AdcPin<gpio::Pin<gpio::bank0::Gpio28, gpio::FunctionNull, gpio::PullDown>>; // gpio 28
-pub type Adc3Type = AdcPin<gpio::Pin<gpio::bank0::Gpio29, gpio::FunctionNull, gpio::PullDown>>; // gpio 29
+pub type Adc0Type =
+  AdcPin<gpio::Pin<gpio::bank0::Gpio26, gpio::FunctionSio<gpio::SioInput>, gpio::PullNone>>; // gpio 26
+pub type Adc1Type =
+  AdcPin<gpio::Pin<gpio::bank0::Gpio27, gpio::FunctionSio<gpio::SioInput>, gpio::PullNone>>; // gpio 27
+pub type Adc2Type =
+  AdcPin<gpio::Pin<gpio::bank0::Gpio28, gpio::FunctionSio<gpio::SioInput>, gpio::PullNone>>; // gpio 28
+pub type Adc3Type =
+  AdcPin<gpio::Pin<gpio::bank0::Gpio29, gpio::FunctionSio<gpio::SioInput>, gpio::PullNone>>; // gpio 29
 
 pub struct Acds {
-  pub adc0: Adc0Type,
-  pub adc1: Adc1Type,
-  pub adc2: Adc2Type,
-  pub adc3: Adc3Type,
-  pub acd4_temp_sense: TempSense,
+  pub hal_adc:    Adc,
+  pub temp_sense: TempSense,
+  pub adc0:       Adc0Type,
+  pub adc1:       Adc1Type,
+  pub adc2:       Adc2Type,
+  pub adc3:       Adc3Type,
+}
+
+impl Acds {
+  /// One shot read of the ADC channel 0-3, and 255 (as TEMP_SENSE_CHN)
+  pub fn read_channel(&mut self, id: u8) -> Option<u16> {
+    match id {
+      0 => self.hal_adc.read(&mut self.adc0).unwrap_or(None),
+      1 => self.hal_adc.read(&mut self.adc1).unwrap_or(None),
+      2 => self.hal_adc.read(&mut self.adc2).unwrap_or(None),
+      3 => self.hal_adc.read(&mut self.adc3).unwrap_or(None),
+      255 => self.hal_adc.read(&mut self.temp_sense).unwrap_or(None),
+      _ => None,
+    }
+  }
 }
 
 // GPIO
@@ -112,7 +142,6 @@ pub struct Outputs {
 pub struct Device {
   pub timer:    Timer,
   pub watchdog: watchdog::Watchdog,
-  pub hal_adc:  hal::Adc,
   pub pwms:     Pwms,
   pub acds:     Acds,
   pub inputs:   Inputs,
@@ -131,6 +160,29 @@ impl Device {
     let mut watchdog = watchdog::Watchdog::new(pac.WATCHDOG);
     let sio = sio::Sio::new(pac.SIO);
     let pac_pins = gpio::Pins::new(pac.IO_BANK0, pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
+
+    // ———————————————————————————————————————————————————————————————————————————————————————————
+    //                                           Test todo
+    // ———————————————————————————————————————————————————————————————————————————————————————————
+
+    // pins = [
+    //   [pac_pins.gpio0.get_input_override()]
+    // ]
+
+    // let a = pac_pins
+    //   .gpio4
+    //   .into_function::<gpio::FunctionPwm>()
+    //   .into_pull_type::<gpio::PullNone>()
+    //   .into_dyn_pin();
+
+    // let a: gpio::Pin<gpio::DynPinId, gpio::FunctionPwm, gpio::PullNone> =
+    //   pac_pins.gpio4.into_function();
+    // let a = a.into_function::<gpio::FunctionSpi>();
+    // let a = pac_pins.gpio4.into_dyn_pin();
+    // let a = a.into_pull_type::<gpio::PullNone>();
+    // if let Ok(p) = a.try_into_function::<gpio::FunctionPwm>() {
+    //   let a = p;
+    // };
 
     // ————————————————————————————————————————— Clocks ———————————————————————————————————————————
 
@@ -188,19 +240,20 @@ impl Device {
 
     // ————————————————————————————————————— SERIAL Handle ————————————————————————————————————————
 
+    // Init SERIAL global
     serial_io::init(serial, usb_dev);
 
     // ————————————————————————————————————— USB Interrupt ————————————————————————————————————————
 
     // Disabling USB interrupt due to Fault/Bug and keeping polling into IRQ_0
-    // This happens even if we blink a simple led in a loop and send a msg though serial
+    // This bug  happens even if we blink a simple led in a loop and send a msg though serial
 
     // // Enable the USB interrupt
     // unsafe {
     //   pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
     // };
 
-    // Priming USB otherwise connection is not established with the hosts
+    // Priming USB connection
     SERIAL.poll_usb();
 
     // ————————————————————————————————————————— Interrupts ———————————————————————————————————————
@@ -221,20 +274,20 @@ impl Device {
     // —————————————————————————————————————————— ADC —————————————————————————————————————————————
 
     let mut hal_adc = hal::Adc::new(pac.ADC, &mut pac.RESETS); // Needs to be set after clocks
+    let temp_sense = hal_adc.take_temp_sensor().unwrap();
 
-    let adc0 = AdcPin::new(pac_pins.gpio26.reconfigure()).unwrap();
-    let adc1 = AdcPin::new(pac_pins.gpio27.reconfigure()).unwrap();
-    let adc2 = AdcPin::new(pac_pins.gpio28.reconfigure()).unwrap();
-    let adc3 = AdcPin::new(pac_pins.gpio29.reconfigure()).unwrap();
-
-    let temp_sense_adc4 = hal_adc.take_temp_sensor().unwrap();
+    let adc0 = AdcPin::new(pac_pins.gpio26.into_floating_input()).unwrap();
+    let adc1 = AdcPin::new(pac_pins.gpio27.into_floating_input()).unwrap();
+    let adc2 = AdcPin::new(pac_pins.gpio28.into_floating_input()).unwrap();
+    let adc3 = AdcPin::new(pac_pins.gpio29.into_floating_input()).unwrap();
 
     let acds = Acds {
+      hal_adc,
+      temp_sense,
       adc0,
       adc1,
       adc2,
       adc3,
-      acd4_temp_sense: temp_sense_adc4,
     };
 
     // —————————————————————————————————————————— PWM —————————————————————————————————————————————
@@ -299,7 +352,6 @@ impl Device {
     Self {
       timer,
       watchdog,
-      hal_adc,
       pwms,
       acds,
       inputs,
@@ -360,14 +412,14 @@ impl TimerExt for Timer {
 
 // ————————————————————————————————————————— Adc Tools ———————————————————————————————————————————
 
-pub trait AdcTools {
+pub trait AdcConversion {
   /// Convert raw u16 ADC reading to volts.
   fn to_voltage(&self) -> f32;
   fn to_resistance(&self, ref_res: u32) -> f32;
 }
 
 // Impl for u16, assuming 12-bit ADC (0..=4095) and 3.3 V reference.
-impl AdcTools for u16 {
+impl AdcConversion for u16 {
   fn to_voltage(&self) -> f32 {
     (*self as f32) * ADC_VREF / ADC_MAX
   }
@@ -430,7 +482,7 @@ fn TIMER_IRQ_0() {
 }
 
 // Disabling USB interrupt due to Fault/Bug and keeping polling into IRQ_0
-// This happens even if we blink a simple led in a loop and send a msg though serial
+// This bug happens even if we blink a simple led in a loop and send a msg though serial
 
 // // Polling the USB device to keep the connection alive even if we stall
 // #[pac::interrupt]

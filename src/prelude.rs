@@ -7,7 +7,7 @@ pub use core::fmt::Write;
 
 pub use crate::delay::DELAY;
 pub use crate::device::*;
-pub use crate::device::{AdcTools, Device, TimerExt};
+pub use crate::device::{AdcConversion, Device, TEMP_SENSE_CHN, TimerExt};
 pub use crate::fifo_buffer::{AsStr, FifoBuffer};
 pub use crate::serial_io::SERIAL;
 pub use crate::{print, println};

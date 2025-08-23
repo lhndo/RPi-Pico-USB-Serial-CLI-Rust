@@ -44,7 +44,7 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
   },
   Command {
     name: "sample_adc",
-    desc: "Samples ADC GPIO 26 | [ref_res=10000(ohm)]",
+    desc: "Samples ADC GPIO 26 | [channel=0(u8)] [ref_res=10000(ohm)]",
     func: sample_adc_cmd,
   },
   Command {
@@ -139,7 +139,7 @@ fn blink(device: &mut Context, times: u8) -> Result<()> {
 // —————————————————————————————————————————— Read ADC —————————————————————————————————————————————
 
 fn read_adc_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
-  let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000); // 3s default
+  let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000);
 
   read_adc(device, ref_res)
 }
@@ -151,22 +151,16 @@ fn read_adc(device: &mut Context, ref_res: u32) -> Result<()> {
   let channels_to_read: [u8; _] = [0, 1, 2, 3];
 
   for &channel in &channels_to_read {
-    let adc_raw = match channel {
-      0 => device.hal_adc.read(&mut device.acds.adc0).unwrap(),
-      1 => device.hal_adc.read(&mut device.acds.adc1).unwrap(),
-      2 => device.hal_adc.read(&mut device.acds.adc2).unwrap(),
-      3 => device.hal_adc.read(&mut device.acds.adc3).unwrap(),
-      _ => 0,
-    };
-
-    let adc_vol = adc_raw.to_voltage();
-    let adc_res = adc_raw.to_resistance(ref_res);
-
-    println!("ACD {}: {}, {:.2}V, {:.1}ohm ", channel, adc_raw, adc_vol, adc_res);
+    if let Some(r) = device.acds.read_channel(channel) {
+      let adc_raw = r;
+      let adc_vol = adc_raw.to_voltage();
+      let adc_res = adc_raw.to_resistance(ref_res);
+      println!("ACD {}: {}, {:.2}V, {:.1}ohm ", channel, adc_raw, adc_vol, adc_res);
+    }
   }
 
   // read Temp Sense
-  let adc_raw: u16 = device.hal_adc.read(&mut device.acds.acd4_temp_sense).unwrap();
+  let adc_raw: u16 = device.acds.read_channel(TEMP_SENSE_CHN).unwrap_or(0);
   let adc_vol = adc_raw.to_voltage();
   let adc_res = adc_raw.to_resistance(ref_res);
   let sys_temp = 27.0 - (adc_raw.to_voltage() - 0.706) / 0.001721;
@@ -179,22 +173,27 @@ fn read_adc(device: &mut Context, ref_res: u32) -> Result<()> {
 //GPIO 26
 
 fn sample_adc_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
-  let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000); // 3s default
+  let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000);
+  let channel: u8 = get_parsed_param("channel", args).unwrap_or(0);
 
-  sample_adc(device, ref_res)
+  sample_adc(device, channel, ref_res)
 }
 
-fn sample_adc(device: &mut Context, ref_res: u32) -> Result<()> {
+fn sample_adc(device: &mut Context, channel: u8, ref_res: u32) -> Result<()> {
   println!("---- Sample ADC ----");
   println!("Reference Pullup Resistor: {}ohm", ref_res);
-  println!("ADC 0 GPIO 26\n");
+  println!("ADC Channel: {} \n", { channel });
 
   while !SERIAL.poll_for_break_cmd() {
-    let adc_raw: u16 = device.hal_adc.read(&mut device.acds.adc0).unwrap();
-    let adc_vol = adc_raw.to_voltage();
-    let adc_res = adc_raw.to_resistance(ref_res);
-    println!("> v:{:.2}, ohm:{:.1}, raw:{} \r", adc_vol, adc_res, adc_raw);
-    device.timer.delay_ms(400);
+    if let Some(r) = device.acds.read_channel(channel) {
+      let adc_raw: u16 = r;
+      let adc_vol = adc_raw.to_voltage();
+      let adc_res = adc_raw.to_resistance(ref_res);
+      println!("> v:{:.2}, ohm:{:.1}, raw:{} \r", adc_vol, adc_res, adc_raw);
+      device.timer.delay_ms(400);
+    } else {
+      println!("Cannot read channel: {}", channel);
+    }
   }
 
   println!("Sampling Interrupted. Done!");
