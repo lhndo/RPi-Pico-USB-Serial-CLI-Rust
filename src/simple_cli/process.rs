@@ -100,11 +100,11 @@ impl Cli {
 
   pub fn execute(&mut self, input: &str, device: &mut Device) -> Result<()> {
     let command = split_into_cmd_args(input)?;
-    self.execute_cmd(&command, device)?;
+    self.execute_command(&command, device)?;
     Ok(())
   }
 
-  fn execute_cmd(&mut self, in_cmd: &CmdWithArgs, device: &mut Device) -> Result<()> {
+  fn execute_command(&mut self, in_cmd: &CmdWithArgs, device: &mut Device) -> Result<()> {
     let cmd_name = in_cmd.cmd.as_str();
     let cmd_arg = &in_cmd.args;
 

@@ -144,7 +144,7 @@ impl Serialio {
     self.usb_dev.poll(&mut [&mut self.serial])
   }
 
-  /// Polls serial read buffer for an excape character (INTERRUPT_CHAR - Ctrl+C )
+  /// Polls serial read buffer for an excape character (INTERRUPT_CHAR '~' )
   /// Runs once, non interrupting. Returns true if found.
   /// To be used in loops that need to be interrupted from the command line
   /// WARNING: This will throw away the buffer

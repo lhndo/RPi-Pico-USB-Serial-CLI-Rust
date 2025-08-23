@@ -13,11 +13,10 @@ use crate::serial_io::SERIAL;
 
 use embedded_hal::pwm::SetDutyCycle;
 use rp_pico as bsp;
-use rp_pico::hal::Adc;
 //
 use bsp::hal;
 use bsp::hal::Clock;
-use bsp::hal::adc::{AdcPin, TempSense};
+use bsp::hal::adc::{Adc, AdcPin, TempSense};
 use bsp::hal::fugit::{Duration, ExtU32, MicrosDurationU32};
 use bsp::hal::gpio;
 use bsp::hal::timer::Alarm;
@@ -61,16 +60,8 @@ pub const TEMP_SENSE_CHN: u8 = 255;
 // GPIO 24 - WA extra GPIO / OG internal - Indicator for VBUS presence (high / low output)
 // GPIO 23 - WA extra Button / OG -  Controls on-board SMPS (Switched Power Mode Supply)
 
-#[derive(Clone, Copy, Eq, PartialEq, Debug)]
-pub enum PinType {
-  Input,
-  Output,
-  PwmOut,
-  PWMIn,
-  Adc,
-}
+// ———————————————————————————————————————————— PWM ———————————————————————————————————————————————
 
-// PWM
 pub type Pwm1Type = pwm::Slice<pwm::Pwm1, pwm::FreeRunning>; // gpio 2 A
 pub type Pwm2Type = pwm::Slice<pwm::Pwm2, pwm::FreeRunning>; // gpio 21 B
 pub type Pwm3Type = pwm::Slice<pwm::Pwm3, pwm::FreeRunning>; // gpio 6 A
@@ -81,23 +72,17 @@ pub struct Pwms {
   pub pwm_3: Pwm3Type,
 }
 
-// ADC
-pub type Adc0Type =
-  AdcPin<gpio::Pin<gpio::bank0::Gpio26, gpio::FunctionSio<gpio::SioInput>, gpio::PullNone>>; // gpio 26
-pub type Adc1Type =
-  AdcPin<gpio::Pin<gpio::bank0::Gpio27, gpio::FunctionSio<gpio::SioInput>, gpio::PullNone>>; // gpio 27
-pub type Adc2Type =
-  AdcPin<gpio::Pin<gpio::bank0::Gpio28, gpio::FunctionSio<gpio::SioInput>, gpio::PullNone>>; // gpio 28
-pub type Adc3Type =
-  AdcPin<gpio::Pin<gpio::bank0::Gpio29, gpio::FunctionSio<gpio::SioInput>, gpio::PullNone>>; // gpio 29
+// ———————————————————————————————————————————— ADC ———————————————————————————————————————————————
+
+type AcdPinType<T> = AdcPin<gpio::Pin<T, gpio::FunctionSio<gpio::SioInput>, gpio::PullNone>>;
 
 pub struct Acds {
   pub hal_adc:    Adc,
   pub temp_sense: TempSense,
-  pub adc0:       Adc0Type,
-  pub adc1:       Adc1Type,
-  pub adc2:       Adc2Type,
-  pub adc3:       Adc3Type,
+  pub adc0:       AcdPinType<gpio::bank0::Gpio26>,
+  pub adc1:       AcdPinType<gpio::bank0::Gpio27>,
+  pub adc2:       AcdPinType<gpio::bank0::Gpio28>,
+  pub adc3:       AcdPinType<gpio::bank0::Gpio29>,
 }
 
 impl Acds {
@@ -114,7 +99,7 @@ impl Acds {
   }
 }
 
-// GPIO
+// ——————————————————————————————————————————— GPIO ——————————————————————————————————————————————
 // Inputs
 pub type InputType = gpio::Pin<gpio::DynPinId, gpio::FunctionSio<gpio::SioInput>, gpio::PullUp>;
 
@@ -160,29 +145,6 @@ impl Device {
     let mut watchdog = watchdog::Watchdog::new(pac.WATCHDOG);
     let sio = sio::Sio::new(pac.SIO);
     let pac_pins = gpio::Pins::new(pac.IO_BANK0, pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
-
-    // ———————————————————————————————————————————————————————————————————————————————————————————
-    //                                           Test todo
-    // ———————————————————————————————————————————————————————————————————————————————————————————
-
-    // pins = [
-    //   [pac_pins.gpio0.get_input_override()]
-    // ]
-
-    // let a = pac_pins
-    //   .gpio4
-    //   .into_function::<gpio::FunctionPwm>()
-    //   .into_pull_type::<gpio::PullNone>()
-    //   .into_dyn_pin();
-
-    // let a: gpio::Pin<gpio::DynPinId, gpio::FunctionPwm, gpio::PullNone> =
-    //   pac_pins.gpio4.into_function();
-    // let a = a.into_function::<gpio::FunctionSpi>();
-    // let a = pac_pins.gpio4.into_dyn_pin();
-    // let a = a.into_pull_type::<gpio::PullNone>();
-    // if let Ok(p) = a.try_into_function::<gpio::FunctionPwm>() {
-    //   let a = p;
-    // };
 
     // ————————————————————————————————————————— Clocks ———————————————————————————————————————————
 
@@ -488,5 +450,5 @@ fn TIMER_IRQ_0() {
 // #[pac::interrupt]
 // fn USBCTRL_IRQ() {
 //   SERIAL.poll_usb();
-//   // SERIAL.update_connected();
+//   SERIAL.update_connected();
 // }

@@ -21,7 +21,7 @@ rp2040-rom            = "0.1.0"
 usb-device            = "0.3.2"
 usbd-serial           = "0.2.2"
 nb                    = "1.1.0"
-heapless              = "0.8.0"
+heapless              = "0.9.1"
 
 
 
@@ -46,8 +46,7 @@ overflow-checks  = true
 
 # cargo build/run --release
 [profile.release]
-codegen-units = 1
-# debug            = 2
+codegen-units    = 1
 debug            = false
 debug-assertions = false
 incremental      = false
