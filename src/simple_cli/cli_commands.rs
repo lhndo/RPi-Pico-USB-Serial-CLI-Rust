@@ -49,7 +49,8 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
   },
   Command {
     name: "servo",
-    desc: "Set Servo PWM on GPIO 2 | [us=1500(us)] [pause=2000(ms)]",
+    desc: "Set Servo PWM on GPIO 2 | [us=1500(us)] [pause=1500(ms)] [sweep=false(bool)] \
+           [max_us=2000(u16)]",
     func: servo_cmd,
   },
   Command {
@@ -202,32 +203,63 @@ fn sample_adc(device: &mut Context, channel: u8, ref_res: u32) -> Result<()> {
 }
 
 // —————————————————————————————————————————— Servo —————————————————————————————————————————————
-// GPIO 2 A
+// GPIO 8 pwm4A
+// Angle Controlled RC Servo
 // ex: servo us=1200 pause=1000
-// TODO: refactor
+// ex: servo sweep=true max_us=1800
 
 fn servo_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
   let us: u16 = get_parsed_param("us", args).unwrap_or(1500); //  1500 us default
-  let pause: u16 = get_parsed_param("pause", args).unwrap_or(2000); // 2s default
+  let pause: u16 = get_parsed_param("pause", args).unwrap_or(1500); // 2s default
+  let sweep: bool = get_parsed_param("sweep", args).unwrap_or(false); //  false default
+  let max_us: u16 = get_parsed_param("max_us", args).unwrap_or(2000); //  2000 us default
 
-  servo(device, us, pause)
+  servo(device, us, pause, sweep, max_us)
 }
 
-fn servo(device: &mut Context, us: u16, pause: u16) -> Result<()> {
-  const CYCLE: u16 = 20 * 1000; // 20ms - 50hz
-
+fn servo(device: &mut Context, us: u16, pause: u16, sweep: bool, max_us: u16) -> Result<()> {
   println!("---- Servo ----");
+  println!("GPIO 8 pwm4A");
 
-  let us = if CYCLE <= us { CYCLE } else { us };
-  let pwm_pin = &mut device.pwms.pwm1.get_channel_a(); // GPIO 2 A
+  const FREQ: u32 = 50;
+  const MID: u16 = 1500; // Home position
 
-  println!("Setting PWM to: {}us, {}%  ... ", us, ((us as f32 / CYCLE as f32) * 100.0));
-  pwm_pin.enable();
-  pwm_pin.set_duty_cycle_fraction(us, CYCLE).unwrap();
+  let pwm_slice = &mut device.pwms.pwm4; // GPIO 8 pwm4A
+
+  let max_us = max_us.clamp(MID, max_us);
+  let min_us = (max_us - MID).clamp(1, MID);
+
+  println!("Setting PWM: Duty: {}us, Freq: {}", us, FREQ);
+  pwm_slice.set_freq(FREQ);
+  let pwm_pin = pwm_slice.get_channel_a();
+  pwm_pin.set_duty_cycle_us(us, FREQ);
+  pwm_slice.enable();
+  println!("Moving...");
   device.timer.delay_ms(pause as u32);
-  pwm_pin.disable();
-  println!("Done!");
 
+  if sweep {
+    let pwm_pin = pwm_slice.get_channel_a();
+    println!("Sweeping...");
+    //Max
+    pwm_pin.set_duty_cycle_us(max_us, FREQ);
+    device.timer.delay_ms(pause as u32);
+
+    //Mid
+    pwm_pin.set_duty_cycle_us(MID, FREQ);
+    device.timer.delay_ms(pause as u32);
+
+    //Min
+    pwm_pin.set_duty_cycle_us(min_us, FREQ);
+    device.timer.delay_ms(pause as u32);
+
+    //Mid
+    pwm_pin.set_duty_cycle_us(MID, FREQ);
+    device.timer.delay_ms(pause as u32);
+  }
+
+  //Off
+  pwm_slice.disable();
+  println!("Done!");
   Ok(())
 }
 
@@ -253,44 +285,44 @@ fn set_pwm(
   disable: bool,
 ) -> Result<()> {
   println!("---- PWM ----");
+  println!("GPIO 6 pwm3A");
 
   // TODO implement channel match
   if slice != 3 {
     println!("PWM slice selection not implemented yet. Defaulting to PWM3")
   }
 
-  let pwm = &mut device.pwms.pwm3; // GPIO 6 pwm3A 
+  let pwm_slice = &mut device.pwms.pwm3; // GPIO 6 pwm3A 
 
   if disable {
-    pwm.disable();
+    pwm_slice.disable();
     println!("PWM Pin disabled");
     return Ok(());
   }
 
   // Set PWM
-  pwm.set_ph_correct(phase);
+  pwm_slice.set_ph_correct(phase);
 
   // Set TOP
-  if top > 0 {
-    let top = top.clamp(0, u16::MAX as i32) as u16;
-    pwm.set_top(top);
-  }
+  let top = if top > 0 { top.clamp(0, u16::MAX as i32) as u16 } else { u16::MAX };
+  pwm_slice.set_top(top);
 
   // Set Frequency
-  pwm.set_freq(freq);
+  pwm_slice.set_freq(freq);
+
+  print!("Seting PWM | freq: {}hz, top: {}, phase: {}", freq, top, phase);
 
   // Set Duty
   if us > 0 {
-    pwm.get_channel_a().set_duty_cycle_us(us as u16, freq);
-    println!(", duty {}µs", us);
+    pwm_slice.get_channel_a().set_duty_cycle_us(us as u16, freq);
+    println!("Setting Duty: {}µs", us);
   } else {
     let duty = duty.clamp(0, 100) as u16;
-    pwm.get_channel_a().set_duty_cycle_fraction(duty, 100).unwrap();
-    println!(", duty {}%", duty);
+    pwm_slice.get_channel_a().set_duty_cycle_fraction(duty, 100).unwrap();
+    println!("Setting Duty: {}%", duty);
   }
 
   // End
-  print!("Seting PWM | freq: {}hz, top: {}, phase: {}", freq, top, phase);
-  pwm.enable();
+  pwm_slice.enable();
   Ok(())
 }
