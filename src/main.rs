@@ -5,10 +5,12 @@
 #![no_std]
 #![no_main]
 
+mod adcs;
 mod delay;
 mod device;
 mod fifo_buffer;
 mod prelude;
+mod pwms;
 mod serial_io;
 mod simple_cli;
 

@@ -53,6 +53,7 @@ impl Program {
     println!("\n========= HELLO =========== ");
     let time = device.timer.get_counter().ticks();
     println!("Current timer ticks: {} (T: {})", time, device.timer.print_time());
+    println!("Frequency: {}hz", SYS_CLK_HZ.load(Ordering::Relaxed));
     println!("Type \"help\" for the command lists\n");
   }
 

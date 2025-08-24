@@ -4,11 +4,14 @@
 
 #![allow(unused_imports)]
 pub use core::fmt::Write;
+pub use core::sync::atomic::Ordering;
 
+pub use crate::adcs::{AdcConversion, TEMP_SENSE_CHN};
 pub use crate::delay::DELAY;
 pub use crate::device::*;
-pub use crate::device::{AdcConversion, Device, TEMP_SENSE_CHN, TimerExt};
+pub use crate::device::{Device, TimerExt};
 pub use crate::fifo_buffer::{AsStr, FifoBuffer};
+pub use crate::pwms::PwmChannelExt;
 pub use crate::serial_io::SERIAL;
 pub use crate::{print, println};
 
