@@ -55,6 +55,8 @@ pub fn init(serial: SerialDev, usb_dev: UsbDev) {
 /// Serial Handle for the GLOBAL SERIAL object
 pub struct SerialHandle;
 
+// ————————————————————————————————————— SerialHandle impl ————————————————————————————————————————
+
 impl SerialHandle {
   /// Executes a closure with a mutable reference to the serial peripheral.
   pub fn with_serial<F, R>(&self, f: F) -> R

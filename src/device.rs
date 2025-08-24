@@ -148,7 +148,7 @@ impl Device {
       &mut pac.RESETS,
     ));
 
-    // quick persistent singleton creation
+    // quick singleton static mut creation
     let usb_bus_ref = cortex_m::singleton!(: UsbBusAllocator<usb::UsbBus> = usb_bus).unwrap();
 
     DELAY.us(200);

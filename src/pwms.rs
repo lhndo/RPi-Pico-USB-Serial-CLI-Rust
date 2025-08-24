@@ -43,6 +43,8 @@ impl Pwms {
 //                                            PwmSlice
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
+/// PwmSlice Handler
+/// Set freq, ph_correct, and enable status though its methods, and not directly on the slice member
 pub struct PwmSlice<I>
 where
   I: pwm::SliceId,
@@ -77,7 +79,7 @@ where
     slice
   }
 
-  /// sets frequency and resets duty cycle tp 50%
+  /// Sets pwm slice frequency and resets duty cycle to 50%
   pub fn set_freq(&mut self, freq: u32) {
     self.slice.disable();
 
@@ -146,10 +148,31 @@ pub trait PwmChannelExt {
 }
 
 impl<T: SetDutyCycle> PwmChannelExt for T {
-  fn set_duty_cycle_us(&mut self, us: u16, freq_hz: u32) {
-    let freq_us = (1_000_000 / freq_hz) as u16;
-    let us = us.clamp(0, freq_us - 1);
-    let _ = self.set_duty_cycle_fraction(us, freq_us);
+  fn set_duty_cycle_us(&mut self, duty_us: u16, freq_hz: u32) {
+    let freq_us = if freq_hz > 0 { 1_000_000 / freq_hz } else { 0 };
+
+    if freq_us == 0 && duty_us == 0 {
+      let _ = self.set_duty_cycle(0);
+      return;
+    }
+
+    if duty_us as u32 >= freq_us {
+      let _ = self.set_duty_cycle(self.max_duty_cycle());
+      return;
+    }
+
+    const MAX_U16: u32 = u16::MAX as u32;
+
+    let (num, den) = if freq_us > MAX_U16 {
+      // Period is too large for a u16; scale both values down.
+      let scaler = freq_us / MAX_U16 + 1;
+      ((duty_us as u32 / scaler) as u16, (freq_us / scaler) as u16)
+    } else {
+      // Period fits, no scaling needed.
+      (duty_us, freq_us as u16)
+    };
+
+    let _ = self.set_duty_cycle_fraction(num, den);
   }
 }
 
