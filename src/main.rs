@@ -16,7 +16,6 @@ mod simple_cli;
 
 use device::Device;
 
-use rp_pico as bsp;
 use rp2040_panic_usb_boot as _;
 
 static RUN_STANDALONE: bool = false;
@@ -25,7 +24,7 @@ static RUN_STANDALONE: bool = false;
 //                                              Main
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-#[bsp::entry]
+#[rp_pico::entry]
 fn main() -> ! {
   let mut device = Device::new();
 

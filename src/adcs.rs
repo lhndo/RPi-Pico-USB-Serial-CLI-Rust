@@ -1,10 +1,8 @@
 use crate::device::{ADC_MAX, ADC_VREF};
 
-use rp_pico as bsp;
-//
-use bsp::hal::adc::{Adc, AdcPin, TempSense};
-use bsp::hal::gpio;
 use cortex_m::prelude::_embedded_hal_adc_OneShot;
+use rp_pico::hal::adc::{Adc, AdcPin, TempSense};
+use rp_pico::hal::gpio;
 
 pub const TEMP_SENSE_CHN: u8 = 255;
 

@@ -14,16 +14,14 @@ use crate::pwms::Pwms;
 use crate::serial_io;
 use crate::serial_io::SERIAL;
 
-use rp_pico as bsp;
-//
-use bsp::hal;
-use bsp::hal::Clock;
-use bsp::hal::adc::AdcPin;
-use bsp::hal::fugit::{Duration, ExtU32, MicrosDurationU32};
-use bsp::hal::gpio;
-use bsp::hal::timer::Alarm;
-use bsp::hal::timer::Timer;
-use bsp::hal::{clocks, pac, pac::interrupt, pwm, sio, timer, usb, watchdog};
+use rp_pico::hal;
+use rp_pico::hal::Clock;
+use rp_pico::hal::adc::AdcPin;
+use rp_pico::hal::fugit::{Duration, ExtU32, MicrosDurationU32};
+use rp_pico::hal::gpio;
+use rp_pico::hal::timer::Alarm;
+use rp_pico::hal::timer::Timer;
+use rp_pico::hal::{clocks, pac, pac::interrupt, pwm, sio, timer, usb, watchdog};
 
 use cortex_m::delay::Delay;
 use cortex_m::interrupt::{Mutex, free};
@@ -112,7 +110,7 @@ impl Device {
     // ————————————————————————————————————————— Clocks ———————————————————————————————————————————
 
     let sys_clocks = clocks::init_clocks_and_plls(
-      bsp::XOSC_CRYSTAL_FREQ, // 12Mhz
+      rp_pico::XOSC_CRYSTAL_FREQ, // 12Mhz
       pac.XOSC,
       pac.CLOCKS,
       pac.PLL_SYS,

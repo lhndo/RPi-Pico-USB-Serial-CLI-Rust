@@ -10,9 +10,7 @@ use core::fmt::Write;
 
 use crate::delay::DELAY;
 
-use rp_pico as bsp;
-//
-use bsp::hal::usb::UsbBus;
+use rp_pico::hal::usb::UsbBus;
 
 use cortex_m::interrupt::{Mutex, free};
 use usb_device::UsbError;
@@ -177,7 +175,7 @@ impl Serialio {
           data = &data[written..];
         }
         Err(UsbError::WouldBlock) => {
-          // if we dropped serial we exit
+          // if serial monitor not we exit
           if !self.serial.dtr() {
             return Err(UsbError::WouldBlock);
           }
@@ -313,9 +311,7 @@ impl Write for Serialio {
 macro_rules! print {
     ($($arg:tt)*) => {
         ::cortex_m::interrupt::free(|cs| {
-          // TODO: write only if there is a serial connection
             if let Some(s) = $crate::serial_io::SERIAL_CELL.borrow(cs).borrow_mut().as_mut() {
-                // If we cannot write due to the serial monitor dropping, we let the program continue
                 let _ = s.write_fmt(format_args!($($arg)*));
             }
         })
