@@ -2,10 +2,8 @@ use core::sync::atomic::Ordering;
 
 use crate::device::SYS_CLK_HZ;
 
-use rp_pico as bsp;
-//
-use bsp::hal::pwm;
 use embedded_hal::pwm::SetDutyCycle;
+use rp_pico::hal::pwm;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                              Pwms
@@ -65,7 +63,9 @@ where
   <I as pwm::SliceId>::Reset: pwm::ValidSliceMode<I>,
 {
   pub fn new(
-    slice: pwm::Slice<I, <I as pwm::SliceId>::Reset>, freq: u32, ph_correct: bool,
+    slice: pwm::Slice<I, <I as pwm::SliceId>::Reset>,
+    freq: u32,
+    ph_correct: bool,
   ) -> Self {
     let mut slice = PwmSlice {
       slice,
@@ -190,4 +190,50 @@ pub fn calculate_pwm_dividers(hz: u32, top: u16, phase_correct: bool) -> (u8, u8
   let div_frac = ((clamped_divider - div_int as f32) * 16.0 + 0.5) as u8;
 
   (div_int, div_frac)
+}
+
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+//                                             Macro
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+
+#[macro_export]
+macro_rules! with_pwm_slice {
+  ($self:expr, $id:expr, | $slice:ident | $body:expr) => {
+    match $id {
+      0 => {
+        let $slice = &mut $self.pwm0;
+        $body
+      }
+      1 => {
+        let $slice = &mut $self.pwm1;
+        $body
+      }
+      2 => {
+        let $slice = &mut $self.pwm2;
+        $body
+      }
+      3 => {
+        let $slice = &mut $self.pwm3;
+        $body
+      }
+      4 => {
+        let $slice = &mut $self.pwm4;
+        $body
+      }
+      5 => {
+        let $slice = &mut $self.pwm5;
+        $body
+      }
+      6 => {
+        let $slice = &mut $self.pwm6;
+        $body
+      }
+      7 => {
+        let $slice = &mut $self.pwm7;
+        $body
+      }
+      // ... other match arms
+      _ => panic!("Invalid PWM Slice ID"),
+    }
+  };
 }

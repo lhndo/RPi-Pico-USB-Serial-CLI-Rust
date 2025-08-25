@@ -50,14 +50,14 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
   },
   Command {
     name: "servo",
-    desc: "Set Servo PWM on GPIO 2 \n [us=1500(us)] [pause=1500(ms)] [sweep=false(bool)] \
+    desc: "Set Servo PWM on GPIO 8 \n [us=1500(us)] [pause=1500(ms)] [sweep=false(bool)] \
            [max_us=2000(us)]",
     func: servo_cmd,
   },
   Command {
     name: "set_pwm",
-    desc: "Sets PWM on GPIO 6 \n [slice=3(u8)] [freq=50(hz)] [us=-1(us)] [duty=50(%)] \n \
-           [top=-1(u16)] [phase=false(bool)] [disable=false(bool)]",
+    desc: "Sets PWM on GPIO 6 (default) \n [pwm_id=3(id)] [channel=a(a/b)] [freq=50(hz)] \
+           [us=-1(us)] [duty=50(%)] \n [top=-1(u16)] [phase=false(bool)] [disable=false(bool)]",
     func: set_pwm_cmd,
   },
 ];
@@ -226,51 +226,52 @@ fn servo(device: &mut Context, us: u16, pause: u32, sweep: bool, max_us: u16) ->
   const FREQ: u32 = 50;
   const MID: u16 = 1500; // Home position
 
-  let pwm_slice = &mut device.pwms.pwm4; // GPIO 8 pwm4A
+  let servo_pwm = &mut device.pwms.pwm4; // GPIO 8 pwm4A
 
   let max_us = max_us.clamp(MID, max_us);
   let min_us = (max_us - MID).clamp(1, MID);
 
   println!("Setting PWM: Duty: {}us, Freq: {}", us, FREQ);
-  pwm_slice.set_freq(FREQ);
-  let pwm_pin = pwm_slice.get_channel_a();
-  pwm_pin.set_duty_cycle_us(us, FREQ);
-  pwm_slice.enable();
+  servo_pwm.set_freq(FREQ);
+  let servo_pin = servo_pwm.get_channel_a();
+  servo_pin.set_duty_cycle_us(us, FREQ);
+  servo_pwm.enable();
   println!("Moving...");
   device.timer.delay_ms(pause);
 
   if sweep {
-    let pwm_pin = pwm_slice.get_channel_a();
+    // resetting borrow
+    let servo_pin = servo_pwm.get_channel_a();
     println!("Sweeping...");
     //Max
-    pwm_pin.set_duty_cycle_us(max_us, FREQ);
+    servo_pin.set_duty_cycle_us(max_us, FREQ);
     device.timer.delay_ms(pause);
 
     //Mid
-    pwm_pin.set_duty_cycle_us(MID, FREQ);
+    servo_pin.set_duty_cycle_us(MID, FREQ);
     device.timer.delay_ms(pause);
 
     //Min
-    pwm_pin.set_duty_cycle_us(min_us, FREQ);
+    servo_pin.set_duty_cycle_us(min_us, FREQ);
     device.timer.delay_ms(pause);
 
     //Mid
-    pwm_pin.set_duty_cycle_us(MID, FREQ);
+    servo_pin.set_duty_cycle_us(MID, FREQ);
     device.timer.delay_ms(pause);
   }
 
   //Off
-  pwm_slice.disable();
+  servo_pwm.disable();
   println!("Done!");
   Ok(())
 }
 
 // —————————————————————————————————————————— Set PWM —————————————————————————————————————————————
 // GPIO 6 pwm3A
-// ex:
 
 fn set_pwm_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
-  let slice: u8 = get_parsed_param("slice", args).unwrap_or(3); //  -1 eq not set
+  let pwm_id: usize = get_parsed_param("pwm_id", args).unwrap_or(3); //  -1 eq not set
+  let channel = get_str_param("channel", args).unwrap_or("a"); // false
   let us: i32 = get_parsed_param("us", args).unwrap_or(-1); //  -1 eq not set
   let duty: u8 = get_parsed_param("duty", args).unwrap_or(50); //  50% default
   let freq: u32 = get_parsed_param("freq", args).unwrap_or(50); // hz
@@ -278,24 +279,39 @@ fn set_pwm_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
   let phase: bool = get_parsed_param("phase", args).unwrap_or(false); // 
   let disable: bool = get_parsed_param("disable", args).unwrap_or(false); // false
 
-  set_pwm(device, slice, us, duty, freq, top, phase, disable)
-}
-
-#[allow(clippy::too_many_arguments)]
-fn set_pwm(
-  device: &mut Context, slice: u8, us: i32, duty: u8, freq: u32, top: i32, phase: bool,
-  disable: bool,
-) -> Result<()> {
-  println!("---- PWM ----");
-  println!("GPIO 6 pwm3A");
-
-  // TODO implement channel match
-  if slice != 3 {
-    println!("PWM slice selection not implemented yet. Defaulting to PWM3")
+  if channel != "a" && channel != "b" {
+    println!("Channel can be only a or b");
+    return Err(CliError::Exit);
   }
 
-  let pwm_slice = &mut device.pwms.pwm3; // GPIO 6 pwm3A 
+  println!("---- PWM ----");
+  println!("PWM: {pwm_id}, channel: {channel}");
 
+  // Using a 'with' macro to be able to select the PWM slice
+  // In a regular program you would use the pwm slice directly
+  with_pwm_slice!(&mut device.pwms, pwm_id, |pwm_slice| {
+    set_pwm(pwm_slice, channel, us, duty, freq, top, phase, disable)
+  })
+}
+
+use rp_pico::hal::pwm;
+
+#[allow(clippy::too_many_arguments)]
+fn set_pwm<I>(
+  pwm_slice: &mut crate::pwms::PwmSlice<I>,
+  channel: &str,
+  us: i32,
+  duty: u8,
+  freq: u32,
+  top: i32,
+  phase: bool,
+  disable: bool,
+) -> Result<()>
+where
+  I: pwm::SliceId,
+  <I as pwm::SliceId>::Reset: pwm::ValidSliceMode<I>,
+{
+  //
   if disable {
     pwm_slice.disable();
     println!("PWM Pin disabled");
@@ -303,28 +319,45 @@ fn set_pwm(
   }
 
   // Set PWM
-  pwm_slice.set_ph_correct(phase);
+  if pwm_slice.ph_correct != phase {
+    pwm_slice.set_ph_correct(phase);
+  }
 
   // Set TOP
   let top = if top > 0 { top.clamp(0, u16::MAX as i32) as u16 } else { u16::MAX };
-  pwm_slice.set_top(top);
+  if pwm_slice.slice.get_top() != top {
+    pwm_slice.set_top(top);
+  }
 
   // Set Frequency
-  pwm_slice.set_freq(freq);
+  if pwm_slice.freq != freq {
+    pwm_slice.set_freq(freq);
+  }
 
-  print!("Seting PWM | freq: {}hz, top: {}, phase: {}", freq, top, phase);
+  print!("Seting PWM | freq: {}hz, top: {}, phase: {} ", freq, top, phase);
 
   // Set Duty
   if us > 0 {
-    pwm_slice.get_channel_a().set_duty_cycle_us(us as u16, freq);
-    println!("Setting Duty: {}µs", us);
+    if channel == "a" {
+      pwm_slice.get_channel_a().set_duty_cycle_us(us as u16, freq);
+    } else {
+      pwm_slice.get_channel_b().set_duty_cycle_us(us as u16, freq);
+    }
+
+    println!("duty: {}µs", us);
   } else {
     let duty = duty.clamp(0, 100) as u16;
-    pwm_slice.get_channel_a().set_duty_cycle_fraction(duty, 100).unwrap();
-    println!("Setting Duty: {}%", duty);
+    if channel == "a" {
+      pwm_slice.get_channel_a().set_duty_cycle_fraction(duty, 100).unwrap();
+    } else {
+      pwm_slice.get_channel_b().set_duty_cycle_fraction(duty, 100).unwrap();
+    }
+
+    println!("duty: {}%", duty);
   }
 
   // End
   pwm_slice.enable();
+
   Ok(())
 }
