@@ -9,7 +9,7 @@ use super::*;
 //                                         Commands List
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-const NUM_COMMANDS: usize = 9;
+const NUM_COMMANDS: usize = 10;
 
 pub const CMDS: [Command; NUM_COMMANDS] = [
   Command {
@@ -59,6 +59,11 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
     desc: "Sets PWM on GPIO 6 (default) \n [pwm_id=3(id)] [channel=a(a/b)] [freq=50(hz)] \
            [us=-1(us)] [duty=50(%)] \n [top=-1(u16)] [phase=false(bool)] [disable=false(bool)]",
     func: set_pwm_cmd,
+  },
+  Command {
+    name: "panic_test",
+    desc: "Panics the program. On the next serial connection, the panic msg is printed",
+    func: panic_test_cmd,
   },
 ];
 
@@ -360,4 +365,11 @@ where
   pwm_slice.enable();
 
   Ok(())
+}
+
+// ——————————————————————————————————————————— Panic Test ———————————————————————————————————————————
+
+fn panic_test_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+  print!("\n On the next boot you should see the msg \"PANIC TEST\"\n Panicking.... :O\n");
+  panic!("PANIC TEST");
 }

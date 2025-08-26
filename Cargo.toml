@@ -16,12 +16,13 @@ rp-pico      = "0.9.0"
 # panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 # panic-halt            = "*"
 # panic-probe = { version = "1.0.0" }
-rp2040-panic-usb-boot = "0.6.0"
-rp2040-rom            = "0.1.0"
-usb-device            = "0.3.2"
-usbd-serial           = "0.2.2"
-nb                    = "1.1.0"
-heapless              = "0.9.1"
+# rp2040-panic-usb-boot = "0.6.0"
+rp2040-rom    = "0.1.0"
+usb-device    = "0.3.2"
+usbd-serial   = "0.2.2"
+nb            = "1.1.0"
+heapless      = "0.9.1"
+panic-persist = "0.3.0"
 
 
 

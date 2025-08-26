@@ -50,6 +50,12 @@ impl Program {
 
     SERIAL.set_connected(true);
 
+    // Displaying last panic msg
+    if let Some(msg) = panic_persist::get_panic_message_bytes() {
+      println!("\n========= PANIC ===========");
+      println!("{}", msg.as_str());
+    }
+
     println!("\n========= HELLO =========== ");
     let time = device.timer.get_counter().ticks();
     println!("Current timer ticks: {} (T: {})", time, device.timer.print_time());
