@@ -35,7 +35,7 @@ use rp_pico::hal::{clocks, pac, pac::interrupt, pwm, sio, timer, usb, watchdog};
 use cortex_m::delay::Delay;
 use cortex_m::interrupt::{Mutex, free};
 use cortex_m::prelude::*;
-use heapless::{String, Vec};
+use heapless::String;
 use usb_device::class_prelude::*;
 use usb_device::prelude::*;
 use usbd_serial::SerialPort;
@@ -45,7 +45,6 @@ use usbd_serial::SerialPort;
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub const SYS_CLK_HZ: u32 = 125_000_000;
-pub const NUM_MAX_DEF_PINS: usize = 15; // max number of input or output pins stored in the device
 pub const ADC_BITS: u32 = 12;
 pub const ADC_MAX: f32 = ((1 << ADC_BITS) - 1) as f32;
 pub const ADC_VREF: f32 = 3.3;
@@ -66,8 +65,8 @@ pub struct Device {
   pub watchdog: watchdog::Watchdog,
   pub pwms:     Pwms,
   pub acds:     Acds,
-  pub inputs:   IoPins<InputType, NUM_MAX_DEF_PINS>,
-  pub outputs:  IoPins<OutputType, NUM_MAX_DEF_PINS>,
+  pub inputs:   IoPins<InputType>,
+  pub outputs:  IoPins<OutputType>,
 }
 
 impl Device {
@@ -145,10 +144,11 @@ impl Device {
 
     // Init SERIAL global
     serial_io::init(serial, usb_dev);
+    SERIAL.poll_usb();
 
     // ————————————————————————————————————————— Interrupts ———————————————————————————————————————
 
-    // Using it as an USB interrupt
+    // Using as an USB interrupt
     let mut alarm0 = timer.alarm_0().unwrap();
     alarm0.schedule(INTERRUPT_0_US).unwrap();
     alarm0.enable_interrupt();
@@ -195,20 +195,20 @@ impl Device {
     // ———————————————————————————————————————— GP Pins ———————————————————————————————————————————
 
     //Inputs
-    let input_pins: Vec<InputType, _> = Vec::from_array([
+    let input_pins: [InputType; _] = [
       pins.gpio9.into_pull_up_input().into_dyn_pin(),
       pins.gpio20.into_pull_up_input().into_dyn_pin(),
       pins.gpio22.into_pull_up_input().into_dyn_pin(),
       pins.gpio23.into_pull_up_input().into_dyn_pin(), // button on WeAct RP2040
-    ]);
+    ];
 
     // Outputs
-    let output_pins: Vec<OutputType, _> = Vec::from_array([
+    let output_pins: [OutputType; _] = [
       pins.gpio0.into_push_pull_output().into_dyn_pin(),
       pins.gpio1.into_push_pull_output().into_dyn_pin(),
       pins.gpio3.into_push_pull_output().into_dyn_pin(),
       pins.gpio25.into_push_pull_output().into_dyn_pin(), // led
-    ]);
+    ];
 
     let inputs = IoPins::new(input_pins);
     let outputs = IoPins::new(output_pins);
