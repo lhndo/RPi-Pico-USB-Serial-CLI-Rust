@@ -1,5 +1,3 @@
-use core::sync::atomic::Ordering;
-
 use crate::device::SYS_CLK_HZ;
 
 use embedded_hal::pwm::SetDutyCycle;
@@ -183,7 +181,7 @@ impl<T: SetDutyCycle> PwmChannelExt for T {
 /// Calculates pwm int and frac clock dividers based on sys clock, top, and desired hz frequency
 pub fn calculate_pwm_dividers(hz: u32, top: u16, phase_correct: bool) -> (u8, u8) {
   let hz = if phase_correct { hz * 2 } else { hz };
-  let divider = SYS_CLK_HZ.load(Ordering::Relaxed) as f32 / (hz as f32 * (top as f32 + 1.0));
+  let divider = SYS_CLK_HZ as f32 / (hz as f32 * (top as f32 + 1.0));
   let clamped_divider = divider.clamp(1.0, 255.9375);
 
   let div_int = (clamped_divider + 0.5) as u8;

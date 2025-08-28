@@ -9,6 +9,7 @@ mod adcs;
 mod delay;
 mod device;
 mod fifo_buffer;
+mod gpios;
 mod prelude;
 mod pwms;
 mod serial_io;

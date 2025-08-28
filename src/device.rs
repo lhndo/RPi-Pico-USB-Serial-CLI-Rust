@@ -3,13 +3,22 @@
 //                                           Device
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
+//
+// RPi Pico           - https://cdn-shop.adafruit.com/970x728/4864-04.png
+//WeAct Studio RP2040 - https://mischianti.org/wp-content/uploads/2022/09/weact-studio-rp2040-raspberry-pi-pico-alternative-pinout-high-resolution.png
+//
+// GPIO 29 - WA extra GPIO (Analog) / RP Pico internal - ADC (ADC3) for measuring VSYS
+// GPIO 25 - internal - LED
+// GPIO 24 - WA extra GPIO / RP Pico internal - Indicator for VBUS presence (high / low output)
+// GPIO 23 - WA extra Button / RP Pico -  Controls on-board SMPS (Switched Power Mode Supply)
+
 use core::cell::RefCell;
 use core::fmt::Write;
-use core::sync::atomic::{AtomicU32, Ordering};
 
 use crate::adcs::Acds;
 use crate::delay;
 use crate::delay::DELAY;
+use crate::gpios::{InputType, IoPins, OutputType};
 use crate::pwms::Pwms;
 use crate::serial_io;
 use crate::serial_io::SERIAL;
@@ -18,7 +27,7 @@ use rp_pico::hal;
 use rp_pico::hal::Clock;
 use rp_pico::hal::adc::AdcPin;
 use rp_pico::hal::fugit::{Duration, ExtU32, MicrosDurationU32};
-use rp_pico::hal::gpio;
+use rp_pico::hal::gpio::{self};
 use rp_pico::hal::timer::Alarm;
 use rp_pico::hal::timer::Timer;
 use rp_pico::hal::{clocks, pac, pac::interrupt, pwm, sio, timer, usb, watchdog};
@@ -26,7 +35,7 @@ use rp_pico::hal::{clocks, pac, pac::interrupt, pwm, sio, timer, usb, watchdog};
 use cortex_m::delay::Delay;
 use cortex_m::interrupt::{Mutex, free};
 use cortex_m::prelude::*;
-use heapless::String;
+use heapless::{String, Vec};
 use usb_device::class_prelude::*;
 use usb_device::prelude::*;
 use usbd_serial::SerialPort;
@@ -35,51 +44,18 @@ use usbd_serial::SerialPort;
 //                                           Globals
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-// pub const SYS_CLK_HZ: u32 = 120_000_000;
+pub const SYS_CLK_HZ: u32 = 125_000_000;
+pub const NUM_MAX_DEF_PINS: usize = 15; // max number of input or output pins stored in the device
 pub const ADC_BITS: u32 = 12;
 pub const ADC_MAX: f32 = ((1 << ADC_BITS) - 1) as f32;
 pub const ADC_VREF: f32 = 3.3;
-pub const PWM_TOP: u16 = u16::MAX; // Standard 16-bit resolution
 
-pub static SYS_CLK_HZ: AtomicU32 = AtomicU32::new(0);
+//Pin Aliases
+pub const LED: usize = 25;
+pub const BUTTON: usize = 23; // WeAct RP
 
 static ALARM_0: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(None));
 const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(10_000); // 100ms - 10hz
-
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-//                                        Device Struct
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-//
-// RPi Pico - https://randomnerdtutorials.com/raspberry-pi-pico-w-pinout-gpios/
-//             https://cdn-shop.adafruit.com/970x728/4864-04.png
-//WeAct Studio RP2040 - https://mischianti.org/weact-studio-rp2040-high-resolution-pinout-and-specs/
-// https://mischianti.org/wp-content/uploads/2022/09/weact-studio-rp2040-raspberry-pi-pico-alternative-pinout-high-resolution.png
-//
-// GPIO 29 - WA extra GPIO (Analog) / RP Pico internal - ADC (ADC3) for measuring VSYS
-// GPIO 25 - internal - LED
-// GPIO 24 - WA extra GPIO / RP Pico internal - Indicator for VBUS presence (high / low output)
-// GPIO 23 - WA extra Button / RP Pico -  Controls on-board SMPS (Switched Power Mode Supply)
-
-// ——————————————————————————————————————————— GPIO ——————————————————————————————————————————————
-// Inputs
-pub type InputType = gpio::Pin<gpio::DynPinId, gpio::FunctionSio<gpio::SioInput>, gpio::PullUp>;
-
-pub struct Inputs {
-  pub button: InputType, // internal 23
-  pub input1: InputType, // gpio 22
-  pub input2: InputType, // gpio 20
-  pub input3: InputType, // gpio 9
-}
-
-pub type OutputType = gpio::Pin<gpio::DynPinId, gpio::FunctionSio<gpio::SioOutput>, gpio::PullDown>;
-
-// Outputs
-pub struct Outputs {
-  pub led:     OutputType, // internal 25
-  pub output1: OutputType, // gpio 0
-  pub output2: OutputType, // gpio 1
-  pub output3: OutputType, // gpio 3
-}
 
 // ———————————————————————————————————————————————————————————————————————————————————————————————
 //                                         Device Struct
@@ -90,8 +66,8 @@ pub struct Device {
   pub watchdog: watchdog::Watchdog,
   pub pwms:     Pwms,
   pub acds:     Acds,
-  pub inputs:   Inputs,
-  pub outputs:  Outputs,
+  pub inputs:   IoPins<InputType, NUM_MAX_DEF_PINS>,
+  pub outputs:  IoPins<OutputType, NUM_MAX_DEF_PINS>,
 }
 
 impl Device {
@@ -105,7 +81,7 @@ impl Device {
     let core = pac::CorePeripherals::take().unwrap();
     let mut watchdog = watchdog::Watchdog::new(pac.WATCHDOG);
     let sio = sio::Sio::new(pac.SIO);
-    let pac_pins = gpio::Pins::new(pac.IO_BANK0, pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
+    let pins = gpio::Pins::new(pac.IO_BANK0, pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
 
     // ————————————————————————————————————————— Clocks ———————————————————————————————————————————
 
@@ -122,7 +98,6 @@ impl Device {
     .unwrap();
 
     let sys_clk_hz: u32 = sys_clocks.system_clock.freq().to_Hz();
-    SYS_CLK_HZ.store(sys_clk_hz, Ordering::Relaxed);
 
     // ————————————————————————————————————————— Timer ————————————————————————————————————————————
 
@@ -171,21 +146,9 @@ impl Device {
     // Init SERIAL global
     serial_io::init(serial, usb_dev);
 
-    // ————————————————————————————————————— USB Interrupt ————————————————————————————————————————
-
-    // Disabling USB interrupt due to Fault/Bug and keeping polling into IRQ_0
-    // This bug  happens even if we blink a simple led in a loop and send a msg though serial
-
-    // // Enable the USB interrupt
-    // unsafe {
-    //   pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
-    // };
-
-    // Priming USB connection
-    SERIAL.poll_usb();
-
     // ————————————————————————————————————————— Interrupts ———————————————————————————————————————
 
+    // Using it as an USB interrupt
     let mut alarm0 = timer.alarm_0().unwrap();
     alarm0.schedule(INTERRUPT_0_US).unwrap();
     alarm0.enable_interrupt();
@@ -203,10 +166,11 @@ impl Device {
 
     let mut hal_adc = hal::Adc::new(pac.ADC, &mut pac.RESETS); // Needs to be set after clocks
     let temp_sense = hal_adc.take_temp_sensor().unwrap();
-    let adc0 = AdcPin::new(pac_pins.gpio26.into_floating_input()).unwrap();
-    let adc1 = AdcPin::new(pac_pins.gpio27.into_floating_input()).unwrap();
-    let adc2 = AdcPin::new(pac_pins.gpio28.into_floating_input()).unwrap();
-    let adc3 = AdcPin::new(pac_pins.gpio29.into_floating_input()).unwrap();
+
+    let adc0 = AdcPin::new(pins.gpio26).unwrap();
+    let adc1 = AdcPin::new(pins.gpio27).unwrap();
+    let adc2 = AdcPin::new(pins.gpio28).unwrap();
+    let adc3 = AdcPin::new(pins.gpio29).unwrap();
 
     let acds = Acds {
       hal_adc,
@@ -222,37 +186,32 @@ impl Device {
     let pwm_slices = pwm::Slices::new(pac.PWM, &mut pac.RESETS);
     let mut pwms = Pwms::new(pwm_slices, 50);
 
-    pwms.pwm2.get_channel_b().output_to(pac_pins.gpio21);
-    pwms.pwm3.get_channel_a().output_to(pac_pins.gpio6);
-    pwms.pwm4.get_channel_a().output_to(pac_pins.gpio8);
+    // TODO: feed the pins into new and have them setup automatically
 
-    // —————————————————————————————————————————— Pins ————————————————————————————————————————————
+    pwms.pwm2.get_channel_b().output_to(pins.gpio21);
+    pwms.pwm3.get_channel_a().output_to(pins.gpio6);
+    pwms.pwm4.get_channel_a().output_to(pins.gpio8);
 
-    // Inputs
-    let button: InputType = pac_pins.gpio23.into_pull_up_input().into_dyn_pin();
-    let input1: InputType = pac_pins.gpio20.into_pull_up_input().into_dyn_pin();
-    let input2: InputType = pac_pins.gpio22.into_pull_up_input().into_dyn_pin();
-    let input3: InputType = pac_pins.gpio9.into_pull_up_input().into_dyn_pin();
+    // ———————————————————————————————————————— GP Pins ———————————————————————————————————————————
 
-    let inputs = Inputs {
-      button,
-      input1,
-      input2,
-      input3,
-    };
+    //Inputs
+    let input_pins: Vec<InputType, _> = Vec::from_array([
+      pins.gpio9.into_pull_up_input().into_dyn_pin(),
+      pins.gpio20.into_pull_up_input().into_dyn_pin(),
+      pins.gpio22.into_pull_up_input().into_dyn_pin(),
+      pins.gpio23.into_pull_up_input().into_dyn_pin(), // button on WeAct RP2040
+    ]);
 
     // Outputs
-    let led: OutputType = pac_pins.gpio25.into_push_pull_output().into_dyn_pin();
-    let output1: OutputType = pac_pins.gpio0.into_push_pull_output().into_dyn_pin();
-    let output2: OutputType = pac_pins.gpio1.into_push_pull_output().into_dyn_pin();
-    let output3: OutputType = pac_pins.gpio3.into_push_pull_output().into_dyn_pin();
+    let output_pins: Vec<OutputType, _> = Vec::from_array([
+      pins.gpio0.into_push_pull_output().into_dyn_pin(),
+      pins.gpio1.into_push_pull_output().into_dyn_pin(),
+      pins.gpio3.into_push_pull_output().into_dyn_pin(),
+      pins.gpio25.into_push_pull_output().into_dyn_pin(), // led
+    ]);
 
-    let outputs = Outputs {
-      led,
-      output1,
-      output2,
-      output3,
-    };
+    let inputs = IoPins::new(input_pins);
+    let outputs = IoPins::new(output_pins);
 
     // —————————————————————————————————————— Construct ———————————————————————————————————————————
 
@@ -350,13 +309,3 @@ fn TIMER_IRQ_0() {
     };
   })
 }
-
-// Disabling USB interrupt due to Fault/Bug and keeping polling into IRQ_0
-// This bug happens even if we blink a simple led in a loop and send a msg though serial
-
-// // Polling the USB device to keep the connection alive even if we stall
-// #[pac::interrupt]
-// fn USBCTRL_IRQ() {
-//   SERIAL.poll_usb();
-//   SERIAL.update_connected();
-// }

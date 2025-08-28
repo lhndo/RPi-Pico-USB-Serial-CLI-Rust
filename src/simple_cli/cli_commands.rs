@@ -9,7 +9,7 @@ use super::*;
 //                                         Commands List
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-const NUM_COMMANDS: usize = 10;
+const NUM_COMMANDS: usize = 11;
 
 pub const CMDS: [Command; NUM_COMMANDS] = [
   Command {
@@ -64,6 +64,11 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
     name: "panic_test",
     desc: "Panics the program. On the next serial connection, the panic msg is printed",
     func: panic_test_cmd,
+  },
+  Command {
+    name: "test_gpio",
+    desc: "Sets gpio0 high if gpio9 is low",
+    func: test_gpio_cmd,
   },
 ];
 
@@ -131,12 +136,13 @@ fn blink_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
 // Separating functions from commands for stand alone use
 fn blink(device: &mut Context, times: u8) -> Result<()> {
   println!("---- Blinking Led! ----");
+  let led = &mut device.outputs.get_pin(LED).unwrap();
 
   for n in 1..(times + 1) {
     print!("Blink {} | ", n);
-    device.outputs.led.set_high().unwrap();
+    led.set_high().unwrap();
     device.timer.delay_ms(200);
-    device.outputs.led.set_low().unwrap();
+    led.set_low().unwrap();
     device.timer.delay_ms(200);
   }
 
@@ -299,6 +305,7 @@ fn set_pwm_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
   })
 }
 
+use embedded_hal::digital::InputPin;
 use rp_pico::hal::pwm;
 
 #[allow(clippy::too_many_arguments)]
@@ -372,4 +379,25 @@ where
 fn panic_test_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
   print!("\n On the next boot you should see the msg \"PANIC TEST\"\n Panicking.... :O\n");
   panic!("PANIC TEST");
+}
+
+// ————————————————————————————————————————— Test GPIO ————————————————————————————————————————————
+
+fn test_gpio_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+  println!("---- Testing GPIO ----");
+  println!("Send '~' to exit");
+
+  let input = &mut device.inputs.get_pin(9).unwrap();
+  let output = &mut device.outputs.get_pin(0).unwrap();
+
+  while !SERIAL.poll_for_break_cmd() {
+    if input.is_low().unwrap() {
+      output.set_high().unwrap();
+    } else {
+      output.set_low().unwrap();
+    }
+  }
+
+  println!("Done!");
+  Ok(())
 }

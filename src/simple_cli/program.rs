@@ -33,8 +33,9 @@ impl Program {
 
   pub fn init(&mut self, device: &mut Device) {
     // Blocking wait until we receive a serial monitor connection
+    let led = device.outputs.get_pin(LED).unwrap();
     while !SERIAL.get_drt() {
-      device.outputs.led.toggle().unwrap();
+      led.toggle().unwrap();
       SERIAL.poll_usb();
       DELAY.ms(80);
     }
@@ -42,9 +43,9 @@ impl Program {
     // Blink leds four times to notify
     // This also warms up the USB device, which otherwise will skip the print msg below
     for _ in 0..4 {
-      device.outputs.led.set_low().unwrap();
+      led.set_low().unwrap();
       device.timer.delay_ms(200);
-      device.outputs.led.set_high().unwrap();
+      led.set_high().unwrap();
       device.timer.delay_ms(200);
     }
 
@@ -59,14 +60,15 @@ impl Program {
     println!("\n========= HELLO =========== ");
     let time = device.timer.get_counter().ticks();
     println!("Current timer ticks: {} (T: {})", time, device.timer.print_time());
-    println!("Frequency: {}hz", SYS_CLK_HZ.load(Ordering::Relaxed));
+    println!("Frequency: {}hz", SYS_CLK_HZ);
     println!("Type \"help\" for the command lists\n");
   }
 
   // ———————————————————————————————————————————— Run ———————————————————————————————————————————————
 
   pub fn run(&mut self, device: &mut Device) {
-    device.outputs.led.set_high().unwrap();
+    let led = device.outputs.get_pin(LED).unwrap();
+    led.set_high().unwrap();
 
     let mut cli = Cli::new(&CMDS);
 
@@ -109,10 +111,11 @@ impl Program {
         print!("\n========= DONE =========== (T: {}) \n", device.timer.print_time());
       }
 
+      let led = device.outputs.get_pin(LED).unwrap();
       for _ in 0..3 {
-        device.outputs.led.set_low().unwrap();
+        led.set_low().unwrap();
         device.timer.delay_ms(50);
-        device.outputs.led.set_high().unwrap();
+        led.set_high().unwrap();
         device.timer.delay_ms(50);
       }
     }
