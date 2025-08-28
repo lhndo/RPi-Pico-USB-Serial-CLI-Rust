@@ -8,7 +8,7 @@
 //WeAct Studio RP2040 - https://mischianti.org/wp-content/uploads/2022/09/weact-studio-rp2040-raspberry-pi-pico-alternative-pinout-high-resolution.png
 //
 // GPIO 29 - WA extra GPIO (Analog) / RP Pico internal - ADC (ADC3) for measuring VSYS
-// GPIO 25 - internal - LED
+// GPIO 25 - Internal LED
 // GPIO 24 - WA extra GPIO / RP Pico internal - Indicator for VBUS presence (high / low output)
 // GPIO 23 - WA extra Button / RP Pico -  Controls on-board SMPS (Switched Power Mode Supply)
 
@@ -54,7 +54,7 @@ pub const LED: usize = 25;
 pub const BUTTON: usize = 23; // WeAct RP
 
 static ALARM_0: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(None));
-const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(10_000); // 100ms - 10hz
+const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(10_000); // 10ms - 10hz
 
 // ———————————————————————————————————————————————————————————————————————————————————————————————
 //                                         Device Struct
@@ -96,8 +96,6 @@ impl Device {
     .ok()
     .unwrap();
 
-    let sys_clk_hz: u32 = sys_clocks.system_clock.freq().to_Hz();
-
     // ————————————————————————————————————————— Timer ————————————————————————————————————————————
 
     let mut timer = Timer::new(pac.TIMER, &mut pac.RESETS, &sys_clocks);
@@ -106,12 +104,12 @@ impl Device {
 
     let delay = Delay::new(core.SYST, sys_clocks.system_clock.freq().to_Hz());
 
-    // Init DELAY global
+    // Init DELAY Global
     delay::init(delay);
 
     // ———————————————————————————————————————— USB Bus ———————————————————————————————————————————
 
-    // usb bus used to create serial and usb_device then into >> serialio
+    // UsbBus used for creation of Serial and UsbDevice
     let usb_bus = UsbBusAllocator::new(usb::UsbBus::new(
       pac.USBCTRL_REGS,
       pac.USBCTRL_DPRAM,
@@ -120,17 +118,20 @@ impl Device {
       &mut pac.RESETS,
     ));
 
-    // quick singleton static mut creation
+    // Storing UsbBus into a singleton and getting a mutable reference
     let usb_bus_ref = cortex_m::singleton!(: UsbBusAllocator<usb::UsbBus> = usb_bus).unwrap();
 
+    // Small pause for initialisation
     DELAY.us(200);
 
     // ————————————————————————————————————— Serial Device ————————————————————————————————————————
 
-    let serial = SerialPort::new(usb_bus_ref); // Needs to be set before usb_dev
+    // SerialPort needs to be created before UsbDev and requires a reference to the UsbBus
+    let serial_port = SerialPort::new(usb_bus_ref);
 
     // ——————————————————————————————————————— Usb Device —————————————————————————————————————————
 
+    // Usb Device creation using the UsbBus
     let usb_dev = UsbDeviceBuilder::new(usb_bus_ref, UsbVidPid(0x16c0, 0x27dd))
       .strings(&[StringDescriptors::default()
         .manufacturer("LH_Eng")
@@ -142,13 +143,14 @@ impl Device {
 
     // ————————————————————————————————————— SERIAL Handle ————————————————————————————————————————
 
-    // Init SERIAL global
-    serial_io::init(serial, usb_dev);
+    // Init SERIAL Global
+    // This is the main interface for interacting with the Serial and the Usb Device
+    serial_io::init(serial_port, usb_dev);
     SERIAL.poll_usb();
 
     // ————————————————————————————————————————— Interrupts ———————————————————————————————————————
 
-    // Using as an USB interrupt
+    // Creating an interrupt for keeping the Usb connection alive by polling every 10ms
     let mut alarm0 = timer.alarm_0().unwrap();
     alarm0.schedule(INTERRUPT_0_US).unwrap();
     alarm0.enable_interrupt();
@@ -164,9 +166,12 @@ impl Device {
 
     // —————————————————————————————————————————— ADC —————————————————————————————————————————————
 
+    // The hal_adc is the main gateway for interracting with the ADC
+    // We store it in device.acds.hal_adc
     let mut hal_adc = hal::Adc::new(pac.ADC, &mut pac.RESETS); // Needs to be set after clocks
     let temp_sense = hal_adc.take_temp_sensor().unwrap();
 
+    // Analog pins assigned to the Adc channels
     let adc0 = AdcPin::new(pins.gpio26).unwrap();
     let adc1 = AdcPin::new(pins.gpio27).unwrap();
     let adc2 = AdcPin::new(pins.gpio28).unwrap();
@@ -184,30 +189,31 @@ impl Device {
     // —————————————————————————————————————————— PWM —————————————————————————————————————————————
 
     let pwm_slices = pwm::Slices::new(pac.PWM, &mut pac.RESETS);
+
+    // device.pwms is the main interface for the pwm channels
     let mut pwms = Pwms::new(pwm_slices, 50);
 
-    // TODO: feed the pins into new and have them setup automatically
-
+    // Assigning PWM pins to the appropriate channels
     pwms.pwm2.get_channel_b().output_to(pins.gpio21);
     pwms.pwm3.get_channel_a().output_to(pins.gpio6);
     pwms.pwm4.get_channel_a().output_to(pins.gpio8);
 
     // ———————————————————————————————————————— GP Pins ———————————————————————————————————————————
 
-    //Inputs
+    // Digital - General Purpose Inputs
     let input_pins: [InputType; _] = [
       pins.gpio9.into_pull_up_input().into_dyn_pin(),
       pins.gpio20.into_pull_up_input().into_dyn_pin(),
       pins.gpio22.into_pull_up_input().into_dyn_pin(),
-      pins.gpio23.into_pull_up_input().into_dyn_pin(), // button on WeAct RP2040
+      pins.gpio23.into_pull_up_input().into_dyn_pin(), // BUTTON on WeAct RP2040
     ];
 
-    // Outputs
+    // Digital - General Purpose Outputs
     let output_pins: [OutputType; _] = [
       pins.gpio0.into_push_pull_output().into_dyn_pin(),
       pins.gpio1.into_push_pull_output().into_dyn_pin(),
       pins.gpio3.into_push_pull_output().into_dyn_pin(),
-      pins.gpio25.into_push_pull_output().into_dyn_pin(), // led
+      pins.gpio25.into_push_pull_output().into_dyn_pin(), // LED
     ];
 
     let inputs = IoPins::new(input_pins);
@@ -239,11 +245,14 @@ pub trait TimerExt {
   fn delay_us(&self, us: u32);
 }
 
+/// Timer extension that provides extra utilities such as a better delay implementation
+/// Access them though device.timer
 impl TimerExt for Timer {
   fn now(&self) -> Duration<u64, 1, 1_000_000> {
     self.get_counter().duration_since_epoch()
   }
 
+  /// Printing Time
   fn print_time(&self) -> String<16> {
     let total_micros = self.now().to_micros();
 
@@ -296,7 +305,7 @@ pub fn device_reset() {
 //                                           Interrupts
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-// Interrupt 0
+/// Interrupt 0
 #[pac::interrupt]
 fn TIMER_IRQ_0() {
   SERIAL.poll_usb();

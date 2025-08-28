@@ -136,7 +136,7 @@ fn blink_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
 // Separating functions from commands for stand alone use
 fn blink(device: &mut Context, times: u8) -> Result<()> {
   println!("---- Blinking Led! ----");
-  let led = &mut device.outputs.get_pin(LED).unwrap();
+  let led = device.outputs.get_pin(LED).unwrap();
 
   for n in 1..(times + 1) {
     print!("Blink {} | ", n);
@@ -387,8 +387,8 @@ fn test_gpio_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
   println!("---- Testing GPIO ----");
   println!("Send '~' to exit");
 
-  let input = &mut device.inputs.get_pin(9).unwrap();
-  let output = &mut device.outputs.get_pin(0).unwrap();
+  let input = device.inputs.get_pin(9).unwrap();
+  let output = device.outputs.get_pin(0).unwrap();
 
   while !SERIAL.poll_for_break_cmd() {
     if input.is_low().unwrap() {

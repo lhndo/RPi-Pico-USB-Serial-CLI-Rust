@@ -310,7 +310,7 @@ impl Write for Serialio {
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {
-        ::cortex_m::interrupt::free(|cs| {
+        cortex_m::interrupt::free(|cs| {
             if let Some(s) = $crate::serial_io::SERIAL_CELL.borrow(cs).borrow_mut().as_mut() {
                 let _ = s.write_fmt(format_args!($($arg)*));
             }
