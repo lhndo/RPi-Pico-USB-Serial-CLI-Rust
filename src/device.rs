@@ -14,6 +14,7 @@
 
 use core::cell::RefCell;
 use core::fmt::Write;
+use core::sync::atomic::{AtomicU32, Ordering};
 
 use crate::adcs::Acds;
 use crate::delay;
@@ -45,14 +46,15 @@ use usbd_serial::SerialPort;
 //                                           Globals
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-pub const SYS_CLK_HZ: u32 = 125_000_000;
 pub const ADC_BITS: u32 = 12;
 pub const ADC_MAX: f32 = ((1 << ADC_BITS) - 1) as f32;
 pub const ADC_VREF: f32 = 3.3;
 
-//Pin Aliases
+// Pin Aliases
 pub const LED: usize = 25;
 pub const BUTTON: usize = 23; // WeAct RP
+
+pub static SYS_CLK_HZ: AtomicU32 = AtomicU32::new(0);
 
 static ALARM_0: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(None));
 const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(10_000); // 10ms - 10hz
@@ -97,6 +99,9 @@ impl Device {
     )
     .ok()
     .unwrap();
+
+    let sys_clk_hz: u32 = sys_clocks.system_clock.freq().to_Hz();
+    SYS_CLK_HZ.store(sys_clk_hz, Ordering::Relaxed);
 
     // ————————————————————————————————————————— Timer ————————————————————————————————————————————
 
