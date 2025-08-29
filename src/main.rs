@@ -14,6 +14,7 @@ mod prelude;
 mod pwms;
 mod serial_io;
 mod simple_cli;
+mod state;
 
 use device::Device;
 

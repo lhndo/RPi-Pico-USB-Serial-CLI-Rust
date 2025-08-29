@@ -21,12 +21,15 @@ use usbd_serial::SerialPort;
 //                                            Globals
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-pub static SERIAL: SerialHandle = SerialHandle;
-
-pub static SERIAL_CELL: Mutex<RefCell<Option<Serialio>>> = Mutex::new(RefCell::new(None));
-
 // Used with poll_for_break_cmd()
 const INTERRUPT_CHAR: u8 = 0x7e; // char "~"
+
+pub static SERIAL: SerialHandle = SerialHandle;
+pub static SERIAL_CELL: Mutex<RefCell<Option<Serialio>>> = Mutex::new(RefCell::new(None));
+
+pub type SerialDev = SerialPort<'static, UsbBus>;
+pub type UsbDev = UsbDevice<'static, UsbBus>;
+pub type Result<T> = core::result::Result<T, UsbError>;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                              Init
@@ -57,63 +60,57 @@ pub struct SerialHandle;
 
 impl SerialHandle {
   /// Executes a closure with a mutable reference to the serial peripheral.
-  pub fn with_serial<F, R>(&self, f: F) -> R
+  pub fn with_serial<F, R>(&self, f: F) -> Result<R>
   where F: FnOnce(&mut Serialio) -> R {
     free(|cs| {
-      if let Some(serial) = SERIAL_CELL.borrow(cs).borrow_mut().as_mut() {
-        f(serial)
-      } else {
-        panic!("SERIAL not initialized");
-      }
+      let mut opt_serial =
+        SERIAL_CELL.borrow(cs).try_borrow_mut().map_err(|_| UsbError::InvalidState)?; // Already in use
+
+      let serial = opt_serial.as_mut().ok_or(UsbError::InvalidEndpoint)?; // Not initialized
+
+      // If both checks pass, execute the closure. Any `UsbError` from the closure will propagate naturally.
+      Ok(f(serial))
     })
   }
 
   /// Polls the USB device and returns true if data was exchanged.
   pub fn poll_usb(&self) -> bool {
-    self.with_serial(|s| s.poll_usb())
+    self.with_serial(|s| s.poll_usb()).unwrap_or(false)
   }
 
   /// Checks if an interrupt command was received via the USB serial.
   pub fn poll_for_break_cmd(&self) -> bool {
-    self.with_serial(|s| s.poll_for_break_cmd())
+    self.with_serial(|s| s.poll_for_break_cmd()).unwrap_or(false)
   }
 
   /// Reads a line from the USB serial into the provided buffer.
   pub fn read_line(&self, buffer: &mut [u8]) -> Result<usize> {
-    self.with_serial(|s| s.read_line(buffer))
+    self.with_serial(|s| s.read_line(buffer))?
   }
 
   /// Writes data to the USB serial.
   pub fn write(&self, data: &[u8]) -> Result<()> {
-    self.with_serial(|s| s.write(data))
+    self.with_serial(|s| s.write(data))?
   }
 
   /// Get drt status when serial monitor connection established
-  pub fn get_drt(&self) -> bool {
+  pub fn get_drt(&self) -> Result<bool> {
     self.with_serial(|s| s.serial.dtr())
   }
 
   /// Set serial monitor connection flag
   pub fn set_connected(&self, value: bool) {
-    self.with_serial(|s| s.connected = value);
+    let _ = self.with_serial(|s| s.connected = value);
   }
 
   pub fn update_connected_status(&self) {
-    self.with_serial(|s| s.connected = s.serial.dtr());
+    let _ = self.with_serial(|s| s.connected = s.serial.dtr());
   }
 
-  pub fn is_connected(&self) -> bool {
+  pub fn is_connected(&self) -> Result<bool> {
     self.with_serial(|s| s.connected)
   }
 }
-
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-//                                            Serial IO
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-
-pub type SerialDev = SerialPort<'static, UsbBus>;
-pub type UsbDev = UsbDevice<'static, UsbBus>;
-pub type Result<T> = core::result::Result<T, UsbError>;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                         Serialio Struct

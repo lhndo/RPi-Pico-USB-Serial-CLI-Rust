@@ -22,6 +22,7 @@ use crate::gpios::{InputType, IoPins, OutputType};
 use crate::pwms::Pwms;
 use crate::serial_io;
 use crate::serial_io::SERIAL;
+use crate::state::State;
 
 use rp_pico::hal;
 use rp_pico::hal::Clock;
@@ -67,6 +68,7 @@ pub struct Device {
   pub acds:     Acds,
   pub inputs:   IoPins<InputType>,
   pub outputs:  IoPins<OutputType>,
+  pub state:    State,
 }
 
 impl Device {
@@ -219,6 +221,10 @@ impl Device {
     let inputs = IoPins::new(input_pins);
     let outputs = IoPins::new(output_pins);
 
+    // ————————————————————————————————————————— State ————————————————————————————————————————————
+
+    let state = State::new();
+
     // —————————————————————————————————————— Construct ———————————————————————————————————————————
 
     Self {
@@ -228,6 +234,7 @@ impl Device {
       acds,
       inputs,
       outputs,
+      state,
     }
   }
 }

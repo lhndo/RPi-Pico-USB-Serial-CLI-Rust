@@ -34,7 +34,9 @@ impl Program {
   pub fn init(&mut self, device: &mut Device) {
     // Blocking wait until we receive a serial monitor connection
     let led = device.outputs.get_pin(LED).unwrap();
-    while !SERIAL.get_drt() {
+
+    // While we don't have a serial monitor connected we keep trying
+    while SERIAL.get_drt() != Ok(true) {
       led.toggle().unwrap();
       SERIAL.poll_usb();
       DELAY.ms(80);
@@ -73,7 +75,7 @@ impl Program {
     let mut cli = Cli::new(&CMDS);
 
     loop {
-      if !SERIAL.is_connected() {
+      if SERIAL.is_connected() != Ok(true) {
         continue;
       }
 
