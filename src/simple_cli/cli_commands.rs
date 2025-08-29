@@ -9,7 +9,7 @@ use super::*;
 //                                         Commands List
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-const NUM_COMMANDS: usize = 11;
+const NUM_COMMANDS: usize = 12;
 
 pub const CMDS: [Command; NUM_COMMANDS] = [
   Command {
@@ -69,6 +69,11 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
     name: "test_gpio",
     desc: "Sets gpio0 high if gpio9 is low",
     func: test_gpio_cmd,
+  },
+  Command {
+    name: "test_analog",
+    desc: "Voltage controlled pwm duty cycle (Potentiometer on GPIO 26 dimming a Led on GPIO 8) ",
+    func: test_analog_cmd,
   },
 ];
 
@@ -244,15 +249,17 @@ fn servo(device: &mut Context, us: u16, pause: u32, sweep: bool, max_us: u16) ->
 
   println!("Setting PWM: Duty: {}us, Freq: {}", us, FREQ);
   servo_pwm.set_freq(FREQ);
+
   let servo_pin = servo_pwm.get_channel_a();
   servo_pin.set_duty_cycle_us(us, FREQ);
   servo_pwm.enable();
   println!("Moving...");
   device.timer.delay_ms(pause);
 
+  let servo_pin = servo_pwm.get_channel_a();
+
   if sweep {
     // resetting borrow
-    let servo_pin = servo_pwm.get_channel_a();
     println!("Sweeping...");
     //Max
     servo_pin.set_duty_cycle_us(max_us, FREQ);
@@ -272,6 +279,7 @@ fn servo(device: &mut Context, us: u16, pause: u32, sweep: bool, max_us: u16) ->
   }
 
   //Off
+  servo_pin.set_duty_cycle_fully_off().unwrap();
   servo_pwm.disable();
   println!("Done!");
   Ok(())
@@ -398,6 +406,46 @@ fn test_gpio_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
     }
   }
 
+  println!("Done!");
+  Ok(())
+}
+
+// ———————————————————————————————————————— Test Analog ———————————————————————————————————————————
+
+fn test_analog_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+  println!("---- Testing Analog Input ----");
+  println!("Input: GPIO 26 >> PWM Output: GPIO 8");
+  println!("Send '~' to exit");
+
+  const FREQ: u32 = 60;
+  const MAX_V: f32 = 3.3;
+
+  let adc_channel = 0; // GPIO 26 - adc0
+  let pwm = &mut device.pwms.pwm4; // GPIO 8 - pwm4A
+
+  // PWM setup
+  pwm.set_freq(FREQ);
+  pwm.get_channel_a().set_duty_cycle_fully_off().unwrap();
+  pwm.enable();
+
+  let pwm_channel = pwm.get_channel_a();
+
+  while !SERIAL.poll_for_break_cmd() {
+    //Analog Read
+    if let Some(r) = device.acds.read_channel(adc_channel) {
+      let adc_v = r.to_voltage().clamp(0.0, MAX_V);
+
+      //PWM
+      let _ = match adc_v {
+        MAX_V => pwm_channel.set_duty_cycle_fully_on(),
+        v if v < 0.1 => pwm_channel.set_duty_cycle_fully_off(),
+        _ => pwm_channel.set_duty_cycle_fraction((adc_v * 100.0) as u16, (MAX_V * 100.0) as u16),
+      };
+    }
+  }
+
+  pwm_channel.set_duty_cycle_fully_off().unwrap();
+  pwm.disable();
   println!("Done!");
   Ok(())
 }
