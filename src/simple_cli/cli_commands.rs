@@ -39,7 +39,7 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
   },
   Command {
     name: "read_adc",
-    desc: "Read ADC \n [ref_res=10000(ohm)]",
+    desc: "Read all ADC channels \n [ref_res=10000(ohm)]",
     func: read_adc_cmd,
   },
   Command {
@@ -56,8 +56,9 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
   },
   Command {
     name: "set_pwm",
-    desc: "Sets PWM on GPIO 6 (default) \n [pwm_id=3(id)] [channel=a(a/b)] [freq=50(hz)] \
-           [us=-1(us)] [duty=50(%)] \n [top=-1(u16)] [phase=false(bool)] [disable=false(bool)]",
+    desc: "Sets PWM  (defaults on GPIO 6 - PWM3A ) \n [pwm_id=3(id)] [channel=a(a/b)] \
+           [freq=50(hz)] [us=-1(us)] [duty=50(%)] \n [top=-1(u16)] [phase=false(bool)] \
+           [disable=false(bool)]",
     func: set_pwm_cmd,
   },
   Command {
@@ -67,12 +68,13 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
   },
   Command {
     name: "test_gpio",
-    desc: "Sets gpio0 high if gpio9 is low",
+    desc: "Sets GPIO 0 High when GPIO 9 is Low",
     func: test_gpio_cmd,
   },
   Command {
     name: "test_analog",
-    desc: "Voltage controlled pwm duty cycle (Potentiometer on GPIO 26 dimming a Led on GPIO 8) ",
+    desc: "Voltage controlled PWM Duty Cycle (i.e. Potentiometer on GPIO 26 dimming a Led on GPIO \
+           8) ",
     func: test_analog_cmd,
   },
 ];
@@ -149,7 +151,7 @@ fn blink(device: &mut Context, times: u16, interval: u16) -> Result<()> {
   let mut ledtask = Tasklet::new(interval as u32, times * 2, &device.timer);
 
   while !ledtask.is_exhausted() {
-    if ledtask.poll() {
+    if ledtask.is_ready() {
       led.toggle().unwrap();
       if led.is_set_high().unwrap() {
         print!("Blink {} | ", blink);
@@ -461,6 +463,7 @@ fn test_analog_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
     }
   }
 
+  // Off
   pwm_channel.set_duty_cycle_fully_off().unwrap();
   pwm.disable();
   println!("Done!");

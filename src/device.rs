@@ -52,12 +52,12 @@ pub const ADC_VREF: f32 = 3.3;
 
 // Pin Aliases
 pub const LED: usize = 25;
-pub const BUTTON: usize = 23; // WeAct RP
+pub const BUTTON: usize = 23; // built-in button on WeAct RP2040
 
 pub static SYS_CLK_HZ: AtomicU32 = AtomicU32::new(0);
 
 static ALARM_0: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(None));
-const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(10_000); // 10ms - 10hz
+const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(10_000); // 10ms - 100hz
 
 // ———————————————————————————————————————————————————————————————————————————————————————————————
 //                                         Device Struct

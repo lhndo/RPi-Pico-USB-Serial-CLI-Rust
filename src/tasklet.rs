@@ -2,7 +2,7 @@ use embedded_hal_0_2::timer::{Cancel, CountDown as CountDownT};
 use rp_pico::hal::fugit::{ExtU32, MicrosDurationU32};
 use rp_pico::hal::timer::{CountDown, Timer};
 
-/// Non blocking periodic task for loop usage
+/// Non blocking periodic task for in-loop usage
 pub struct Tasklet<'a> {
   count_down:     CountDown<'a>,
   interval:       MicrosDurationU32,
@@ -12,7 +12,7 @@ pub struct Tasklet<'a> {
 }
 
 impl<'a> Tasklet<'a> {
-  /// Create a new task. runs: 0 is infinite
+  /// Create a new task. runs: 0 equals infinite
   #[inline]
   pub fn new(interval_ms: u32, runs: u16, timer: &'a Timer) -> Self {
     Tasklet {
@@ -26,7 +26,7 @@ impl<'a> Tasklet<'a> {
 
   /// Polls the task. Returns `true` if the period has elapsed OR on the very first call.
   #[inline]
-  pub fn poll(&mut self) -> bool {
+  pub fn is_ready(&mut self) -> bool {
     if self.is_first_poll {
       self.is_first_poll = false;
       self.count_down.start(self.interval);
