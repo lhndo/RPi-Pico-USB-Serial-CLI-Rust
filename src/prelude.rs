@@ -10,12 +10,12 @@ pub use core::sync::atomic::Ordering;
 pub use crate::adcs::{AdcConversion, TEMP_SENSE_CHN};
 pub use crate::delay::DELAY;
 pub use crate::device::*;
-
 pub use crate::device::{Device, TimerExt};
 pub use crate::fifo_buffer::{AsStr, FifoBuffer};
 pub use crate::gpios::IoPins;
 pub use crate::pwms::PwmChannelExt;
 pub use crate::serial_io::SERIAL;
+pub use crate::tasklet::Tasklet;
 pub use crate::{print, println, with_pwm_slice};
 
 pub use cortex_m::prelude::*;

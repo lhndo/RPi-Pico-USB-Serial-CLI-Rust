@@ -1,0 +1,75 @@
+use embedded_hal_0_2::timer::{Cancel, CountDown as CountDownT};
+use rp_pico::hal::fugit::{ExtU32, MicrosDurationU32};
+use rp_pico::hal::timer::{CountDown, Timer};
+
+/// Non blocking periodic task for loop usage
+pub struct Tasklet<'a> {
+  count_down:     CountDown<'a>,
+  interval:       MicrosDurationU32,
+  initial_runs:   u16,
+  remaining_runs: u16,
+  is_first_poll:  bool,
+}
+
+impl<'a> Tasklet<'a> {
+  /// Create a new task. runs: 0 is infinite
+  #[inline]
+  pub fn new(interval_ms: u32, runs: u16, timer: &'a Timer) -> Self {
+    Tasklet {
+      count_down:     timer.count_down(),
+      interval:       (interval_ms * 1000).micros(),
+      initial_runs:   runs,
+      remaining_runs: runs,
+      is_first_poll:  true,
+    }
+  }
+
+  /// Polls the task. Returns `true` if the period has elapsed OR on the very first call.
+  #[inline]
+  pub fn poll(&mut self) -> bool {
+    if self.is_first_poll {
+      self.is_first_poll = false;
+      self.count_down.start(self.interval);
+      if self.initial_runs != 0 {
+        self.remaining_runs -= 1;
+      }
+      return true;
+    }
+
+    if self.initial_runs != 0 && self.remaining_runs == 0 {
+      return false;
+    }
+
+    if self.count_down.wait().is_ok() {
+      if self.initial_runs != 0 {
+        self.remaining_runs -= 1;
+        if self.remaining_runs == 0 {
+          let _ = self.count_down.cancel();
+        }
+      }
+      true
+    } else {
+      false
+    }
+  }
+
+  /// Resets the task
+  #[inline]
+  pub fn reset(&mut self) {
+    self.remaining_runs = self.initial_runs;
+    let _ = self.count_down.cancel();
+    self.is_first_poll = true;
+  }
+
+  /// Cancels the task and stops it from firing
+  #[inline]
+  pub fn cancel(&mut self) -> Result<(), &'static str> {
+    self.count_down.cancel()
+  }
+
+  /// Check to see if the no of runs have finished
+  #[inline]
+  pub fn is_exhausted(&self) -> bool {
+    self.initial_runs != 0 && self.remaining_runs == 0
+  }
+}

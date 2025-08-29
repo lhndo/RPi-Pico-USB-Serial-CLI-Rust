@@ -34,7 +34,7 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
   },
   Command {
     name: "blink",
-    desc: "Blink Onboard Led \n [times=10]",
+    desc: "Blink Onboard Led \n [times=10] [interval=200(ms)]",
     func: blink_cmd,
   },
   Command {
@@ -116,7 +116,7 @@ fn example_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
 
 fn reset_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
   print!("\nResetting...\n");
-  DELAY.ms(1500); // Waiting for reset msg to appear
+  device.timer.delay_ms(500); // Waiting for msg to appear
   device_reset();
   Ok(())
 }
@@ -134,22 +134,39 @@ fn flash_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
 // ex: blink times=4
 
 fn blink_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
-  let times: u8 = get_parsed_param("times", args).unwrap_or(10); // 10 default
-  blink(device, times)
+  let times: u16 = get_parsed_param("times", args).unwrap_or(10); // 10 default
+  let interval: u16 = get_parsed_param("interval", args).unwrap_or(200); // 10 default
+  blink(device, times, interval)
 }
 
 // Separating functions from commands for stand alone use
-fn blink(device: &mut Context, times: u8) -> Result<()> {
+fn blink(device: &mut Context, times: u16, interval: u16) -> Result<()> {
   println!("---- Blinking Led! ----");
   let led = device.outputs.get_pin(LED).unwrap();
+  let mut blink = 1;
 
-  for n in 1..(times + 1) {
-    print!("Blink {} | ", n);
-    led.set_high().unwrap();
-    device.timer.delay_ms(200);
-    led.set_low().unwrap();
-    device.timer.delay_ms(200);
+  // Non blocking timer based task
+  let mut ledtask = Tasklet::new(interval as u32, times * 2, &device.timer);
+
+  while !ledtask.is_exhausted() {
+    if ledtask.poll() {
+      led.toggle().unwrap();
+      if led.is_set_high().unwrap() {
+        print!("Blink {} | ", blink);
+        blink += 1;
+      }
+    }
   }
+
+  // Non tasklet implementation example:
+  //
+  // for n in 1..(times + 1) {
+  //   print!("Blink {} | ", n);
+  //   led.set_high().unwrap();
+  //   device.timer.delay_ms(200);
+  //   led.set_low().unwrap();
+  //   device.timer.delay_ms(200);
+  // }
 
   Ok(())
 }

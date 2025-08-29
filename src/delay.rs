@@ -1,5 +1,5 @@
 //! A global, safe, non-efficient spinning interruptible delay provider.
-//! A better choice is to use device.timer.delay_ms
+//! A better choice is to use device.timer.delay_ms()
 
 use core::cell::RefCell;
 use cortex_m::delay::Delay as CortexmDelay;

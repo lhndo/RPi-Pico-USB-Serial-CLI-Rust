@@ -15,6 +15,7 @@ mod pwms;
 mod serial_io;
 mod simple_cli;
 mod state;
+mod tasklet;
 
 use panic_persist as _;
 
