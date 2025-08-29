@@ -16,8 +16,6 @@ mod serial_io;
 mod simple_cli;
 mod state;
 
-use device::Device;
-
 use panic_persist as _;
 
 static RUN_STANDALONE: bool = false;
@@ -28,7 +26,7 @@ static RUN_STANDALONE: bool = false;
 
 #[rp_pico::entry]
 fn main() -> ! {
-  let mut device = Device::new();
+  let mut device = device::Device::new();
 
   if !RUN_STANDALONE {
     let mut program = simple_cli::program::Program::new();
