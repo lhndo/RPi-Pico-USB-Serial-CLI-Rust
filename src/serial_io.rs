@@ -10,9 +10,8 @@ use core::fmt::Write;
 
 use crate::delay::DELAY;
 
-use rp_pico::hal::usb::UsbBus;
-
 use cortex_m::interrupt::{Mutex, free};
+use rp_pico::hal::usb::UsbBus;
 use usb_device::UsbError;
 use usb_device::device::UsbDevice;
 use usbd_serial::SerialPort;
