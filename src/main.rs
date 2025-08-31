@@ -25,10 +25,10 @@ use defmt_rtt as _;
 #[cfg(feature = "defmt")]
 use defmt::{debug, error, info, warn};
 
+// ——————————————————————————————— Panic handler select features ——————————————————————————————————
 #[cfg(feature = "defmt")]
 extern crate panic_probe;
 
-// ——————————————————————————————— Panic handler select features ——————————————————————————————————
 #[cfg(feature = "panic-usb")]
 extern crate rp2040_panic_usb_boot;
 

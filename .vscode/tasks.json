@@ -2,15 +2,15 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "cargo build debug_swd",
+      "label": "cargo build debug defmt",
       "type": "shell",
       "command": "cargo",
-      "args": ["build-d"], // Alias - check config.toml
+      "args": ["build", "--no-default-features", "--features", "defmt"],
       "group": "build",
       "problemMatcher": ["$rustc"]
     },
     {
-      "label": "cargo run debug_swd - probe-rs",
+      "label": "cargo run defmt - probe-rs",
       "type": "shell",
       "command": "cargo",
       "args": ["run", "--no-default-features", "--features", "defmt"],

@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "preLaunchTask": "cargo build debug_swd",
+      "preLaunchTask": "cargo build debug defmt",
       "type": "probe-rs-debug",
       "request": "launch",
       "name": "rp2040-debug",
