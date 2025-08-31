@@ -1,0 +1,75 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "cargo build debug_swd",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["build-d"], // Alias - check config.toml
+      "group": "build",
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "cargo run debug_swd - probe-rs",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["run", "--no-default-features", "--features", "defmt"],
+      "group": {
+        "kind": "build"
+      },
+      "options": {
+        "env": {
+          "CARGO_TARGET_THUMBV6M_NONE_EABI_RUNNER": "probe-rs run --chip rp2040 --protocol swd"
+        }
+      },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "cargo run release",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["run", "--release"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "cargo run dev",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["run"],
+      "group": "build",
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "cargo run release - probe-rs",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["run", "--release"],
+      "group": {
+        "kind": "build"
+      },
+      "options": {
+        "env": {
+          "CARGO_TARGET_THUMBV6M_NONE_EABI_RUNNER": "probe-rs run --chip rp2040 --protocol swd"
+        }
+      },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "cargo run dev - probe-rs",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["run"],
+      "group": "build",
+      "options": {
+        "env": {
+          "CARGO_TARGET_THUMBV6M_NONE_EABI_RUNNER": "probe-rs run --chip rp2040 --protocol swd"
+        }
+      },
+      "problemMatcher": ["$rustc"]
+    }
+  ]
+}

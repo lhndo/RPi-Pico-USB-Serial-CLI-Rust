@@ -12,7 +12,7 @@ pub struct Tasklet<'a> {
 }
 
 impl<'a> Tasklet<'a> {
-  /// Create a new task. runs: 0 equals infinite
+  /// Create a new task. Runs: 0 equals infinite
   #[inline]
   pub fn new(interval_ms: u32, runs: u16, timer: &'a Timer) -> Self {
     Tasklet {

@@ -1,9 +1,12 @@
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
-# Choose a default "cargo run" tool (see README for more info)
-# - `probe-rs` provides flashing and defmt via a hardware debugger, and stack unwind on panic
-# - elf2uf2-rs loads firmware over USB when the rp2040 is in boot mode
-# runner = "probe-rs run --chip RP2040 --protocol swd"
+# Choose a default "cargo run" tool which flashes the firmware
+# - elf2uf2-rs - loads firmware over USB when the rp2040 is in boot mode
+# - probe-rs   - provides flashing and defmt via a hardware debugger, and stack unwind on panic
+#                use --target-sel 0x01002927 instead of --chip if exp freezing issues
+
 runner = "elf2uf2-rs -d"
+# runner = "probe-rs run --chip rp2040 --protocol swd"
+
 linker = "flip-link"
 
 rustflags = [
@@ -11,17 +14,9 @@ rustflags = [
   "link-arg=--nmagic",
   "-C",
   "link-arg=-Tlink.x",
-
-  # "-C",
-  # "link-arg=-Tdefmt.x",
-
-  # Code-size optimizations.
-  #   trap unreachable can save a lot of space, but requires nightly compiler.
-  #   uncomment the next line if you wish to enable it
-  # "-Z", "trap-unreachable=no",
-  # "-C", "inline-threshold=5",
   "-C",
   "no-vectorize-loops",
+  # defmt flag is automatically included by build.rs depending on the build feature flag
 ]
 
 [build]
@@ -29,3 +24,7 @@ target = "thumbv6m-none-eabi"
 
 [env]
 DEFMT_LOG = "debug"
+
+[alias]
+build-d = 'build --no-default-features --features defmt'
+embed-d = 'embed default -- --no-default-features --features defmt'

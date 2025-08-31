@@ -22,3 +22,6 @@ pub use cortex_m::prelude::*;
 pub use embedded_hal::digital::{OutputPin, StatefulOutputPin};
 pub use embedded_hal::pwm::SetDutyCycle;
 pub use heapless::{String, Vec};
+
+#[cfg(feature = "defmt")]
+pub use defmt::{debug, error, info, warn};

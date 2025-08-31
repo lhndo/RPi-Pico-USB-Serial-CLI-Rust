@@ -17,7 +17,25 @@ mod simple_cli;
 mod state;
 mod tasklet;
 
-use panic_persist as _;
+// ———————————————————————————————————— Debug dfmt features ——————————————————————————————————————
+#[cfg(feature = "defmt")]
+use defmt_rtt as _;
+
+#[allow(unused_imports)]
+#[cfg(feature = "defmt")]
+use defmt::{debug, error, info, warn};
+
+#[cfg(feature = "defmt")]
+extern crate panic_probe;
+
+// ——————————————————————————————— Panic handler select features ——————————————————————————————————
+#[cfg(feature = "panic-usb")]
+extern crate rp2040_panic_usb_boot;
+
+#[cfg(feature = "panic-persist")]
+extern crate panic_persist;
+
+// —————————————————————————————————————————— Statics —————————————————————————————————————————————
 
 static RUN_STANDALONE: bool = false;
 
@@ -27,6 +45,10 @@ static RUN_STANDALONE: bool = false;
 
 #[rp_pico::entry]
 fn main() -> ! {
+  //
+  #[cfg(feature = "defmt")]
+  info!("Alive");
+
   let mut device = device::Device::new();
 
   if !RUN_STANDALONE {

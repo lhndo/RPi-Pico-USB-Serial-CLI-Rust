@@ -42,6 +42,9 @@ impl Program {
       DELAY.ms(80);
     }
 
+    #[cfg(feature = "defmt")]
+    info!("USB Serial Monitor: Connected!");
+
     // Blink leds four times to notify
     // This also warms up the USB device, which otherwise will skip the print msg below
     for _ in 0..4 {
@@ -54,6 +57,7 @@ impl Program {
     SERIAL.set_connected(true);
 
     // Displaying last panic msg
+    #[cfg(feature = "panic-persist")]
     if let Some(msg) = panic_persist::get_panic_message_bytes() {
       println!("\n========= PANIC ===========");
       println!("{}", msg.as_str());

@@ -1,6 +1,15 @@
+# To launch the cargo embed with the correct set of features "defmt" run the following:
+# cargo embed default -- --no-default-features --features defmt
+# or the Alias: cargo embed-d  
+
+[default.general]
+chip                = "RP2040"
+log_level           = "INFO"
+connect_under_reset = false    # RP2040 does not support connect_under_reset
+
 [default.probe]
 protocol = "Swd"
-speed = 20000
+speed    = 20000
 # If you only have one probe cargo embed will pick automatically
 # Otherwise: add your probe's VID/PID/serial to filter
 
@@ -14,26 +23,17 @@ speed = 20000
 enabled = true
 
 [default.reset]
-enabled = true
+enabled         = true
 halt_afterwards = false
 
-[default.general]
-chip = "RP2040"
-log_level = "WARN"
-# RP2040 does not support connect_under_reset
-connect_under_reset = false
 
 [default.rtt]
-enabled = true
-up_mode = "NoBlockSkip"
-channels = [
-    { up = 0, down = 0, name = "name", up_mode = "NoBlockSkip", format = "Defmt" },
-]
-timeout = 3000
-show_timestamps = true
-log_enabled = false
-log_path = "./logs"
+enabled     = true
+up_mode     = "NoBlockSkip"
+timeout     = 3000
+log_enabled = true
+log_path    = "./logs"
 
 [default.gdb]
-enabled = false
+enabled               = false
 gdb_connection_string = "127.0.0.1:2345"
