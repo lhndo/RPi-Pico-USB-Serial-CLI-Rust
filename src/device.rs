@@ -5,7 +5,7 @@
 
 //
 // RPi Pico           - https://cdn-shop.adafruit.com/970x728/4864-04.png
-//WeAct Studio RP2040 - https://mischianti.org/wp-content/uploads/2022/09/weact-studio-rp2040-raspberry-pi-pico-alternative-pinout-high-resolution.png
+// WeAct Studio RP2040 - https://mischianti.org/wp-content/uploads/2022/09/weact-studio-rp2040-raspberry-pi-pico-alternative-pinout-high-resolution.png
 //
 // GPIO 29 - WA extra GPIO (Analog) / RP Pico internal - ADC (ADC3) for measuring VSYS
 // GPIO 25 - Internal LED
@@ -117,7 +117,7 @@ impl Device {
     // ———————————————————————————————————————— USB Bus ———————————————————————————————————————————
 
     // UsbBus used for creation of Serial and UsbDevice
-    let usb_bus = UsbBusAllocator::new(usb::UsbBus::new(
+    let usb_bus_alloc = UsbBusAllocator::new(usb::UsbBus::new(
       pac.USBCTRL_REGS,
       pac.USBCTRL_DPRAM,
       sys_clocks.usb_clock,
@@ -126,7 +126,7 @@ impl Device {
     ));
 
     // Storing UsbBus into a singleton and getting a mutable reference
-    let usb_bus_ref = cortex_m::singleton!(: UsbBusAllocator<usb::UsbBus> = usb_bus).unwrap();
+    let usb_bus = cortex_m::singleton!(: UsbBusAllocator<usb::UsbBus> = usb_bus_alloc).unwrap();
 
     // Small pause for initialisation
     DELAY.us(200);
@@ -134,12 +134,12 @@ impl Device {
     // ————————————————————————————————————— Serial Device ————————————————————————————————————————
 
     // SerialPort needs to be created before UsbDev and requires a reference to the UsbBus
-    let serial_port = SerialPort::new(usb_bus_ref);
+    let serial_port = SerialPort::new(usb_bus);
 
     // ——————————————————————————————————————— Usb Device —————————————————————————————————————————
 
     // Usb Device creation using the UsbBus
-    let usb_dev = UsbDeviceBuilder::new(usb_bus_ref, UsbVidPid(0x16c0, 0x27dd))
+    let usb_dev = UsbDeviceBuilder::new(usb_bus, UsbVidPid(0x16c0, 0x27dd))
       .strings(&[StringDescriptors::default()
         .manufacturer("LH_Eng")
         .product("embedded_serial_cli")
@@ -209,18 +209,18 @@ impl Device {
 
     // Digital - General Purpose Inputs
     let input_pins: [InputType; _] = [
-      pins.gpio9.into_pull_up_input().into_dyn_pin(),
-      pins.gpio20.into_pull_up_input().into_dyn_pin(),
-      pins.gpio22.into_pull_up_input().into_dyn_pin(),
-      pins.gpio23.into_pull_up_input().into_dyn_pin(), // BUTTON on WeAct RP2040
+      pins.gpio9.reconfigure().into_dyn_pin(),
+      pins.gpio20.reconfigure().into_dyn_pin(),
+      pins.gpio22.reconfigure().into_dyn_pin(),
+      pins.gpio23.reconfigure().into_dyn_pin(), // BUTTON on WeAct RP2040
     ];
 
     // Digital - General Purpose Outputs
     let output_pins: [OutputType; _] = [
-      pins.gpio0.into_push_pull_output().into_dyn_pin(),
-      pins.gpio1.into_push_pull_output().into_dyn_pin(),
-      pins.gpio3.into_push_pull_output().into_dyn_pin(),
-      pins.gpio25.into_push_pull_output().into_dyn_pin(), // LED
+      pins.gpio0.reconfigure().into_dyn_pin(),
+      pins.gpio1.reconfigure().into_dyn_pin(),
+      pins.gpio3.reconfigure().into_dyn_pin(),
+      pins.gpio25.reconfigure().into_dyn_pin(), // LED
     ];
 
     let inputs = IoPins::new(input_pins);
@@ -321,7 +321,6 @@ pub fn device_reset() {
 #[pac::interrupt]
 fn TIMER_IRQ_0() {
   SERIAL.poll_usb();
-  SERIAL.update_connected_status();
   // Reset interrupt timer safely
   free(|cs| {
     if let Some(alarm) = ALARM_0.borrow(cs).borrow_mut().as_mut() {
