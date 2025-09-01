@@ -36,7 +36,7 @@ impl Program {
     let led = device.outputs.get_pin(LED).unwrap();
 
     // While we don't have a serial monitor connected we keep trying
-    while SERIAL.get_drt() != Ok(true) {
+    while !SERIAL.is_connected() {
       led.toggle().unwrap();
       SERIAL.poll_usb();
       DELAY.ms(80);
@@ -53,8 +53,6 @@ impl Program {
       led.set_high().unwrap();
       device.timer.delay_ms(200);
     }
-
-    SERIAL.set_connected(true);
 
     // Displaying last panic msg
     #[cfg(feature = "panic-persist")]
@@ -79,7 +77,7 @@ impl Program {
     let mut cli = Cli::new(&CMDS);
 
     loop {
-      if SERIAL.is_connected() != Ok(true) {
+      if !SERIAL.is_connected() {
         continue;
       }
 
@@ -97,11 +95,16 @@ impl Program {
 
         // Blocking wait for command
         self.command_buf.clear();
-        let len = SERIAL.read_line(self.command_buf.receive_buffer()).unwrap_or(0);
-        if len > 0 {
-          self.command_buf.advance(len);
-          self.command_read = true;
-          println!("\n>> Received Command: (T: {}) ", device.timer.print_time());
+        match SERIAL.read_line_blocking(self.command_buf.receive_buffer()) {
+          Ok(len) => {
+            self.command_buf.advance(len);
+            self.command_read = true;
+            println!("\n>> Received Command: (T: {}) ", device.timer.print_time());
+          }
+
+          Err(e) => {
+            println!("\nErr: {:?} \n", e);
+          }
         }
       }
 

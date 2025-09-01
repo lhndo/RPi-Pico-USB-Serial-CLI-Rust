@@ -21,7 +21,7 @@ use usbd_serial::SerialPort;
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 // Used with poll_for_break_cmd()
-const INTERRUPT_CHAR: u8 = 0x7e; // char "~"
+const INTERRUPT_CHAR: u8 = b'~'; // char "~"
 
 pub static SERIAL: SerialHandle = SerialHandle;
 pub static SERIAL_CELL: Mutex<RefCell<Option<Serialio>>> = Mutex::new(RefCell::new(None));
@@ -43,8 +43,7 @@ pub fn init(serial: SerialDev, usb_dev: UsbDev) {
       panic!("SERIAL already initialized");
     }
 
-    let serialio = Serialio::new(serial, usb_dev);
-    *cell = Some(serialio);
+    cell.replace(Serialio::new(serial, usb_dev));
   });
 }
 
@@ -83,8 +82,8 @@ impl SerialHandle {
   }
 
   /// Reads a line from the USB serial into the provided buffer.
-  pub fn read_line(&self, buffer: &mut [u8]) -> Result<usize> {
-    self.with_serial(|s| s.read_line(buffer))?
+  pub fn read_line_blocking(&self, buffer: &mut [u8]) -> Result<usize> {
+    self.with_serial(|s| s.read_line_blocking(buffer))?
   }
 
   /// Writes data to the USB serial.
@@ -92,22 +91,9 @@ impl SerialHandle {
     self.with_serial(|s| s.write(data))?
   }
 
-  /// Get drt status when serial monitor connection established
-  pub fn get_drt(&self) -> Result<bool> {
-    self.with_serial(|s| s.serial.dtr())
-  }
-
-  /// Set serial monitor connection flag
-  pub fn set_connected(&self, value: bool) {
-    let _ = self.with_serial(|s| s.connected = value);
-  }
-
-  pub fn update_connected_status(&self) {
-    let _ = self.with_serial(|s| s.connected = s.serial.dtr());
-  }
-
-  pub fn is_connected(&self) -> Result<bool> {
-    self.with_serial(|s| s.connected)
+  // Get serial monitor connection flag
+  pub fn is_connected(&self) -> bool {
+    self.with_serial(|s| s.serial.dtr()).unwrap_or(false)
   }
 }
 
@@ -116,18 +102,13 @@ impl SerialHandle {
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Serialio {
-  pub serial:    SerialDev,
-  pub usb_dev:   UsbDev,
-  pub connected: bool,
+  pub serial:  SerialDev,
+  pub usb_dev: UsbDev,
 }
 
 impl Serialio {
   fn new(serial: SerialDev, usb_dev: UsbDev) -> Self {
-    Self {
-      serial,
-      usb_dev,
-      connected: false,
-    }
+    Self { serial, usb_dev }
   }
 
   // ——————————————————————————————————————————————————————————————————————————————————————————————
@@ -143,20 +124,38 @@ impl Serialio {
   /// Polls serial read buffer for an excape character (INTERRUPT_CHAR '~' )
   /// Runs once, non interrupting. Returns true if found.
   /// To be used in loops that need to be interrupted from the command line
-  /// WARNING: This will throw away the buffer
+  /// WARNING: This will throw away the read buffer
   fn poll_for_break_cmd(&mut self) -> bool {
-    let mut found = false;
-    if self.usb_dev.poll(&mut [&mut self.serial]) {
-      let mut buffer = [0u8; 64];
+    // If no serial connection return false
+    if !self.serial.dtr() {
+      return false;
+    };
 
-      if let Ok(count) = self.serial.read(&mut buffer) {
-        let received_data = &buffer[..count];
-        if received_data.contains(&INTERRUPT_CHAR) {
-          found = true;
+    loop {
+      self.poll_usb();
+
+      let byte = {
+        let mut byte_buffer = [0u8; 1];
+        let _ = self.serial.read(&mut byte_buffer);
+        byte_buffer[0]
+      };
+
+      if byte == 0 {
+        return false;
+      }
+
+      if byte == INTERRUPT_CHAR {
+        // we need to remove everything up to '/n' from the buffer
+        loop {
+          let mut byte_buffer = [0u8; 1];
+          let _ = self.serial.read(&mut byte_buffer);
+          if byte_buffer[0] == b'\n' {
+            return true;
+          }
+          self.poll_usb();
         }
       }
     }
-    found
   }
 
   /// Appends as much as possible into the write buffer
@@ -171,113 +170,88 @@ impl Serialio {
           data = &data[written..];
         }
         Err(UsbError::WouldBlock) => {
-          // if serial monitor not we exit
+          // If not connected to serial, we exit
           if !self.serial.dtr() {
             return Err(UsbError::WouldBlock);
           }
-
-          // Otherwise The USB host isn't ready for data. This is normal.
-          // We just need to wait and let the USB bus handle its events.
+          // Otherwise The serial buffer is full and we must keep polling
+          // Small delay to avoid tight loops
+          DELAY.us(6);
         }
         Err(e) => {
-          // A different, real error occurred.
+          // A different, real error occurred. We exit.
           return Err(e);
         }
       }
 
-      // We must always poll the USB device in the loop. This allows
-      // the device to respond to the host and manage the connection.
+      // We must always poll the USB device to send the serial data
       self.usb_dev.poll(&mut [&mut self.serial]);
     }
 
     Ok(())
   }
 
-  /// Blocking read from serial into provided buffer until new line. Discards the rest.
-  /// Returns size written
-  /// Remember to clear the read buffer beforehand
-  pub fn read_line(&mut self, buffer: &mut [u8]) -> Result<usize> {
-    let max_len = buffer.len();
-    let mut used = 0;
+  /// Blocking read from serial into the provided buffer until a newline `\n`  is found.
+  /// The newline character is not included in the buffer.
+  ///
+  /// If the line is longer than the buffer, the buffer is filled, the rest of the
+  /// line is discarded from the serial input, and `Err(UsbError::BufferOverflow)` is returned.
+  ///
+  /// Returns the number of bytes written to the buffer on success.
+  pub fn read_line_blocking(&mut self, buffer: &mut [u8]) -> Result<usize> {
+    // No serial connection established, exit immediately.
+    if !self.serial.dtr() {
+      return Err(UsbError::InvalidEndpoint);
+    }
+
+    let mut bytes_read = 0;
+    let buffer_len = buffer.len();
+    let mut overflow = false;
 
     loop {
-      // Try grabbing a new usb package only if serial is established
-      while !self.poll_usb() && self.serial.dtr() {
-        DELAY.us(5);
+      //
+      // Inner loop to read a single byte
+      let byte = loop {
+        self.poll_usb();
+
+        let mut byte_buffer = [0u8; 1];
+        match self.serial.read(&mut byte_buffer) {
+          Ok(1) => break byte_buffer[0], // Got a byte, break inner loop.
+          Ok(_) => {}                    // Read 0 bytes, should never happen...
+          Err(UsbError::WouldBlock) => {
+            // No data available, check connection and continue polling.
+            if !self.serial.dtr() {
+              // No serial connection, we exit.
+              return Err(UsbError::InvalidEndpoint);
+            }
+            // Add a small delay to avoid a tight loop
+            DELAY.us(6);
+          }
+          Err(e) => return Err(e), // Non-recoverable error occurred.
+        }
+      };
+
+      // Check the byte for newline characters.
+      if byte == b'\n' {
+        if overflow {
+          // We finished reading the oversized line. Return the error.
+          return Err(UsbError::BufferOverflow);
+        } else {
+          // Done! End of line found and it fit in the buffer.
+          return Ok(bytes_read);
+        }
       }
 
-      // Read as much as possible into the read buffer
-      match self.serial.read(&mut buffer[used..]) {
-        Ok(count) if count > 0 => {
-          if let Some(index) = buffer[used..(used + count)].iter().position(|&b| b == b'\n') {
-            used += index;
-            break;
-          }
-          used += count;
-
-          // if buffer is full but no new like, we error
-          if used >= max_len {
-            return Err(UsbError::BufferOverflow);
-          }
-        }
-        Ok(_) => {
-          // no data received, keep trying
-          continue;
-        }
-        Err(usb_device::UsbError::WouldBlock) => {
-          // if we dropped serial we exit
-          if !self.serial.dtr() {
-            return Err(UsbError::WouldBlock);
-          } else {
-            continue;
-          }
-        }
-        Err(e) => {
-          return Err(e);
-        }
-      }
-    }
-
-    self.flush_read_all()?; // Discarding the rest of the data since we got our line
-    Ok(used)
-  }
-
-  /// Tries to flush the rest of the serial read into void. Not guaranteed
-  /// it succeeds since we don't know if the host stopped sending messages
-  fn flush_read_all(&mut self) -> Result<()> {
-    const MAX_EMPTY_READ_ATTEMPTS: i32 = 20;
-    let mut temp_buffer = [0u8; 64];
-    let mut retries = MAX_EMPTY_READ_ATTEMPTS; // Limit retries to avoid infinite loop
-
-    while retries > 0 {
-      self.poll_usb();
-      DELAY.us(5);
-
-      match self.serial.read(&mut temp_buffer[..]) {
-        Ok(count) if count > 0 => {
-          retries = MAX_EMPTY_READ_ATTEMPTS; // Got data, reset retry count
-          continue;
-        }
-        Ok(_) => {
-          retries -= 1; // No data read, decrement retries
-          continue;
-        }
-        Err(UsbError::WouldBlock) => {
-          if !self.serial.dtr() {
-            return Err(UsbError::WouldBlock);
-          } else {
-            // No data available right now
-            retries -= 1;
-            continue;
-          }
-        }
-        Err(e) => {
-          return Err(e);
-        }
+      // It's a regular character.
+      if bytes_read < buffer_len {
+        // There is space, store the byte.
+        buffer[bytes_read] = byte;
+        bytes_read += 1;
+      } else {
+        // No more space, set overflow flag. We will now discard bytes.
+        overflow = true;
       }
     }
-
-    Ok(())
   }
 }
 
@@ -317,10 +291,13 @@ macro_rules! print {
 #[macro_export]
 macro_rules! println {
     () => {
-        print!("\r\n")
+        $crate::print!("\r\n")
     };
-    ($($arg:tt)*) => {{
-        print!($($arg)*);
-        print!("\r\n");
-    }};
+    ($($arg:tt)*) => {
+        cortex_m::interrupt::free(|cs| {
+            if let Some(s) = $crate::serial_io::SERIAL_CELL.borrow(cs).borrow_mut().as_mut() {
+                let _ = writeln!(s, $($arg)*);
+            }
+        })
+    };
 }
