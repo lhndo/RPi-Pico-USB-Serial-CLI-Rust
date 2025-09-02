@@ -58,42 +58,39 @@ pub struct SerialHandle;
 
 impl SerialHandle {
   /// Executes a closure with a mutable reference to the serial peripheral.
-  pub fn with_serial<F, R>(&self, f: F) -> Result<R>
+  pub fn with<F, R>(&self, f: F) -> R
   where F: FnOnce(&mut Serialio) -> R {
     free(|cs| {
-      let mut opt_serial =
-        SERIAL_CELL.borrow(cs).try_borrow_mut().map_err(|_| UsbError::InvalidState)?; // Already in use
+      let mut guard = SERIAL_CELL.borrow(cs).borrow_mut();
+      let cell = guard.as_mut().unwrap();
 
-      let serial = opt_serial.as_mut().ok_or(UsbError::InvalidEndpoint)?; // Not initialized
-
-      // If both checks pass, execute the closure. Any `UsbError` from the closure will propagate naturally.
-      Ok(f(serial))
+      f(cell)
     })
   }
 
   /// Polls the USB device and returns true if data was exchanged.
   pub fn poll_usb(&self) -> bool {
-    self.with_serial(|s| s.poll_usb()).unwrap_or(false)
+    self.with(|cell| cell.poll_usb())
   }
 
   /// Checks if an interrupt command was received via the USB serial.
   pub fn poll_for_break_cmd(&self) -> bool {
-    self.with_serial(|s| s.poll_for_break_cmd()).unwrap_or(false)
+    self.with(|cell| cell.poll_for_break_cmd())
   }
 
   /// Reads a line from the USB serial into the provided buffer.
   pub fn read_line_blocking(&self, buffer: &mut [u8]) -> Result<usize> {
-    self.with_serial(|s| s.read_line_blocking(buffer))?
+    self.with(|cell| cell.read_line_blocking(buffer))
   }
 
   /// Writes data to the USB serial.
   pub fn write(&self, data: &[u8]) -> Result<()> {
-    self.with_serial(|s| s.write(data))?
+    self.with(|cell| cell.write(data))
   }
 
   // Get serial monitor connection flag
   pub fn is_connected(&self) -> bool {
-    self.with_serial(|s| s.serial.dtr()).unwrap_or(false)
+    self.with(|cell| cell.serial.dtr())
   }
 }
 
@@ -184,7 +181,7 @@ impl Serialio {
         }
       }
 
-      // We must always poll the USB device to send the serial data
+      // We must poll the USB device to send the serial data
       self.usb_dev.poll(&mut [&mut self.serial]);
     }
 
