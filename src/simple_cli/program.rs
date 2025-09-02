@@ -15,7 +15,7 @@ static CMD_BUFF_SIZE: usize = 128;
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Program {
-  pub command_buf:  FifoBuffer<CMD_BUFF_SIZE>,
+  pub command_buf:  FifoBuffer<u8, CMD_BUFF_SIZE>,
   pub command_read: bool,
 }
 
