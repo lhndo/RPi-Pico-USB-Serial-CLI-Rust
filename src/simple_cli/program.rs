@@ -15,7 +15,7 @@ static CMD_BUFF_SIZE: usize = 128;
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Program {
-  pub command_buf:  FifoBuffer<CMD_BUFF_SIZE>,
+  pub command_buf:  FifoBuffer<u8, CMD_BUFF_SIZE>,
   pub command_read: bool,
 }
 
@@ -23,7 +23,7 @@ impl Program {
   // ———————————————————————————————————————————— New ———————————————————————————————————————————————
 
   pub fn new() -> Self {
-    let command_buf = FifoBuffer::<CMD_BUFF_SIZE>::new();
+    let command_buf = FifoBuffer::new();
     let command_read = false;
 
     Self { command_buf, command_read }
@@ -58,7 +58,7 @@ impl Program {
     #[cfg(feature = "panic-persist")]
     if let Some(msg) = panic_persist::get_panic_message_bytes() {
       println!("\n========= PANIC ===========");
-      println!("{}", msg.as_str());
+      println!("{}", msg.as_str().unwrap());
     }
 
     println!("\n========= HELLO =========== ");
@@ -110,7 +110,7 @@ impl Program {
 
       // Execute command
       if self.command_read {
-        let input = self.command_buf.data().as_str();
+        let input = self.command_buf.data().as_str().unwrap();
         println!(">> '{}' \n", input);
         cli.execute(input, device).unwrap_or_else(|e| println!("Err: {}", e));
 

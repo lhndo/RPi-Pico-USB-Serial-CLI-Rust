@@ -1,34 +1,23 @@
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                          FIFO Buffer
 // ————————————————————————————————————————————————————————————————————————————————————————————————
-// Adapted From Anchor
 
-/// Simple FIFO buffer implementation which can be useful when managing data to/from.
-pub struct FifoBuffer<const BUF_SIZE: usize> {
-  buffer:   [u8; BUF_SIZE],
-  pub used: usize,
-}
-
-impl Default for FifoBuffer<128> {
-  fn default() -> Self {
-    FifoBuffer {
-      buffer: [0u8; 128],
-      used:   0,
-    }
-  }
+/// Simple generic FIFO buffer implementation.
+pub struct FifoBuffer<T, const BUF_SIZE: usize> {
+  buffer: [T; BUF_SIZE],
+  used:   usize,
 }
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                            Methods
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
-  /// Creates a new buffer
-  ///
-  /// This is declared const, allowing it to be used even in `static const` contexts.
-  pub const fn new() -> Self {
-    FifoBuffer {
-      buffer: [0u8; BUF_SIZE],
+// General methods for any type `T` that can be copied and has a default value.
+impl<T: Copy + Default, const BUF_SIZE: usize> FifoBuffer<T, BUF_SIZE> {
+  /// Creates a new, empty buffer.
+  pub fn new() -> Self {
+    Self {
+      buffer: [T::default(); BUF_SIZE],
       used:   0,
     }
   }
@@ -40,74 +29,79 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
 
   #[inline(always)]
   pub fn is_full(&self) -> bool {
-    self.used == self.buffer.len()
+    self.used == BUF_SIZE
   }
 
-  /// Return length of currently stored buffer
+  /// Returns the number of items in the buffer.
   #[inline(always)]
   pub fn len(&self) -> usize {
     self.used
   }
 
-  /// Get available size
+  /// Returns how many more items can be added.
   #[inline(always)]
   pub fn available(&self) -> usize {
-    self.buffer.len() - self.used
+    BUF_SIZE - self.used
   }
 
-  /// Return mutable slice to the non-filled part of the buffer
-  /// To be used with advance()
+  /// Clears the buffer.
   #[inline(always)]
-  pub fn receive_buffer(&mut self) -> &mut [u8] {
+  pub fn clear(&mut self) {
+    self.used = 0;
+  }
+
+  /// Moves the `used` cursor forward by `n` items.
+  ///
+  /// Useful after writing directly into the `receive_buffer`.
+  #[inline(always)]
+  pub fn advance(&mut self, n: usize) {
+    self.used = self.used.saturating_add(n).min(BUF_SIZE);
+  }
+
+  /// Returns a mutable slice to the unused part of the buffer.
+  /// Remember to set .advance(n) to set the endpoint
+  #[inline(always)]
+  pub fn receive_buffer(&mut self) -> &mut [T] {
     &mut self.buffer[self.used..]
   }
 
-  /// Add a single byte, return flase if full
+  /// Adds a single item to the buffer. Returns `false` if full.
   #[inline(always)]
-  pub fn add_byte(&mut self, byte: u8) -> bool {
-    if self.used + 1 >= self.buffer.len() {
+  pub fn add_single(&mut self, item: T) -> bool {
+    if self.is_full() {
       return false;
     }
-
-    self.buffer[self.used + 1] = byte;
+    self.buffer[self.used] = item;
     self.used += 1;
     true
   }
 
-  /// Append / Write `buf` to the non-filled part of the buffer
-  /// Return none if buffer is full
-  /// Return usize written
+  /// Appends items from a slice to the buffer.
+  /// Returns the number of items written, or 0 if the buffer is full.
   #[inline(always)]
-  pub fn append(&mut self, buf: &[u8]) -> Option<usize> {
+  pub fn append(&mut self, buf: &[T]) -> usize {
     let into = self.receive_buffer();
     let len = into.len().min(buf.len());
 
     if len == 0 {
-      return None;
+      return 0;
     }
 
     into[..len].copy_from_slice(&buf[..len]);
-    self.used = (self.used + len).clamp(0, self.buffer.len());
-    Some(len)
+    self.advance(len);
+    len
   }
 
-  /// Moves the used cursor forward
-  ///
-  /// This can be used after filling part of the non-filled buffer returned by `receive_buffer`.
+  /// Returns a slice of the items currently in the buffer.
   #[inline(always)]
-  pub fn advance(&mut self, n: usize) {
-    self.used = (self.used + n).clamp(0, self.buffer.len());
-  }
-
-  /// Returns the filled part of the buffer
-  #[inline(always)]
-  pub fn data(&self) -> &[u8] {
+  pub fn data(&self) -> &[T] {
     &self.buffer[0..self.used]
   }
 
-  /// Moves the data into a provided slice. Pops the read count. Returns transfered size.
+  /// Reads items from the buffer into a provided slice.
+  /// The read items are removed. Returns the number of items transferred.
   #[inline(always)]
-  pub fn read(&mut self, data: &mut [u8]) -> usize {
+  pub fn read(&mut self, data: &mut [T]) -> usize {
     let len = self.used.min(data.len());
     if len == 0 {
       return 0;
@@ -117,75 +111,56 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
     len
   }
 
-  /// Read and pop the first byte
+  /// Reads and removes the first item from the buffer.
   #[inline(always)]
-  pub fn read_byte(&mut self, data: &mut [u8]) -> Option<u8> {
-    if self.used == 0 {
+  pub fn read_single(&mut self) -> Option<T> {
+    if self.is_empty() {
       return None;
     }
-
-    let byte = self.buffer[0];
+    let item = self.buffer[0];
     self.pop(1);
-    Some(byte)
+    Some(item)
   }
 
-  /// Removes `n` bytes from the front of the buffer
-  ///
-  /// This operation moves the used part of the buffer down in memory. This is linear in the
-  /// number of bytes currently stored.
+  /// Removes `n` items from the front of the buffer.
   #[inline(always)]
   pub fn pop(&mut self, n: usize) {
-    let n = n.clamp(0, self.used);
-    let remain = n..self.used;
-    let len = remain.len();
-    self.buffer.copy_within(remain, 0);
-    self.used = len;
+    let n = n.min(self.used);
+    self.buffer.copy_within(n..self.used, 0);
+    self.used -= n;
   }
 
-  /// Returns first byte index found or None
-  #[inline(always)]
-  pub fn contains_byte(&self, byte: u8) -> Option<usize> {
-    for (index, &b) in self.data().iter().take(self.used).enumerate() {
-      if b == byte {
-        return Some(index);
-      }
-    }
-    None
-  }
-
-  /// Searches for a string slice and returns Some(usize) if found, None if not
-  #[inline(always)]
-  pub fn contains_str(&self, word: &str) -> Option<usize> {
-    let pattern = word.as_bytes();
-    self.contains_slice(pattern)
-  }
-
-  /// Searches for a string slice and returns Some(usize) if found, None if not
-  #[inline(always)]
-  pub fn contains_slice(&self, slice: &[u8]) -> Option<usize> {
-    let buffer = self.data();
-
-    if buffer.len() < slice.len() {
-      return None;
-    }
-    for (index, window) in buffer.windows(slice.len()).enumerate() {
-      if window == slice {
-        return Some(index);
-      }
-    }
-    None
-  }
-
-  /// Sets buffer end point at index
+  /// Sets buffer's used length to a specific index.
   #[inline(always)]
   pub fn set_end(&mut self, index: usize) {
-    self.used = index.clamp(0, self.buffer.len());
+    self.used = index.min(BUF_SIZE);
+  }
+}
+
+// Methods that require the type `T` to be comparable.
+impl<T: Copy + Default + PartialEq, const BUF_SIZE: usize> FifoBuffer<T, BUF_SIZE> {
+  /// Returns the index of the first matching item, or `None`.
+  #[inline(always)]
+  pub fn contains(&self, item: &T) -> Option<usize> {
+    self.data().iter().position(|b| b == item)
   }
 
-  /// Clears the buffer
+  /// Searches for a sub-slice and returns the starting index if found.
   #[inline(always)]
-  pub fn clear(&mut self) {
-    self.used = 0;
+  pub fn contains_slice(&self, slice: &[T]) -> Option<usize> {
+    if slice.is_empty() {
+      return None;
+    };
+    self.data().windows(slice.len()).position(|w| w == slice)
+  }
+}
+
+// Methods specific to a buffer holding `u8`.
+impl<const BUF_SIZE: usize> FifoBuffer<u8, BUF_SIZE> {
+  /// Searches for a string slice and returns the starting index if found.
+  #[inline(always)]
+  pub fn contains_str(&self, word: &str) -> Option<usize> {
+    self.contains_slice(word.as_bytes())
   }
 }
 
@@ -193,13 +168,23 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
 //                                             Traits
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
+// Default implementation for any `T` that meets the bounds.
+impl<T: Copy + Default, const BUF_SIZE: usize> Default for FifoBuffer<T, BUF_SIZE> {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
+use core::str::Utf8Error;
+
+// The AsStr trait can be defined and used separately for `u8` slices.
 pub trait AsStr {
-  fn as_str(&self) -> &str;
+  fn as_str(&self) -> Result<&str, Utf8Error>;
 }
 
 impl AsStr for [u8] {
-  /// Tries to convert an u8 array to utf8 &str. Defaults to error str if it fails.
-  fn as_str(&self) -> &str {
-    core::str::from_utf8(self).unwrap_or("Err: utf8 conversion")
+  /// Tries to convert a u8 slice to a utf8 &str.
+  fn as_str(&self) -> Result<&str, Utf8Error> {
+    core::str::from_utf8(self)
   }
 }
