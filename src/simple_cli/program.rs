@@ -8,7 +8,7 @@ use super::*;
 //                                            Globals
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-static CMD_BUFF_SIZE: usize = 128;
+static CMD_BUFF_SIZE: usize = 192;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                        Program Struct
@@ -32,21 +32,19 @@ impl Program {
   // ———————————————————————————————————————————— Init ——————————————————————————————————————————————
 
   pub fn init(&mut self, device: &mut Device) {
-    // Blocking wait until we receive a serial monitor connection
     let led = device.outputs.get_pin(LED).unwrap();
 
-    // While we don't have a serial monitor connected we keep trying
+    // While we don't have a serial monitor connection we keep polling
     while !SERIAL.is_connected() {
       led.toggle().unwrap();
       SERIAL.poll_usb();
-      DELAY.ms(80);
+      device.timer.delay_ms(80);
     }
 
     #[cfg(feature = "defmt")]
     info!("USB Serial Monitor: Connected!");
 
     // Blink leds four times to notify
-    // This also warms up the USB device, which otherwise will skip the print msg below
     for _ in 0..4 {
       led.set_low().unwrap();
       device.timer.delay_ms(200);
@@ -58,7 +56,9 @@ impl Program {
     #[cfg(feature = "panic-persist")]
     if let Some(msg) = panic_persist::get_panic_message_bytes() {
       println!("\n========= PANIC ===========");
-      println!("{}", msg.as_str().unwrap());
+      if let Ok(msg) = msg.as_str() {
+        println!("{}", msg);
+      }
     }
 
     println!("\n========= HELLO =========== ");
@@ -71,17 +71,22 @@ impl Program {
   // ———————————————————————————————————————————— Run ———————————————————————————————————————————————
 
   pub fn run(&mut self, device: &mut Device) {
+    let mut cli = Cli::new(&CMDS);
+
     let led = device.outputs.get_pin(LED).unwrap();
     led.set_high().unwrap();
 
-    let mut cli = Cli::new(&CMDS);
-
     loop {
-      if !SERIAL.is_connected() {
-        continue;
+      let led = device.outputs.get_pin(LED).unwrap();
+
+      // While we don't have a serial monitor connection we keep polling
+      while !SERIAL.is_connected() {
+        led.toggle().unwrap();
+        SERIAL.poll_usb();
+        device.timer.delay_ms(80);
       }
 
-      SERIAL.poll_usb();
+      led.set_high().unwrap();
 
       // Read command
       if !self.command_read {
@@ -104,6 +109,7 @@ impl Program {
 
           Err(e) => {
             println!("\nErr: {:?} \n", e);
+            continue;
           }
         }
       }

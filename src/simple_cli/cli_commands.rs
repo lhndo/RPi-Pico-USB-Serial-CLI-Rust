@@ -5,6 +5,15 @@
 
 use super::*;
 
+type Result<T> = core::result::Result<T, CliError>;
+type Context = Device;
+
+pub struct Command {
+  pub name: &'static str,
+  pub desc: &'static str,
+  pub func: fn(&[Arguments], &mut Device) -> Result<()>,
+}
+
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                         Commands List
 // ————————————————————————————————————————————————————————————————————————————————————————————————
@@ -83,12 +92,9 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
 //                                        Commands Config
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-type Result<T> = core::result::Result<T, CliError>;
-type Context = Device;
-
 // ———————————————————————————————————————————— Help ——————————————————————————————————————————————
 
-fn help_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+fn help_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   println!("Available commands:\n");
   for cmd in CMDS.iter() {
     println!(" {} - {} \n", &cmd.name, &cmd.desc);
@@ -98,7 +104,7 @@ fn help_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
 
 // ———————————————————————————————————————————— Test ——————————————————————————————————————————————
 
-fn example_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+fn example_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   let arg: f32 = get_parsed_param("arg", args)?;
   let opt: u8 = get_parsed_param("opt", args).unwrap_or(0); // With default
   let on: bool = get_parsed_param("on", args).unwrap_or(false);
@@ -116,7 +122,7 @@ fn example_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
 
 // ——————————————————————————————————————————— Reset ——————————————————————————————————————————————
 
-fn reset_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+fn reset_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   print!("\nResetting...\n");
   device.timer.delay_ms(500); // Waiting for msg to appear
   device_reset();
@@ -125,7 +131,7 @@ fn reset_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
 
 // ——————————————————————————————————————————— Flash ——————————————————————————————————————————————
 
-fn flash_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+fn flash_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   print!("\nRestarting in USB Flash mode!...\n");
   device_reset_to_usb();
 
@@ -135,7 +141,7 @@ fn flash_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
 // —————————————————————————————————————————— Blink —————————————————————————————————————————————
 // ex: blink times=4
 
-fn blink_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+fn blink_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   let times: u16 = get_parsed_param("times", args).unwrap_or(10); // 10 default
   let interval: u16 = get_parsed_param("interval", args).unwrap_or(200); // 10 default
   blink(device, times, interval)
@@ -153,6 +159,7 @@ fn blink(device: &mut Context, times: u16, interval: u16) -> Result<()> {
   while !ledtask.is_exhausted() {
     if ledtask.is_ready() {
       led.toggle().unwrap();
+
       if led.is_set_high().unwrap() {
         print!("Blink {} | ", blink);
         blink += 1;
@@ -175,7 +182,7 @@ fn blink(device: &mut Context, times: u16, interval: u16) -> Result<()> {
 
 // —————————————————————————————————————————— Read ADC —————————————————————————————————————————————
 
-fn read_adc_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+fn read_adc_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000);
 
   read_adc(device, ref_res)
@@ -209,7 +216,7 @@ fn read_adc(device: &mut Context, ref_res: u32) -> Result<()> {
 // ————————————————————————————————————————— Sample Adc ———————————————————————————————————————————
 //GPIO 26
 
-fn sample_adc_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+fn sample_adc_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000);
   let channel: u8 = get_parsed_param("channel", args).unwrap_or(0);
   let interval: u16 = get_parsed_param("interval", args).unwrap_or(200);
@@ -245,7 +252,7 @@ fn sample_adc(device: &mut Context, channel: u8, ref_res: u32, interval: u16) ->
 // ex: servo us=1200 pause=1000
 // ex: servo sweep=true max_us=1800
 
-fn servo_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+fn servo_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   let us: u16 = get_parsed_param("us", args).unwrap_or(1500); //  1500 us default
   let pause: u32 = get_parsed_param("pause", args).unwrap_or(1500); // 2s default
   let sweep: bool = get_parsed_param("sweep", args).unwrap_or(false); //  false default
@@ -307,7 +314,7 @@ fn servo(device: &mut Context, us: u16, pause: u32, sweep: bool, max_us: u16) ->
 // —————————————————————————————————————————— Set PWM —————————————————————————————————————————————
 // GPIO 6 pwm3A
 
-fn set_pwm_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+fn set_pwm_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   let pwm_id: usize = get_parsed_param("pwm_id", args).unwrap_or(3); //  -1 eq not set
   let channel = get_str_param("channel", args).unwrap_or("a"); // false
   let us: i32 = get_parsed_param("us", args).unwrap_or(-1); //  -1 eq not set
@@ -403,14 +410,14 @@ where
 
 // ——————————————————————————————————————————— Panic Test ———————————————————————————————————————————
 
-fn panic_test_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+fn panic_test_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   print!("\n On the next boot you should see the msg \"PANIC TEST\"\n Panicking.... :O\n");
   panic!("PANIC TEST");
 }
 
 // ————————————————————————————————————————— Test GPIO ————————————————————————————————————————————
 
-fn test_gpio_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+fn test_gpio_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   println!("---- Testing GPIO ----");
   println!("Send '~' to exit");
 
@@ -431,7 +438,7 @@ fn test_gpio_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
 
 // ———————————————————————————————————————— Test Analog ———————————————————————————————————————————
 
-fn test_analog_cmd(args: &[Arg], device: &mut Context) -> Result<()> {
+fn test_analog_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   println!("---- Testing Analog Input ----");
   println!("Input: GPIO 26 >> PWM Output: GPIO 8");
   println!("Send '~' to exit");

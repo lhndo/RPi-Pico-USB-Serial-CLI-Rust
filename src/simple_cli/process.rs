@@ -1,12 +1,8 @@
-// -----------------------------------------------------------------------------
-//                                 SIMPLE CLI
-// -----------------------------------------------------------------------------
-
 use super::*;
 
-// -----------------------------------------------------------------------------
-//                                   Globals
-// -----------------------------------------------------------------------------
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+//                                            Globals
+// ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub const CLI_READ_BUFFER_LENGTH: usize = 128;
 const MAX_CMD_CALL_LENGTH: usize = 24;
@@ -15,10 +11,11 @@ const MAX_PARAM_LENGTH: usize = 16;
 const MAX_VALUE_LENGTH: usize = 64;
 const ERR_STR_LENGTH: usize = 64;
 
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+//                                             Errors
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+
 type Result<T> = core::result::Result<T, CliError>;
-// -----------------------------------------------------------------------------
-//                                   Errors
-// -----------------------------------------------------------------------------
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -56,73 +53,64 @@ impl fmt::Display for CliError {
   }
 }
 
-// -----------------------------------------------------------------------------
-//                              Command Struct
-// -----------------------------------------------------------------------------
-
-pub struct Command {
-  pub name: &'static str,
-  pub desc: &'static str,
-  pub func: fn(&[Arg], &mut Device) -> Result<()>,
-}
-
-#[derive(Debug, Default)]
-struct CmdWithArgs {
-  cmd:  String<MAX_CMD_CALL_LENGTH>,
-  args: Vec<Arg, MAX_NUMBER_PARAMS>,
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct Arg {
-  param: String<MAX_PARAM_LENGTH>,
-  value: String<MAX_VALUE_LENGTH>,
-}
-
-// -----------------------------------------------------------------------------
-//                                    Cli
-// -----------------------------------------------------------------------------
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+//                                              CLI
+// ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Cli {
   commands: &'static [Command],
 }
-
-// -------------------------------- Cli Impl -----------------------------------
 
 impl Cli {
   pub fn new(commands: &'static [Command]) -> Self {
     Self { commands }
   }
 
-  // ------------------------------- Execute ---------------------------------
-
   pub fn execute(&mut self, input: &str, device: &mut Device) -> Result<()> {
     let command = split_into_cmd_args(input)?;
-    self.execute_command(&command, device)?;
+    self.execute_command(command, device)?;
     Ok(())
   }
 
-  fn execute_command(&mut self, in_cmd: &CmdWithArgs, device: &mut Device) -> Result<()> {
-    let cmd_name = in_cmd.cmd.as_str();
-    let cmd_arg = &in_cmd.args;
+  fn execute_command(&mut self, command: CommandWithArgs, device: &mut Device) -> Result<()> {
+    let cmd_name = command.cmd.as_str();
+    let cmd_arg = command.args;
 
     let cmd =
       self.commands.iter().find(|x| x.name.eq_ignore_ascii_case(cmd_name)).ok_or_else(|| {
         String::try_from(cmd_name).map(CliError::CmdNotFound).unwrap_or(CliError::BufferWrite)
       })?;
 
-    // Executing command
-    (cmd.func)(cmd_arg, device)?;
+    // Execute Command
+    (cmd.func)(&cmd_arg, device)?;
     Ok(())
   }
 }
 
-// -----------------------------------------------------------------------------
-//                              Helper Functions
-// -----------------------------------------------------------------------------
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+//                                         Input Commands
+// ————————————————————————————————————————————————————————————————————————————————————————————————
 
-// ---------------------- Split into command and arguments -------------------------
+#[derive(Debug, Default)]
+struct CommandWithArgs {
+  cmd:  String<MAX_CMD_CALL_LENGTH>,
+  args: Vec<Arguments, MAX_NUMBER_PARAMS>,
+}
 
-fn split_into_cmd_args(input: &str) -> Result<CmdWithArgs> {
+#[derive(Debug, Default, Clone)]
+pub struct Arguments {
+  param: String<MAX_PARAM_LENGTH>,
+  value: String<MAX_VALUE_LENGTH>,
+}
+
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+//                                        Helper Functions
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+
+// —————————————————————————————————— Split Into Cmd and Args —————————————————————————————————————
+
+/// Takes an input string and processes it creating a CommandWithArgs struct
+fn split_into_cmd_args(input: &str) -> Result<CommandWithArgs> {
   // --- Stage 1: All text to lowercase, detect and strip quotes
   // and switch spaces inside with a key (0x1E) symbol ---
   let mut processed_buf: String<CLI_READ_BUFFER_LENGTH> = String::new();
@@ -150,7 +138,7 @@ fn split_into_cmd_args(input: &str) -> Result<CmdWithArgs> {
   let command: String<MAX_CMD_CALL_LENGTH> =
     String::try_from(cmd_str).map_err(|_| CliError::BufferWrite)?;
 
-  let mut split_input = CmdWithArgs {
+  let mut split_input = CommandWithArgs {
     cmd:  command,
     args: Vec::new(),
   };
@@ -169,7 +157,7 @@ fn split_into_cmd_args(input: &str) -> Result<CmdWithArgs> {
       let arg_param = String::try_from(elements[0]).map_err(|_| CliError::BufferWrite)?;
       split_input
         .args
-        .push(Arg {
+        .push(Arguments {
           param: arg_param,
           value: String::new(),
         })
@@ -188,7 +176,7 @@ fn split_into_cmd_args(input: &str) -> Result<CmdWithArgs> {
       // Creating argument with value
       split_input
         .args
-        .push(Arg {
+        .push(Arguments {
           param: arg_param,
           value: arg_value,
         })
@@ -198,9 +186,10 @@ fn split_into_cmd_args(input: &str) -> Result<CmdWithArgs> {
   Ok(split_input)
 }
 
-// ---------------------------- Get Parsed Param -------------------------------
+// —————————————————————————————————————— Get Parsed Param ————————————————————————————————————————
 
-pub fn get_parsed_param<T>(param: &str, arg_list: &[Arg]) -> Result<T>
+/// Matches a string parameter name and retrives the value from an argument list
+pub fn get_parsed_param<T>(param: &str, arg_list: &[Arguments]) -> Result<T>
 where T: FromStr {
   // Find argument
   let arg = arg_list.iter().find(|s| s.param.eq_ignore_ascii_case(param)).ok_or_else(|| {
@@ -217,8 +206,9 @@ where T: FromStr {
   Ok(value)
 }
 
-// ------------------------------ Get Str Param --------------------------------
+// —————————————————————————————————— Get Parsed String Param —————————————————————————————————————
 
-pub fn get_str_param<'a>(param: &str, arg_list: &'a [Arg]) -> Option<&'a str> {
+/// Matches a string parameter name and retrives the string from an argument list
+pub fn get_str_param<'a>(param: &str, arg_list: &'a [Arguments]) -> Option<&'a str> {
   arg_list.iter().find(|arg| arg.param.eq_ignore_ascii_case(param)).map(|arg| arg.value.as_str())
 }

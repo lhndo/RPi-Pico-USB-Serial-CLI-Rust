@@ -46,10 +46,6 @@ use usbd_serial::SerialPort;
 //                                           Globals
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-pub const ADC_BITS: u32 = 12;
-pub const ADC_MAX: f32 = ((1 << ADC_BITS) - 1) as f32;
-pub const ADC_VREF: f32 = 3.3;
-
 // Pin Aliases
 pub const LED: usize = 25;
 pub const BUTTON: usize = 23; // built-in button on WeAct RP2040
@@ -156,6 +152,19 @@ impl Device {
     SERIAL.poll_usb();
 
     // ————————————————————————————————————————— Interrupts ———————————————————————————————————————
+
+    // ————————————————————————————————————— USB Interrupt ————————————————————————————————————————
+    // Disabling it due freeze issues
+
+    // // Enable the USB interrupt
+    // unsafe {
+    //   pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
+    // };
+
+    // // Priming USB otherwise connection is not established with the hosts
+    // SERIAL.poll_usb();
+
+    // ———————————————————————————————————————— Alarm 0 ———————————————————————————————————————————
 
     // Creating an interrupt for keeping the Usb connection alive by polling every 10ms
     let mut alarm0 = timer.alarm_0().unwrap();
@@ -321,6 +330,7 @@ pub fn device_reset() {
 #[pac::interrupt]
 fn TIMER_IRQ_0() {
   SERIAL.poll_usb();
+
   // Reset interrupt timer safely
   free(|cs| {
     if let Some(alarm) = ALARM_0.borrow(cs).borrow_mut().as_mut() {
@@ -329,3 +339,10 @@ fn TIMER_IRQ_0() {
     };
   })
 }
+
+// Disabling it due freeze issues
+// /// Polling the USB device to keep the connection alive even if we stall
+// #[pac::interrupt]
+// fn USBCTRL_IRQ() {
+//   SERIAL.poll_usb();
+// }

@@ -61,10 +61,11 @@ impl SerialHandle {
   pub fn with<F, R>(&self, f: F) -> R
   where F: FnOnce(&mut Serialio) -> R {
     free(|cs| {
-      let mut guard = SERIAL_CELL.borrow(cs).borrow_mut();
-      let cell = guard.as_mut().unwrap();
-
-      f(cell)
+      if let Some(cell) = SERIAL_CELL.borrow(cs).borrow_mut().as_mut() {
+        f(cell)
+      } else {
+        panic!("SERIAL not initialized");
+      }
     })
   }
 

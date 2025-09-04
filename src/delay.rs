@@ -29,7 +29,8 @@ pub fn init(delay: CortexmDelay) {
     if cell.is_some() {
       panic!("DELAY already initialized");
     }
-    *cell = Some(delay);
+
+    cell.replace(delay);
   });
 }
 
@@ -43,11 +44,11 @@ pub struct DelayHandle;
 impl DelayHandle {
   /// Executes a closure with a mutable reference to the delay object.
   /// Panics if the DELAY has not been initialized.
-  fn with_delay<F>(&self, f: F)
+  fn with<F>(&self, f: F)
   where F: FnOnce(&mut CortexmDelay) {
     free(|cs| {
-      if let Some(delay) = DELAY_CELL.borrow(cs).borrow_mut().as_mut() {
-        f(delay);
+      if let Some(cell) = DELAY_CELL.borrow(cs).borrow_mut().as_mut() {
+        f(cell);
       } else {
         panic!("DELAY not initialized");
       }
@@ -56,11 +57,11 @@ impl DelayHandle {
 
   /// Pauses execution for a minimum number of milliseconds.
   pub fn ms(&self, ms: u32) {
-    self.with_delay(|delay| delay.delay_ms(ms));
+    self.with(|delay| delay.delay_ms(ms));
   }
 
   /// Pauses execution for a minimum number of microseconds.
   pub fn us(&self, us: u32) {
-    self.with_delay(|delay| delay.delay_us(us));
+    self.with(|delay| delay.delay_us(us));
   }
 }
