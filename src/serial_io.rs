@@ -74,11 +74,6 @@ impl SerialHandle {
     self.with(|cell| cell.poll_usb())
   }
 
-  /// Checks if an interrupt command was received via the USB serial.
-  pub fn poll_for_break_cmd(&self) -> bool {
-    self.with(|cell| cell.poll_for_break_cmd())
-  }
-
   /// Reads a line from the USB serial into the provided buffer.
   pub fn read_line_blocking(&self, buffer: &mut [u8]) -> Result<usize> {
     self.with(|cell| cell.read_line_blocking(buffer))
@@ -89,9 +84,41 @@ impl SerialHandle {
     self.with(|cell| cell.write(data))
   }
 
-  // Get serial monitor connection flag
+  /// Get serial monitor connection flag
   pub fn is_connected(&self) -> bool {
     self.with(|cell| cell.serial.dtr())
+  }
+
+  /// flush the rx buffer discarding the data
+  pub fn flush_rx(&self) {
+    self.with(|cell| cell.flush_rx())
+  }
+
+  /// Polls for interrupt cmd though the serial read buffer
+  /// This should be only called by the USB Interrupt
+  pub fn poll_for_cmd_interrupt(&self) {
+    self.with(|cell| cell.poll_for_interrupt())
+  }
+
+  /// Is there an interrupt request
+  /// This should be only called by the USB Interrupt
+  pub fn interrupt_poll_requested(&self) -> bool {
+    self.with(|cell| cell.request_poll_for_interrupt)
+  }
+
+  /// Sets request to poll for interrupt flag
+  pub fn request_poll_for_interrupt_cmd(&self, value: bool) {
+    self.with(|cell| {
+      cell.request_poll_for_interrupt = value;
+      if !value {
+        cell.interrupt_cmd_triggered = false;
+      }
+    })
+  }
+
+  /// Checks if an interrupt command was received via the USB serial.
+  pub fn interrupt_cmd_triggered(&self) -> bool {
+    self.with(|cell| cell.interrupt_cmd_triggered)
   }
 }
 
@@ -100,13 +127,20 @@ impl SerialHandle {
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Serialio {
-  pub serial:  SerialDev,
+  pub serial: SerialDev,
   pub usb_dev: UsbDev,
+  pub request_poll_for_interrupt: bool,
+  pub interrupt_cmd_triggered: bool,
 }
 
 impl Serialio {
   fn new(serial: SerialDev, usb_dev: UsbDev) -> Self {
-    Self { serial, usb_dev }
+    Self {
+      serial,
+      usb_dev,
+      request_poll_for_interrupt: false,
+      interrupt_cmd_triggered: false,
+    }
   }
 
   // ——————————————————————————————————————————————————————————————————————————————————————————————
@@ -119,39 +153,50 @@ impl Serialio {
     self.usb_dev.poll(&mut [&mut self.serial])
   }
 
+  /// flush the rx buffer discarding the data
+  fn flush_rx(&mut self) {
+    let mut discard_buffer = [0u8; 64];
+
+    // Keep reading until buffer is empty
+    loop {
+      match self.serial.read(&mut discard_buffer) {
+        Ok(bytes_read) if bytes_read > 0 => {}
+        _ => {
+          // No more data or error, we're done
+          break;
+        }
+      }
+    }
+  }
+
   /// Polls serial read buffer for an excape character (INTERRUPT_CHAR '~' )
-  /// Runs once, non interrupting. Returns true if found.
   /// To be used in loops that need to be interrupted from the command line
   /// WARNING: This will throw away the read buffer
-  fn poll_for_break_cmd(&mut self) -> bool {
+  fn poll_for_interrupt(&mut self) {
     // If no serial connection return false
     if !self.serial.dtr() {
-      return false;
+      self.interrupt_cmd_triggered = false;
+      return;
     };
 
     loop {
-      self.poll_usb();
-
       let byte = {
         let mut byte_buffer = [0u8; 1];
-        let _ = self.serial.read(&mut byte_buffer);
-        byte_buffer[0]
+        match self.serial.read(&mut byte_buffer) {
+          Ok(bytes_read) if bytes_read > 0 => byte_buffer[0],
+          _ => {
+            // No data
+            self.interrupt_cmd_triggered = false;
+            return;
+          }
+        }
       };
 
-      if byte == 0 {
-        return false;
-      }
-
       if byte == INTERRUPT_CHAR {
-        // we need to remove everything up to '/n' from the buffer
-        loop {
-          let mut byte_buffer = [0u8; 1];
-          let _ = self.serial.read(&mut byte_buffer);
-          if byte_buffer[0] == b'\n' {
-            return true;
-          }
-          self.poll_usb();
-        }
+        // We flush the rest of the buffer
+        self.flush_rx();
+        self.interrupt_cmd_triggered = true;
+        return;
       }
     }
   }

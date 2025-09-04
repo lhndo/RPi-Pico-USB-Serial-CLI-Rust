@@ -154,15 +154,14 @@ impl Device {
     // ————————————————————————————————————————— Interrupts ———————————————————————————————————————
 
     // ————————————————————————————————————— USB Interrupt ————————————————————————————————————————
-    // Disabling it due freeze issues
 
-    // // Enable the USB interrupt
-    // unsafe {
-    //   pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
-    // };
+    // Enabling the USB interrupt
+    unsafe {
+      pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
+    };
 
-    // // Priming USB otherwise connection is not established with the hosts
-    // SERIAL.poll_usb();
+    // Priming USB otherwise connection is not established with the hosts
+    SERIAL.poll_usb();
 
     // ———————————————————————————————————————— Alarm 0 ———————————————————————————————————————————
 
@@ -329,7 +328,7 @@ pub fn device_reset() {
 /// Interrupt 0
 #[pac::interrupt]
 fn TIMER_IRQ_0() {
-  SERIAL.poll_usb();
+  // Do something here in a timed interrupt
 
   // Reset interrupt timer safely
   free(|cs| {
@@ -340,9 +339,17 @@ fn TIMER_IRQ_0() {
   })
 }
 
-// Disabling it due freeze issues
-// /// Polling the USB device to keep the connection alive even if we stall
-// #[pac::interrupt]
-// fn USBCTRL_IRQ() {
-//   SERIAL.poll_usb();
-// }
+/// USB Interrupt
+/// Polling the USB device to keep the connection alive even if we stall
+#[pac::interrupt]
+fn USBCTRL_IRQ() {
+  SERIAL.poll_usb();
+
+  // We clear the read buffer to avoid an interrupt storm
+  // All explicit reads are done in CS blocks in the main program loop
+  if SERIAL.interrupt_poll_requested() {
+    SERIAL.poll_for_cmd_interrupt();
+  } else {
+    SERIAL.flush_rx();
+  }
+}

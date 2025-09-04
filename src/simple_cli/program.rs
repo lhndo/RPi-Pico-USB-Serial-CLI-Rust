@@ -37,7 +37,6 @@ impl Program {
     // While we don't have a serial monitor connection we keep polling
     while !SERIAL.is_connected() {
       led.toggle().unwrap();
-      SERIAL.poll_usb();
       device.timer.delay_ms(80);
     }
 
@@ -82,7 +81,6 @@ impl Program {
       // While we don't have a serial monitor connection we keep polling
       while !SERIAL.is_connected() {
         led.toggle().unwrap();
-        SERIAL.poll_usb();
         device.timer.delay_ms(80);
       }
 

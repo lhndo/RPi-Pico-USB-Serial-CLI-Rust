@@ -229,7 +229,8 @@ fn sample_adc(device: &mut Context, channel: u8, ref_res: u32, interval: u16) ->
   println!("Reference Pullup Resistor: {}ohm", ref_res);
   println!("ADC Channel: {} \n", { channel });
 
-  while !SERIAL.poll_for_break_cmd() {
+  SERIAL.request_poll_for_interrupt_cmd(true);
+  while !SERIAL.interrupt_cmd_triggered() {
     if let Some(r) = device.acds.read_channel(channel) {
       let adc_raw: u16 = r;
       let adc_vol = adc_raw.to_voltage();
@@ -240,6 +241,7 @@ fn sample_adc(device: &mut Context, channel: u8, ref_res: u32, interval: u16) ->
       println!("Cannot read channel: {}", channel);
     }
   }
+  SERIAL.request_poll_for_interrupt_cmd(false);
 
   println!("Sampling Interrupted. Done!");
 
@@ -424,13 +426,15 @@ fn test_gpio_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   let input = device.inputs.get_pin(9).unwrap();
   let output = device.outputs.get_pin(0).unwrap();
 
-  while !SERIAL.poll_for_break_cmd() {
+  SERIAL.request_poll_for_interrupt_cmd(true);
+  while !SERIAL.interrupt_cmd_triggered() {
     if input.is_low().unwrap() {
       output.set_high().unwrap();
     } else {
       output.set_low().unwrap();
     }
   }
+  SERIAL.request_poll_for_interrupt_cmd(false);
 
   println!("Done!");
   Ok(())
@@ -456,7 +460,8 @@ fn test_analog_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
 
   let pwm_channel = pwm.get_channel_a();
 
-  while !SERIAL.poll_for_break_cmd() {
+  SERIAL.request_poll_for_interrupt_cmd(true);
+  while !SERIAL.interrupt_cmd_triggered() {
     //Analog Read
     if let Some(r) = device.acds.read_channel(adc_channel) {
       let adc_v = r.to_voltage().clamp(0.0, MAX_V);
@@ -469,6 +474,7 @@ fn test_analog_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
       };
     }
   }
+  SERIAL.request_poll_for_interrupt_cmd(false);
 
   // Off
   pwm_channel.set_duty_cycle_fully_off().unwrap();
