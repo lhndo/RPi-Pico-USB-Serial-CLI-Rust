@@ -165,7 +165,7 @@ impl Device {
 
     // ———————————————————————————————————————— Alarm 0 ———————————————————————————————————————————
 
-    // Creating an interrupt for keeping the Usb connection alive by polling every 10ms
+    // Creating a timer interrupt
     let mut alarm0 = timer.alarm_0().unwrap();
     alarm0.schedule(INTERRUPT_0_US).unwrap();
     alarm0.enable_interrupt();
