@@ -96,29 +96,18 @@ impl SerialHandle {
 
   /// Polls for interrupt cmd though the serial read buffer
   /// This should be only called by the USB Interrupt
-  pub fn poll_for_cmd_interrupt(&self) {
+  pub fn poll_for_interrupt_char(&self) {
     self.with(|cell| cell.poll_for_interrupt())
-  }
-
-  /// Is there an interrupt request
-  /// This should be only called by the USB Interrupt
-  pub fn interrupt_poll_requested(&self) -> bool {
-    self.with(|cell| cell.request_poll_for_interrupt)
-  }
-
-  /// Sets request to poll for interrupt flag
-  pub fn request_poll_for_interrupt_cmd(&self, value: bool) {
-    self.with(|cell| {
-      cell.request_poll_for_interrupt = value;
-      if !value {
-        cell.interrupt_cmd_triggered = false;
-      }
-    })
   }
 
   /// Checks if an interrupt command was received via the USB serial.
   pub fn interrupt_cmd_triggered(&self) -> bool {
     self.with(|cell| cell.interrupt_cmd_triggered)
+  }
+
+  /// Clear the interrupt comand trigger state
+  pub fn clear_interrupt_cmd(&self) {
+    self.with(|cell| cell.interrupt_cmd_triggered = false);
   }
 }
 
@@ -177,26 +166,27 @@ impl Serialio {
     if !self.serial.dtr() {
       self.interrupt_cmd_triggered = false;
       return;
-    };
+    }
+
+    let mut buffer = [0u8; 64];
 
     loop {
-      let byte = {
-        let mut byte_buffer = [0u8; 1];
-        match self.serial.read(&mut byte_buffer) {
-          Ok(bytes_read) if bytes_read > 0 => byte_buffer[0],
-          _ => {
-            // No data
-            self.interrupt_cmd_triggered = false;
+      match self.serial.read(&mut buffer) {
+        Ok(bytes_read) if bytes_read > 0 => {
+          // Scan the buffer for interrupt character
+          if buffer[..bytes_read].contains(&INTERRUPT_CHAR) {
+            // Found interrupt character, flush and set flag
+            self.interrupt_cmd_triggered = true;
+            self.flush_rx();
             return;
           }
+          continue;
         }
-      };
-
-      if byte == INTERRUPT_CHAR {
-        // We flush the rest of the buffer
-        self.flush_rx();
-        self.interrupt_cmd_triggered = true;
-        return;
+        _ => {
+          // No data available
+          self.interrupt_cmd_triggered = false;
+          return;
+        }
       }
     }
   }

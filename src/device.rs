@@ -345,11 +345,7 @@ fn TIMER_IRQ_0() {
 fn USBCTRL_IRQ() {
   SERIAL.poll_usb();
 
-  // We clear the read buffer to avoid an interrupt storm
-  // All explicit reads are done in CS blocks in the main program loop
-  if SERIAL.interrupt_poll_requested() {
-    SERIAL.poll_for_cmd_interrupt();
-  } else {
-    SERIAL.flush_rx();
-  }
+  // All explicit reads are done in CS blocks in the main program loops
+  // We search the rx buffer for an interrupt character and flush the rest
+  SERIAL.poll_for_interrupt_char();
 }
