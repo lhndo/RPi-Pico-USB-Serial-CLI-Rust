@@ -25,6 +25,7 @@ use crate::serial_io;
 use crate::serial_io::SERIAL;
 use crate::state::State;
 
+use critical_section::{Mutex, with as free};
 use rp_pico::hal;
 use rp_pico::hal::Clock;
 use rp_pico::hal::adc::AdcPin;
@@ -35,7 +36,6 @@ use rp_pico::hal::timer::Timer;
 use rp_pico::hal::{clocks, pac, pac::interrupt, pwm, sio, timer, usb, watchdog};
 
 use cortex_m::delay::Delay;
-use cortex_m::interrupt::{Mutex, free};
 use cortex_m::prelude::*;
 use heapless::String;
 use usb_device::class_prelude::*;
@@ -171,7 +171,7 @@ impl Device {
     alarm0.enable_interrupt();
 
     free(|cs| {
-      ALARM_0.borrow(cs).borrow_mut().replace(alarm0);
+      ALARM_0.borrow_ref_mut(cs).replace(alarm0);
     });
 
     // Enable Interrupt
@@ -332,7 +332,7 @@ fn TIMER_IRQ_0() {
 
   // Reset interrupt timer safely
   free(|cs| {
-    if let Some(alarm) = ALARM_0.borrow(cs).borrow_mut().as_mut() {
+    if let Some(alarm) = ALARM_0.borrow_ref_mut(cs).as_mut() {
       alarm.clear_interrupt();
       alarm.schedule(INTERRUPT_0_US).unwrap();
     };
@@ -345,7 +345,8 @@ fn TIMER_IRQ_0() {
 fn USBCTRL_IRQ() {
   SERIAL.poll_usb();
 
-  // All explicit reads are done in CS blocks in the main program loops
   // We search the rx buffer for an interrupt character and flush the rest
+  // This is ok since all explicit reads are done in CS blocks in the main program loop
+  // If we don't read the data, the interrupt will keep firing freezing the device
   SERIAL.poll_for_interrupt_char();
 }

@@ -1,7 +1,7 @@
 //! Main CLI program logic
-/// ————————————————————————————————————————————————————————————————————————————————————————————————
+/// ———————————————————————————————————————————————————————————————————————————————————————————————
 ///                                            Program
-/// ————————————————————————————————————————————————————————————————————————————————————————————————
+/// ———————————————————————————————————————————————————————————————————————————————————————————————
 use super::*;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
@@ -20,7 +20,7 @@ pub struct Program {
 }
 
 impl Program {
-  // ———————————————————————————————————————————— New ———————————————————————————————————————————————
+  // ———————————————————————————————————————————— New ——————————————————————————————————————————————
 
   pub fn new() -> Self {
     let command_buf = FifoBuffer::new();
@@ -29,7 +29,7 @@ impl Program {
     Self { command_buf, command_read }
   }
 
-  // ———————————————————————————————————————————— Init ——————————————————————————————————————————————
+  // ———————————————————————————————————————————— Init —————————————————————————————————————————————
 
   pub fn init(&mut self, device: &mut Device) {
     let led = device.outputs.get_pin(LED).unwrap();
@@ -76,9 +76,8 @@ impl Program {
     led.set_high().unwrap();
 
     loop {
-      let led = device.outputs.get_pin(LED).unwrap();
-
       // While we don't have a serial monitor connection we keep polling
+      let led = device.outputs.get_pin(LED).unwrap();
       while !SERIAL.is_connected() {
         led.toggle().unwrap();
         device.timer.delay_ms(80);
@@ -104,7 +103,6 @@ impl Program {
             self.command_read = true;
             println!("\n>> Received Command: (T: {}) ", device.timer.print_time());
           }
-
           Err(e) => {
             println!("\nErr: {:?} \n", e);
             continue;

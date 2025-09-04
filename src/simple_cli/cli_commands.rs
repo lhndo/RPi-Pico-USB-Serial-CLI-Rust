@@ -409,7 +409,7 @@ where
   Ok(())
 }
 
-// ——————————————————————————————————————————— Panic Test ———————————————————————————————————————————
+// ——————————————————————————————————————————— Panic Test —————————————————————————————————————————
 
 fn panic_test_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   print!("\n On the next boot you should see the msg \"PANIC TEST\"\n Panicking.... :O\n");

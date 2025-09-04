@@ -1,5 +1,4 @@
-//! This module owns the serial interface, the method of communicating outwards
-//! such as the usb device, and a write buffer
+//! This module owns the serial interface and the usb device
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                           Serial IO
 // ————————————————————————————————————————————————————————————————————————————————————————————————
@@ -10,7 +9,7 @@ use core::fmt::Write;
 
 use crate::delay::DELAY;
 
-use cortex_m::interrupt::{Mutex, free};
+use critical_section::{Mutex, with as free};
 use rp_pico::hal::usb::UsbBus;
 use usb_device::UsbError;
 use usb_device::device::UsbDevice;
@@ -37,7 +36,7 @@ pub type Result<T> = core::result::Result<T, UsbError>;
 /// Initialise the SERIAL global object once
 pub fn init(serial: SerialDev, usb_dev: UsbDev) {
   free(|cs| {
-    let mut cell = SERIAL_CELL.borrow(cs).borrow_mut();
+    let mut cell = SERIAL_CELL.borrow_ref_mut(cs);
 
     if cell.is_some() {
       panic!("SERIAL already initialized");
@@ -61,7 +60,7 @@ impl SerialHandle {
   pub fn with<F, R>(&self, f: F) -> R
   where F: FnOnce(&mut Serialio) -> R {
     free(|cs| {
-      if let Some(cell) = SERIAL_CELL.borrow(cs).borrow_mut().as_mut() {
+      if let Some(cell) = SERIAL_CELL.borrow_ref_mut(cs).as_mut() {
         f(cell)
       } else {
         panic!("SERIAL not initialized");
@@ -313,8 +312,8 @@ impl Write for Serialio {
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {
-        cortex_m::interrupt::free(|cs| {
-            if let Some(s) = $crate::serial_io::SERIAL_CELL.borrow(cs).borrow_mut().as_mut() {
+        critical_section::with(|cs| {
+            if let Some(s) = $crate::serial_io::SERIAL_CELL.borrow_ref_mut(cs).as_mut() {
                 let _ = s.write_fmt(format_args!($($arg)*));
             }
         })
@@ -327,8 +326,8 @@ macro_rules! println {
         $crate::print!("\r\n")
     };
     ($($arg:tt)*) => {
-        cortex_m::interrupt::free(|cs| {
-            if let Some(s) = $crate::serial_io::SERIAL_CELL.borrow(cs).borrow_mut().as_mut() {
+        critical_section::with(|cs| {
+            if let Some(s) = $crate::serial_io::SERIAL_CELL.borrow_ref_mut(cs).as_mut() {
                 let _ = writeln!(s, $($arg)*);
             }
         })

@@ -1,4 +1,4 @@
-use cortex_m::prelude::_embedded_hal_adc_OneShot;
+use embedded_hal_0_2::adc::OneShot;
 use rp_pico::hal::adc::{Adc, AdcPin, TempSense};
 use rp_pico::hal::gpio;
 

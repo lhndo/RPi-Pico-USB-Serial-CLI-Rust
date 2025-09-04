@@ -2,6 +2,10 @@ use core::panic;
 
 use rp_pico::hal::gpio::{self, Function, Pin, PinId, PullType};
 
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+//                                            Globals
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+
 pub const NUM_MCU_PINS: usize = 30;
 pub const NUM_MAX_DEF_PINS: usize = 15; // max number of input or output pins stored 
 const EMPTY_SLOT_MARKER: usize = 255;
