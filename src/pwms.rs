@@ -202,35 +202,35 @@ macro_rules! with_pwm_slice {
       0 => {
         let $slice = &mut $self.pwm0;
         $body
-      }
+      },
       1 => {
         let $slice = &mut $self.pwm1;
         $body
-      }
+      },
       2 => {
         let $slice = &mut $self.pwm2;
         $body
-      }
+      },
       3 => {
         let $slice = &mut $self.pwm3;
         $body
-      }
+      },
       4 => {
         let $slice = &mut $self.pwm4;
         $body
-      }
+      },
       5 => {
         let $slice = &mut $self.pwm5;
         $body
-      }
+      },
       6 => {
         let $slice = &mut $self.pwm6;
         $body
-      }
+      },
       7 => {
         let $slice = &mut $self.pwm7;
         $body
-      }
+      },
       // ... other match arms
       _ => panic!("Invalid PWM Slice ID"),
     }

@@ -95,7 +95,7 @@ impl SerialHandle {
 
   /// Polls for interrupt cmd though the serial read buffer
   /// This should be only called by the USB Interrupt
-  pub fn poll_for_interrupt_char(&self) {
+  pub fn poll_for_interrupt_cmd(&self) {
     self.with(|cell| cell.poll_for_interrupt())
   }
 
@@ -115,10 +115,10 @@ impl SerialHandle {
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Serialio {
-  pub serial: SerialDev,
-  pub usb_dev: UsbDev,
-  pub request_poll_for_interrupt: bool,
-  pub interrupt_cmd_triggered: bool,
+  serial: SerialDev,
+  usb_dev: UsbDev,
+  request_poll_for_interrupt: bool,
+  interrupt_cmd_triggered: bool,
 }
 
 impl Serialio {
@@ -148,11 +148,11 @@ impl Serialio {
     // Keep reading until buffer is empty
     loop {
       match self.serial.read(&mut discard_buffer) {
-        Ok(bytes_read) if bytes_read > 0 => {}
+        Ok(bytes_read) if bytes_read > 0 => {},
         _ => {
           // No more data or error, we're done
           break;
-        }
+        },
       }
     }
   }
@@ -180,12 +180,12 @@ impl Serialio {
             return;
           }
           continue;
-        }
+        },
         _ => {
           // No data available
           self.interrupt_cmd_triggered = false;
           return;
-        }
+        },
       }
     }
   }
@@ -200,7 +200,7 @@ impl Serialio {
         Ok(written) => {
           // If we wrote some bytes, advance the slice.
           data = &data[written..];
-        }
+        },
         Err(UsbError::WouldBlock) => {
           // If not connected to serial, we exit
           if !self.serial.dtr() {
@@ -209,11 +209,11 @@ impl Serialio {
           // Otherwise The serial buffer is full and we must keep polling
           // Small delay to avoid tight loops
           DELAY.us(6);
-        }
+        },
         Err(e) => {
           // A different, real error occurred. We exit.
           return Err(e);
-        }
+        },
       }
 
       // We must poll the USB device to send the serial data
@@ -241,7 +241,6 @@ impl Serialio {
     let mut overflow = false;
 
     loop {
-      //
       // Inner loop to read a single byte
       let byte = loop {
         self.poll_usb();
@@ -249,7 +248,7 @@ impl Serialio {
         let mut byte_buffer = [0u8; 1];
         match self.serial.read(&mut byte_buffer) {
           Ok(1) => break byte_buffer[0], // Got a byte, break inner loop.
-          Ok(_) => {}                    // Read 0 bytes, should never happen...
+          Ok(_) => {},                   // Read 0 bytes, should never happen...
           Err(UsbError::WouldBlock) => {
             // No data available, check connection and continue polling.
             if !self.serial.dtr() {
@@ -258,7 +257,7 @@ impl Serialio {
             }
             // Add a small delay to avoid a tight loop
             DELAY.us(6);
-          }
+          },
           Err(e) => return Err(e), // Non-recoverable error occurred.
         }
       };

@@ -3,7 +3,6 @@
 //                                           Device
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-//
 // RPi Pico           - https://cdn-shop.adafruit.com/970x728/4864-04.png
 // WeAct Studio RP2040 - https://mischianti.org/wp-content/uploads/2022/09/weact-studio-rp2040-raspberry-pi-pico-alternative-pinout-high-resolution.png
 //
@@ -73,7 +72,6 @@ impl Device {
   // ——————————————————————————————————————————— New ——————————————————————————————————————————————
 
   pub fn new() -> Self {
-    //
     // ———————————————————————————————————— Hal Boilerplate ———————————————————————————————————————
 
     let mut pac = pac::Peripherals::take().unwrap();
@@ -348,5 +346,5 @@ fn USBCTRL_IRQ() {
   // We search the rx buffer for an interrupt character and flush the rest
   // This is ok since all explicit reads are done in CS blocks in the main program loop
   // If we don't read the data, the interrupt will keep firing freezing the device
-  SERIAL.poll_for_interrupt_char();
+  SERIAL.poll_for_interrupt_cmd();
 }

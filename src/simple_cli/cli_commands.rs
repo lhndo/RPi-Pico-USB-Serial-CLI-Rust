@@ -214,7 +214,7 @@ fn read_adc(device: &mut Context, ref_res: u32) -> Result<()> {
 }
 
 // ————————————————————————————————————————— Sample Adc ———————————————————————————————————————————
-//GPIO 26
+// GPIO 26
 
 fn sample_adc_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000);
@@ -288,24 +288,24 @@ fn servo(device: &mut Context, us: u16, pause: u32, sweep: bool, max_us: u16) ->
   if sweep {
     // resetting borrow
     println!("Sweeping...");
-    //Max
+    // Max
     servo_pin.set_duty_cycle_us(max_us, FREQ);
     device.timer.delay_ms(pause);
 
-    //Mid
+    // Mid
     servo_pin.set_duty_cycle_us(MID, FREQ);
     device.timer.delay_ms(pause);
 
-    //Min
+    // Min
     servo_pin.set_duty_cycle_us(min_us, FREQ);
     device.timer.delay_ms(pause);
 
-    //Mid
+    // Mid
     servo_pin.set_duty_cycle_us(MID, FREQ);
     device.timer.delay_ms(pause);
   }
 
-  //Off
+  // Off
   servo_pin.set_duty_cycle_fully_off().unwrap();
   servo_pwm.disable();
   println!("Done!");
@@ -460,11 +460,11 @@ fn test_analog_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
 
   SERIAL.clear_interrupt_cmd();
   while !SERIAL.interrupt_cmd_triggered() {
-    //Analog Read
+    // Analog Read
     if let Some(r) = device.acds.read_channel(adc_channel) {
       let adc_v = r.to_voltage().clamp(0.0, MAX_V);
 
-      //PWM
+      // PWM
       let _ = match adc_v {
         MAX_V => pwm_channel.set_duty_cycle_fully_on(),
         v if v < 0.1 => pwm_channel.set_duty_cycle_fully_off(),

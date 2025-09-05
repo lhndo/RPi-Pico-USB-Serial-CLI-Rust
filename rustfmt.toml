@@ -14,15 +14,20 @@ imports_indent               = "Visual"
 imports_layout               = "HorizontalVertical"
 hard_tabs                    = false
 combine_control_expr         = false
-fn_args_layout               = "Tall"
+fn_params_layout             = "Tall"
 use_small_heuristics         = "Default"
+match_block_trailing_comma   = true
+normalize_comments           = true
+normalize_doc_attributes     = true
+overflow_delimited_expr      = true
+reorder_impl_items           = true
 
 
-fn_call_width                  = 90
-single_line_if_else_max_width  = 80
-single_line_let_else_max_width = 80
-attr_fn_like_width             = 90
+fn_call_width                  = 80
+attr_fn_like_width             = 80
 struct_lit_width               = 25
 struct_variant_width           = 60
 array_width                    = 60
-chain_width                    = 100
+chain_width                    = 80
+single_line_if_else_max_width  = 80
+single_line_let_else_max_width = 80

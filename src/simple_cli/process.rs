@@ -34,18 +34,20 @@ pub enum CliError {
 impl fmt::Display for CliError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      CliError::BufferWrite => write!(f, "failed to process the buffer into a valid command!"),
+      CliError::BufferWrite => {
+        write!(f, "failed to process the buffer into a valid command!")
+      },
       CliError::IoInput => write!(f, "IO Input!"),
       CliError::Parse(e) => {
         write!(f, "argument parse, arg: {}", e.as_str())
-      }
+      },
       CliError::MissingArg(e) => {
         write!(f, "missing argument <{}>", e.as_str())
-      }
+      },
       CliError::CmdExec(e) => write!(f, "command failed with: {}", e.as_str()),
       CliError::CmdNotFound(e) => {
         write!(f, "command not found: {}", e.as_str())
-      }
+      },
       CliError::CriticalFail => write!(f, "critical failure!"),
       CliError::Exit => write!(f, "exit!"),
       CliError::Other => write!(f, "internal error!"),
@@ -76,9 +78,14 @@ impl Cli {
     let cmd_name = command.cmd.as_str();
     let cmd_arg = command.args;
 
-    let cmd =
-      self.commands.iter().find(|x| x.name.eq_ignore_ascii_case(cmd_name)).ok_or_else(|| {
-        String::try_from(cmd_name).map(CliError::CmdNotFound).unwrap_or(CliError::BufferWrite)
+    let cmd = self
+      .commands
+      .iter()
+      .find(|x| x.name.eq_ignore_ascii_case(cmd_name))
+      .ok_or_else(|| {
+        String::try_from(cmd_name)
+          .map(CliError::CmdNotFound)
+          .unwrap_or(CliError::BufferWrite)
       })?;
 
     // Execute Command
@@ -119,16 +126,16 @@ fn split_into_cmd_args(input: &str) -> Result<CommandWithArgs> {
     match char {
       '"' => {
         in_quotes = !in_quotes;
-      }
+      },
       ' ' if in_quotes => {
         processed_buf.push(char::from(0x1E)).map_err(|_| CliError::BufferWrite)?;
-      }
+      },
       c if c.is_ascii_uppercase() => {
         processed_buf.push(c.to_ascii_lowercase()).map_err(|_| CliError::BufferWrite)?;
-      }
+      },
       c => {
         processed_buf.push(c).map_err(|_| CliError::BufferWrite)?;
-      }
+      },
     }
   }
 
@@ -193,7 +200,9 @@ pub fn get_parsed_param<T>(param: &str, arg_list: &[Arguments]) -> Result<T>
 where T: FromStr {
   // Find argument
   let arg = arg_list.iter().find(|s| s.param.eq_ignore_ascii_case(param)).ok_or_else(|| {
-    String::try_from(param).map(CliError::MissingArg).unwrap_or(CliError::BufferWrite)
+    String::try_from(param)
+      .map(CliError::MissingArg)
+      .unwrap_or(CliError::BufferWrite)
     // Or map directly if try_from returns a compatible error
   })?;
 
@@ -210,5 +219,8 @@ where T: FromStr {
 
 /// Matches a string parameter name and retrives the string from an argument list
 pub fn get_str_param<'a>(param: &str, arg_list: &'a [Arguments]) -> Option<&'a str> {
-  arg_list.iter().find(|arg| arg.param.eq_ignore_ascii_case(param)).map(|arg| arg.value.as_str())
+  arg_list
+    .iter()
+    .find(|arg| arg.param.eq_ignore_ascii_case(param))
+    .map(|arg| arg.value.as_str())
 }

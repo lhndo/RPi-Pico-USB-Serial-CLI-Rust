@@ -102,11 +102,11 @@ impl Program {
             self.command_buf.advance(len);
             self.command_read = true;
             println!("\n>> Received Command: (T: {}) ", device.timer.print_time());
-          }
+          },
           Err(e) => {
             println!("\nErr: {:?} \n", e);
             continue;
-          }
+          },
         }
       }
 
