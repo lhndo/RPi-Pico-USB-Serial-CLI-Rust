@@ -1,5 +1,3 @@
-use core::panic;
-
 use rp_pico::hal::gpio::{self, Function, Pin, PinId, PullType};
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————

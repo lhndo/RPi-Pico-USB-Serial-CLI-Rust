@@ -195,7 +195,7 @@ fn read_adc(device: &mut Context, ref_res: u32) -> Result<()> {
   let channels_to_read: [u8; _] = [0, 1, 2, 3];
 
   for &channel in &channels_to_read {
-    if let Some(r) = device.acds.read_channel(channel) {
+    if let Some(r) = device.adcs.read_channel(channel) {
       let adc_raw = r;
       let adc_vol = adc_raw.to_voltage();
       let adc_res = adc_raw.to_resistance(ref_res);
@@ -204,7 +204,7 @@ fn read_adc(device: &mut Context, ref_res: u32) -> Result<()> {
   }
 
   // read Temp Sense
-  let adc_raw: u16 = device.acds.read_channel(TEMP_SENSE_CHN).unwrap_or(0);
+  let adc_raw: u16 = device.adcs.read_channel(TEMP_SENSE_CHN).unwrap_or(0);
   let adc_vol = adc_raw.to_voltage();
   let adc_res = adc_raw.to_resistance(ref_res);
   let sys_temp = 27.0 - (adc_raw.to_voltage() - 0.706) / 0.001721;
@@ -231,7 +231,7 @@ fn sample_adc(device: &mut Context, channel: u8, ref_res: u32, interval: u16) ->
 
   SERIAL.clear_interrupt_cmd();
   while !SERIAL.interrupt_cmd_triggered() {
-    if let Some(r) = device.acds.read_channel(channel) {
+    if let Some(r) = device.adcs.read_channel(channel) {
       let adc_raw: u16 = r;
       let adc_vol = adc_raw.to_voltage();
       let adc_res = adc_raw.to_resistance(ref_res);
@@ -461,7 +461,7 @@ fn test_analog_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   SERIAL.clear_interrupt_cmd();
   while !SERIAL.interrupt_cmd_triggered() {
     // Analog Read
-    if let Some(r) = device.acds.read_channel(adc_channel) {
+    if let Some(r) = device.adcs.read_channel(adc_channel) {
       let adc_v = r.to_voltage().clamp(0.0, MAX_V);
 
       // PWM
