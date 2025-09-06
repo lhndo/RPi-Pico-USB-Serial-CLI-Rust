@@ -12,15 +12,16 @@ pub const TEMP_SENSE_CHN: u8 = 255;
 //                                              Adcs
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-pub type AcdPinType<T> = AdcPin<gpio::Pin<T, gpio::FunctionNull, gpio::PullDown>>;
+pub type AdcPinType<T> = AdcPin<gpio::Pin<T, gpio::FunctionSio<gpio::SioInput>, gpio::PullNone>>;
+pub type AdcDynPinType = AdcPinType<gpio::DynPinId>;
 
 pub struct Adcs {
   pub hal_adc:    Adc,
   pub temp_sense: TempSense,
-  pub adc0:       AcdPinType<gpio::bank0::Gpio26>,
-  pub adc1:       AcdPinType<gpio::bank0::Gpio27>,
-  pub adc2:       AcdPinType<gpio::bank0::Gpio28>,
-  pub adc3:       AcdPinType<gpio::bank0::Gpio29>,
+  pub adc0:       Option<AdcPinType<gpio::bank0::Gpio26>>,
+  pub adc1:       Option<AdcPinType<gpio::bank0::Gpio27>>,
+  pub adc2:       Option<AdcPinType<gpio::bank0::Gpio28>>,
+  pub adc3:       Option<AdcPinType<gpio::bank0::Gpio29>>,
 }
 
 impl Adcs {
@@ -28,10 +29,10 @@ impl Adcs {
   /// Returns Some or None
   pub fn read_channel(&mut self, id: u8) -> Option<u16> {
     match id {
-      0 => self.hal_adc.read(&mut self.adc0).unwrap_or(None),
-      1 => self.hal_adc.read(&mut self.adc1).unwrap_or(None),
-      2 => self.hal_adc.read(&mut self.adc2).unwrap_or(None),
-      3 => self.hal_adc.read(&mut self.adc3).unwrap_or(None),
+      0 => self.adc0.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+      1 => self.adc1.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+      2 => self.adc2.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+      3 => self.adc3.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
       255 => self.hal_adc.read(&mut self.temp_sense).unwrap_or(None),
       _ => None,
     }

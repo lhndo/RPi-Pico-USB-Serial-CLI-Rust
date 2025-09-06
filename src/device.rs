@@ -185,10 +185,10 @@ impl Device {
     let temp_sense = hal_adc.take_temp_sensor().unwrap();
 
     // Analog pins assigned to the Adc channels
-    let adc0 = AdcPin::new(pins.gpio26).unwrap();
-    let adc1 = AdcPin::new(pins.gpio27).unwrap();
-    let adc2 = AdcPin::new(pins.gpio28).unwrap();
-    let adc3 = AdcPin::new(pins.gpio29).unwrap();
+    let adc0 = Some(AdcPin::new(pins.gpio26.into_floating_input()).unwrap());
+    let adc1 = Some(AdcPin::new(pins.gpio27.into_floating_input()).unwrap());
+    let adc2 = Some(AdcPin::new(pins.gpio28.into_floating_input()).unwrap());
+    let adc3 = Some(AdcPin::new(pins.gpio29.into_floating_input()).unwrap());
 
     let acds = Adcs {
       hal_adc,
