@@ -15,7 +15,7 @@ use core::cell::RefCell;
 use core::fmt::Write;
 use core::sync::atomic::{AtomicU32, Ordering};
 
-use crate::adcs::Acds;
+use crate::adcs::Adcs;
 use crate::delay;
 use crate::delay::DELAY;
 use crate::gpios::{InputType, IoPins, OutputType};
@@ -62,7 +62,7 @@ pub struct Device {
   pub timer:    Timer,
   pub watchdog: watchdog::Watchdog,
   pub pwms:     Pwms,
-  pub acds:     Acds,
+  pub acds:     Adcs,
   pub inputs:   IoPins<InputType>,
   pub outputs:  IoPins<OutputType>,
   pub state:    State,
@@ -190,7 +190,7 @@ impl Device {
     let adc2 = AdcPin::new(pins.gpio28).unwrap();
     let adc3 = AdcPin::new(pins.gpio29).unwrap();
 
-    let acds = Acds {
+    let acds = Adcs {
       hal_adc,
       temp_sense,
       adc0,

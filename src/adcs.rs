@@ -14,7 +14,7 @@ pub const TEMP_SENSE_CHN: u8 = 255;
 
 pub type AcdPinType<T> = AdcPin<gpio::Pin<T, gpio::FunctionNull, gpio::PullDown>>;
 
-pub struct Acds {
+pub struct Adcs {
   pub hal_adc:    Adc,
   pub temp_sense: TempSense,
   pub adc0:       AcdPinType<gpio::bank0::Gpio26>,
@@ -23,7 +23,7 @@ pub struct Acds {
   pub adc3:       AcdPinType<gpio::bank0::Gpio29>,
 }
 
-impl Acds {
+impl Adcs {
   /// One shot read of the ADC channel 0-3, and 255 (as TEMP_SENSE_CHN)
   /// Returns Some or None
   pub fn read_channel(&mut self, id: u8) -> Option<u16> {
