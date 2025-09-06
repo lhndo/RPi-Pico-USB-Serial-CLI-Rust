@@ -204,7 +204,7 @@ impl Device {
     let pwm_slices = pwm::Slices::new(pac.PWM, &mut pac.RESETS);
 
     // device.pwms is the main interface for the pwm channels
-    let mut pwms = Pwms::new(pwm_slices, 50);
+    let mut pwms = Pwms::new(pwm_slices, sys_clk_hz, 50);
 
     // Assigning PWM pins to the appropriate channels
     pwms.pwm2.get_channel_b().output_to(pins.gpio21);

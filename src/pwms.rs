@@ -1,6 +1,3 @@
-use crate::device::SYS_CLK_HZ;
-use core::sync::atomic::Ordering;
-
 use embedded_hal::pwm::SetDutyCycle;
 use rp_pico::hal::pwm;
 
@@ -22,16 +19,16 @@ pub struct Pwms {
 // ————————————————————————————————————————— Pwms Impl ————————————————————————————————————————————
 
 impl Pwms {
-  pub fn new(slices: pwm::Slices, default_freq: u32) -> Self {
+  pub fn new(slices: pwm::Slices, sys_clk_hz: u32, default_freq: u32) -> Self {
     Pwms {
-      pwm0: PwmSlice::new(slices.pwm0, default_freq, false),
-      pwm1: PwmSlice::new(slices.pwm1, default_freq, false),
-      pwm2: PwmSlice::new(slices.pwm2, default_freq, false),
-      pwm3: PwmSlice::new(slices.pwm3, default_freq, false),
-      pwm4: PwmSlice::new(slices.pwm4, default_freq, false),
-      pwm5: PwmSlice::new(slices.pwm5, default_freq, false),
-      pwm6: PwmSlice::new(slices.pwm6, default_freq, false),
-      pwm7: PwmSlice::new(slices.pwm7, default_freq, false),
+      pwm0: PwmSlice::new(slices.pwm0, default_freq, false, sys_clk_hz),
+      pwm1: PwmSlice::new(slices.pwm1, default_freq, false, sys_clk_hz),
+      pwm2: PwmSlice::new(slices.pwm2, default_freq, false, sys_clk_hz),
+      pwm3: PwmSlice::new(slices.pwm3, default_freq, false, sys_clk_hz),
+      pwm4: PwmSlice::new(slices.pwm4, default_freq, false, sys_clk_hz),
+      pwm5: PwmSlice::new(slices.pwm5, default_freq, false, sys_clk_hz),
+      pwm6: PwmSlice::new(slices.pwm6, default_freq, false, sys_clk_hz),
+      pwm7: PwmSlice::new(slices.pwm7, default_freq, false, sys_clk_hz),
     }
   }
 }
@@ -52,6 +49,7 @@ where
   pub freq:       u32,
   pub ph_correct: bool,
   pub enabled:    bool,
+  pub sys_clk_hz: u32,
 }
 
 // ———————————————————————————————————————— PwmSlice impl ——————————————————————————————————————————
@@ -65,12 +63,14 @@ where
     slice: pwm::Slice<I, <I as pwm::SliceId>::Reset>,
     freq: u32,
     ph_correct: bool,
+    sys_clk_hz: u32,
   ) -> Self {
     let mut slice = PwmSlice {
       slice,
       freq,
       ph_correct,
       enabled: false,
+      sys_clk_hz,
     };
 
     slice.set_freq(freq);
@@ -84,7 +84,7 @@ where
 
     self.freq = freq;
     let top = self.slice.get_top();
-    let (int, frac) = calculate_pwm_dividers(freq, top, self.ph_correct);
+    let (int, frac) = calculate_pwm_dividers(self.sys_clk_hz, freq, top, self.ph_correct);
     self.slice.set_div_int(int);
     self.slice.set_div_frac(frac);
 
@@ -180,9 +180,9 @@ impl<T: SetDutyCycle> PwmChannelExt for T {
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 /// Calculates pwm int and frac clock dividers based on sys clock, top, and desired hz frequency
-pub fn calculate_pwm_dividers(hz: u32, top: u16, phase_correct: bool) -> (u8, u8) {
+pub fn calculate_pwm_dividers(sys_clk_hz: u32, hz: u32, top: u16, phase_correct: bool) -> (u8, u8) {
   let hz = if phase_correct { hz * 2 } else { hz };
-  let divider = SYS_CLK_HZ.load(Ordering::Relaxed) as f32 / (hz as f32 * (top as f32 + 1.0));
+  let divider = sys_clk_hz as f32 / (hz as f32 * (top as f32 + 1.0));
   let clamped_divider = divider.clamp(1.0, 255.9375);
 
   let div_int = (clamped_divider + 0.5) as u8;
