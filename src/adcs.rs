@@ -12,7 +12,7 @@ pub const TEMP_SENSE_CHN: u8 = 255;
 //                                              Adcs
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-pub type AdcPinType<T> = AdcPin<gpio::Pin<T, gpio::FunctionSio<gpio::SioInput>, gpio::PullNone>>;
+pub type AdcPinType<T> = AdcPin<gpio::Pin<T, gpio::FunctionNull, gpio::PullDown>>;
 pub type AdcDynPinType = AdcPinType<gpio::DynPinId>;
 
 pub struct Adcs {
