@@ -1,7 +1,8 @@
 //! Hardware Device Configuration
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-//                                           Device
-// ————————————————————————————————————————————————————————————————————————————————————————————————
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                             Diagram
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
 // RPi Pico           - https://pico.pinout.xyz
 // WeAct Studio RP2040 - https://mischianti.org/wp-content/uploads/2022/09/weact-studio-rp2040-raspberry-pi-pico-alternative-pinout-high-resolution.png
@@ -40,6 +41,10 @@
 // | GP25    | User LED              |                                                                                        |
 // | GP29 A3 | VSYS Sense            | Read VSYS/3 through resistor divider and FET Q1              | WeAct - extra GPIO A3   |
 // | A4      | Temperature           | Read onboard temperature sensor                                                        |
+
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+//                                           Device
+// ————————————————————————————————————————————————————————————————————————————————————————————————
 
 use core::cell::RefCell;
 use core::fmt::Write;

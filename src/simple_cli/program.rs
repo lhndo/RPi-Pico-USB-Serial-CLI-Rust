@@ -92,7 +92,7 @@ impl Program {
         let vsys_adc_raw: u16 = device.adcs.read_channel(3).unwrap_or(0);
         let sys_temp = 27.0 - (temp_adc_raw.to_voltage() - 0.706) / 0.001721;
 
-        print!("\n| Temp: {:.1}C Voltage: {:.2}V | ", sys_temp, vsys_adc_raw.to_voltage());
+        print!("\n| Temp: {:.1}C A3: {:.2}V | ", sys_temp, vsys_adc_raw.to_voltage());
         print!("Enter Command >>> \n");
 
         // Blocking wait for command
