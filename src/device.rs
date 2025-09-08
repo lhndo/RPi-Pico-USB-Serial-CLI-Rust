@@ -3,13 +3,43 @@
 //                                           Device
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-// RPi Pico           - https://cdn-shop.adafruit.com/970x728/4864-04.png
+// RPi Pico           - https://pico.pinout.xyz
 // WeAct Studio RP2040 - https://mischianti.org/wp-content/uploads/2022/09/weact-studio-rp2040-raspberry-pi-pico-alternative-pinout-high-resolution.png
-//
-// GPIO 29 - WA extra GPIO (Analog) / RP Pico internal - ADC (ADC3) for measuring VSYS
-// GPIO 25 - Internal LED
-// GPIO 24 - WA extra GPIO / RP Pico internal - Indicator for VBUS presence (high / low output)
-// GPIO 23 - WA extra Button / RP Pico -  Controls on-board SMPS (Switched Power Mode Supply)
+
+//                                                     --RPi Pico--
+//                                                      ___USB___
+// (PWM0 A)(UART0  TX)(I2C0 SDA)(SPI0  RX)   GP0  |  1 |o       o| 40 | VBUS 5V
+// (PWM0 B)(UART0  RX)(I2C0 SCL)(SPI0 CSn)   GP1  |  2 |o       o| 39 | VSYS 5V*
+//                                           GND  |  3 |o       o| 38 | GND
+// (PWM1 A)(UART0 CTS)(I2C1 SDA)(SPI0 SCK)   GP2  |  4 |o       o| 37 | 3V3  En
+// (PWM1 B)(UART0 RTS)(I2C1 SCL)(SPI0  TX)   GP3  |  5 |o       o| 36 | 3V3  Out
+// (PWM2 A)(UART1  TX)(I2C0 SDA)(SPI0  RX)   GP4  |  6 |o       o| 35 | ADC  VREF
+// (PWM2 B)(UART1  RX)(I2C0 SCL)(SPI0 CSn)   GP5  |  7 |o       o| 34 | GP28 A2    (SPI1  RX)(I2C0 SDA)(UART0  TX)(PWM6 A)
+//                                           GND  |  8 |o       o| 33 | ADC  GND
+// (PWM3 A)(UART1 CTS)(I2C1 SDA)(SPI1 SCK)   GP6  |  9 |o       o| 32 | GP27 A1    (SPI1  TX)(I2C1 SCL)(UART1 RTS)(PWM5 B)
+// (PWM3 B)(UART1 RTS)(I2C1 SCL)(SPI1  TX)   GP7  | 10 |o       o| 31 | GP26 A0    (SPI1 SCK)(I2C1 SDA)(UART1 CTS)(PWM5 A)
+// (PWM4 A)(UART1  TX)(I2C0 SDA)(SPI1  RX)   GP8  | 11 |o       o| 30 | RUN
+// (PWM4 B)(UART1  RX)(I2C0 SCL)(SPI1 CSn)   GP9  | 12 |o       o| 29 | GP22       (SPI0 SCK)(I2C1 SDA)(UART1 CTS)(PWM3 A)
+//                                           GND  | 13 |o       o| 28 | GND
+// (PWM5 A)(UART1 CTS)(I2C1 SDA)(SPI1 SCK)   GP10 | 14 |o       o| 27 | GP21       (SPI0 CSn)(I2C0 SCL)(UART1  RX)(PWM2 B)
+// (PWM5 B)(UART1 RTS)(I2C1 SCL)(SPI1  TX)   GP11 | 15 |o       o| 26 | GP20       (SPI0  RX)(I2C0 SDA)(UART1  TX)(PWM2 A)
+// (PWM6 A)(UART0  TX)(I2C0 SDA)(SPI1  RX)   GP12 | 16 |o       o| 25 | GP19       (SPI0  TX)(I2C1 SCL)(UART0 RTS)(PWM1 B)
+// (PWM6 B)(UART0  RX)(I2C0 SCL)(SPI1 CSn)   GP13 | 17 |o       o| 24 | GP18       (SPI0 SCK)(I2C1 SDA)(UART0 CTS)(PWM1 A)
+//                                           GND  | 18 |o       o| 23 | GND
+// (PWM7 A)(UART0 CTS)(I2C1 SDA)(SPI1 SCK)   GP14 | 19 |o       o| 22 | GP17       (SPI0 CSn)(I2C0 SCL)(UART0  RX)(PWM0 B)
+// (PWM7 B)(UART0 RTS)(I2C1 SCL)(SPI1  TX)   GP15 | 20 |o__ooo__o| 21 | GP16       (SPI0  RX)(I2C0 SDA)(UART0  TX)(PWM0 A)
+
+//                                             --[ SWD: CLK, GND, DIO ]--
+
+// | Pin     | Description           | Notes                                                                                  |
+// |---------|-----------------------|----------------------------------------------------------------------------------------|
+// | VSYS*   | System voltage in/out | 5V out when powered by USB (diode to VBUS), 1.8V to 5.5V in if powered externally      |
+// | 3V3 Out | Chip 3V3 supply       | Can be used to power external circuitry, recommended to keep the load less than 300mA  |
+// | GP23    | RT6150B-33GQW P-Select| LOW (def) high efficiency (PFM), HIGH improved ripple (PWM)  | WeAct - extra Button    |
+// | GP24    | VBUS Sense            | Detect USB power or VBUS pin                                 | Weact - extra GPIO      |
+// | GP25    | User LED              |                                                                                        |
+// | GP29 A3 | VSYS Sense            | Read VSYS/3 through resistor divider and FET Q1              | WeAct - extra GPIO A3   |
+// | A4      | Temperature           | Read onboard temperature sensor                                                        |
 
 use core::cell::RefCell;
 use core::fmt::Write;
@@ -103,7 +133,7 @@ impl Device {
 
     // ————————————————————————————————————————— Delay  ————————————————————————————————————————————
 
-    let delay = Delay::new(core.SYST, sys_clocks.system_clock.freq().to_Hz());
+    let delay = Delay::new(core.SYST, sys_clk_hz);
 
     // Init DELAY Global
     delay::init(delay);
@@ -180,7 +210,7 @@ impl Device {
     // —————————————————————————————————————————— ADC —————————————————————————————————————————————
 
     // The hal_adc is the main gateway for interracting with the ADC
-    // We store it in device.acds.hal_adc
+    // We store it in device.adcs.hal_adc
     let mut hal_adc = hal::Adc::new(pac.ADC, &mut pac.RESETS); // Needs to be set after clocks
     let temp_sense = hal_adc.take_temp_sensor().unwrap();
 
