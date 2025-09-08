@@ -7,8 +7,6 @@ use core::cell::RefCell;
 use core::fmt;
 use core::fmt::Write;
 
-use crate::delay::DELAY;
-
 use critical_section::{Mutex, with as free};
 use rp_pico::hal::usb::UsbBus;
 use usb_device::UsbError;
@@ -207,8 +205,6 @@ impl Serialio {
             return Err(UsbError::WouldBlock);
           }
           // Otherwise The serial buffer is full and we must keep polling
-          // Small delay to avoid tight loops
-          DELAY.us(6);
         },
         Err(e) => {
           // A different, real error occurred. We exit.
@@ -255,8 +251,6 @@ impl Serialio {
               // No serial connection, we exit.
               return Err(UsbError::InvalidEndpoint);
             }
-            // Add a small delay to avoid a tight loop
-            DELAY.us(6);
           },
           Err(e) => return Err(e), // Non-recoverable error occurred.
         }
