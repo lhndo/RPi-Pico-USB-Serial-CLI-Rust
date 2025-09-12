@@ -35,9 +35,9 @@ extern crate rp2040_panic_usb_boot;
 #[cfg(feature = "panic-persist")]
 extern crate panic_persist;
 
-// —————————————————————————————————————————— Statics —————————————————————————————————————————————
+// —————————————————————————————————————————— Globals —————————————————————————————————————————————
 
-static RUN_STANDALONE: bool = false;
+const RUN_STANDALONE: bool = false;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                              Main
