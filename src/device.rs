@@ -113,14 +113,14 @@ macro_rules! setup_pins {
   (PWM7_B,    NA,  PWM) // GP15
 
   //I2C
-  (I2C0_SDA,  2,  I2C) // GP0, GP4, GP8, GP12, GP16, GP20, GP28
+  (I2C0_SDA,   2,  I2C) // GP0, GP4, GP8, GP12, GP16, GP20, GP28
   (I2C0_SCL,  NA,  I2C) // GP1, GP5, GP9, GP13, GP17, GP21
 
   (I2C1_SDA,  NA,  I2C) // GP2, GP6, GP10, GP14, GP18, GP22, GP26
   (I2C1_SCL,  NA,  I2C) // GP3, GP7, GP11, GP15, GP19, GP27
 
   //SPI
-  (SPI0_RX,   4,  SPI) // GP0, GP4, GP16, GP20
+  (SPI0_RX,    4,  SPI) // GP0, GP4, GP16, GP20
   (SPI0_TX,   NA,  SPI) // GP3, GP19
   (SPI0_SCK,  NA,  SPI) // GP2, GP18, GP22
   (SPI0_CSN,  NA,  SPI) // GP1, GP5, GP17, GP21
@@ -131,7 +131,7 @@ macro_rules! setup_pins {
   (SPI1_CSN,  NA,  SPI) // GP9, GP13
 
   //UART
-  (UART0_TX,  5,  UART) // GP0, GP12, GP16, GP28
+  (UART0_TX,   5,  UART) // GP0, GP12, GP16, GP28
   (UART0_RX,  NA,  UART) // GP1, GP13, GP17
   (UART0_CTS, NA,  UART) // GP2, GP14, GP18
   (UART0_RTS, NA,  UART) // GP3, GP15, GP19
