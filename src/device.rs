@@ -1,12 +1,46 @@
 //! Hardware Device Configuration
 
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+//                                           Device
+// ————————————————————————————————————————————————————————————————————————————————————————————————
+
+use core::cell::RefCell;
+use core::fmt::Write;
+use core::sync::atomic::{AtomicU32, Ordering};
+
+use crate::adcs::Adcs;
+use crate::delay;
+use crate::delay::DELAY;
+use crate::gpios::{InputType, IoPins, OutputType};
+use crate::pwms::Pwms;
+use crate::serial_io;
+use crate::serial_io::SERIAL;
+use crate::state::State;
+
+use critical_section::{Mutex, with as free};
+use rp_pico::hal;
+use rp_pico::hal::Clock;
+use rp_pico::hal::fugit::{Duration, ExtU32, MicrosDurationU32};
+use rp_pico::hal::gpio::{self};
+use rp_pico::hal::timer::Alarm;
+use rp_pico::hal::timer::Timer;
+use rp_pico::hal::{clocks, pac, pac::interrupt, pwm, sio, timer, usb, watchdog};
+
+use cortex_m::delay::Delay;
+use cortex_m::prelude::*;
+use heapless::String;
+use pastey::paste;
+use usb_device::class_prelude::*;
+use usb_device::prelude::*;
+use usbd_serial::SerialPort;
+
 // —————————————————————————————————————————————————————————————————————————————————————————————————
-//                                             Diagram
+//                                         Pin Definitions
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
 // RPi Pico           - https://pico.pinout.xyz
 // WeAct Studio RP2040 - https://mischianti.org/wp-content/uploads/2022/09/weact-studio-rp2040-raspberry-pi-pico-alternative-pinout-high-resolution.png
-
+//
 //                                                     --RPi Pico--
 //                                                      ___USB___
 // (PWM0 A)(UART0  TX)(I2C0 SDA)(SPI0  RX)   GP0  |  1 |o       o| 40 | VBUS 5V
@@ -29,9 +63,9 @@
 //                                           GND  | 18 |o       o| 23 | GND
 // (PWM7 A)(UART0 CTS)(I2C1 SDA)(SPI1 SCK)   GP14 | 19 |o       o| 22 | GP17       (SPI0 CSn)(I2C0 SCL)(UART0  RX)(PWM0 B)
 // (PWM7 B)(UART0 RTS)(I2C1 SCL)(SPI1  TX)   GP15 | 20 |o__ooo__o| 21 | GP16       (SPI0  RX)(I2C0 SDA)(UART0  TX)(PWM0 A)
-
+//
 //                                             --[ SWD: CLK, GND, DIO ]--
-
+//
 // | Pin     | Description           | Notes                                                                                  |
 // |---------|-----------------------|----------------------------------------------------------------------------------------|
 // | VSYS*   | System voltage in/out | 5V out when powered by USB (diode to VBUS), 1.8V to 5.5V in if powered externally      |
@@ -42,50 +76,175 @@
 // | GP29 A3 | VSYS Sense            | Read VSYS/3 through resistor divider and FET Q1              | WeAct - extra GPIO A3   |
 // | A4      | Temperature           | Read onboard temperature sensor                                                        |
 
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-//                                           Device
-// ————————————————————————————————————————————————————————————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                           Pins Setup
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
-use core::cell::RefCell;
-use core::fmt::Write;
-use core::sync::atomic::{AtomicU32, Ordering};
+// NA = Not Available
+#[rustfmt::skip]
+macro_rules! setup_pins {
 
-use crate::adcs::Adcs;
-use crate::delay;
-use crate::delay::DELAY;
-use crate::gpios::{InputType, IoPins, OutputType};
-use crate::pwms::Pwms;
-use crate::serial_io;
-use crate::serial_io::SERIAL;
-use crate::state::State;
+  ($func:ident, $pins:ident, $obj:ident ) => { 
+  set_function_pins!($func, $pins, $obj,
+  
+  //ADC  
+  //Ident     Pin  Function
+  (ADC0,      26,  ADC) // GP26
+  (ADC1,      27,  ADC) // GP27
+  (ADC2,      28,  ADC) // GP28
+  (ADC3,      29,  ADC) // GP29
+  
+  //PWM  
+  (PWM0_A,    NA,  PWM) // GP0, GP16
+  (PWM0_B,    NA,  PWM) // GP1, GP17
+  (PWM1_A,    NA,  PWM) // GP2, GP18
+  (PWM1_B,    NA,  PWM) // GP3, GP19
+  (PWM2_A,    NA,  PWM) // GP4, GP20
+  (PWM2_B,    21,  PWM) // GP5, GP21
+  (PWM3_A,     6,  PWM) // GP6, GP22
+  (PWM3_B,    NA,  PWM) // GP7
+  (PWM4_A,     8,  PWM) // GP8
+  (PWM4_B,    NA,  PWM) // GP9
+  (PWM5_A,    NA,  PWM) // GP10, GP26
+  (PWM5_B,    NA,  PWM) // GP11, GP27
+  (PWM6_A,    NA,  PWM) // GP12, GP28
+  (PWM6_B,    NA,  PWM) // GP13
+  (PWM7_A,    NA,  PWM) // GP14
+  (PWM7_B,    NA,  PWM) // GP15
 
-use critical_section::{Mutex, with as free};
-use rp_pico::hal;
-use rp_pico::hal::Clock;
-use rp_pico::hal::adc::AdcPin;
-use rp_pico::hal::fugit::{Duration, ExtU32, MicrosDurationU32};
-use rp_pico::hal::gpio::{self};
-use rp_pico::hal::timer::Alarm;
-use rp_pico::hal::timer::Timer;
-use rp_pico::hal::{clocks, pac, pac::interrupt, pwm, sio, timer, usb, watchdog};
+  //I2C
+  (I2C0_SDA,  2,  I2C) // GP0, GP4, GP8, GP12, GP16, GP20, GP28
+  (I2C0_SCL,  NA,  I2C) // GP1, GP5, GP9, GP13, GP17, GP21
 
-use cortex_m::delay::Delay;
-use cortex_m::prelude::*;
-use heapless::String;
-use usb_device::class_prelude::*;
-use usb_device::prelude::*;
-use usbd_serial::SerialPort;
+  (I2C1_SDA,  NA,  I2C) // GP2, GP6, GP10, GP14, GP18, GP22, GP26
+  (I2C1_SCL,  NA,  I2C) // GP3, GP7, GP11, GP15, GP19, GP27
+
+  //SPI
+  (SPI0_RX,   4,  SPI) // GP0, GP4, GP16, GP20
+  (SPI0_TX,   NA,  SPI) // GP3, GP19
+  (SPI0_SCK,  NA,  SPI) // GP2, GP18, GP22
+  (SPI0_CSN,  NA,  SPI) // GP1, GP5, GP17, GP21
+  
+  (SPI1_RX,   NA,  SPI) // GP8, GP12, GP28
+  (SPI1_TX,   NA,  SPI) // GP7, GP11, GP15, GP27
+  (SPI1_SCK,  NA,  SPI) // GP6, GP10, GP14, GP26
+  (SPI1_CSN,  NA,  SPI) // GP9, GP13
+
+  //UART
+  (UART0_TX,  5,  UART) // GP0, GP12, GP16, GP28
+  (UART0_RX,  NA,  UART) // GP1, GP13, GP17
+  (UART0_CTS, NA,  UART) // GP2, GP14, GP18
+  (UART0_RTS, NA,  UART) // GP3, GP15, GP19
+  
+  (UART1_TX,  NA,  UART) // GP4, GP8, GP20
+  (UART1_RX,  NA,  UART) // GP5, GP9, GP21
+  (UART1_CTS, NA,  UART) // GP6, GP10, GP22, GP26
+  (UART1_RTS, NA,  UART) // GP7, GP11, GP27
+
+  // Inputs
+  (IN_A    ,   9  ,  IN)
+  (IN_B    ,  20  ,  IN)
+  (IN_C    ,  22  ,  IN)
+  (BUTTON  ,  23  ,  IN)
+  
+  // Ouputs
+  (OUT_A   ,   0  , OUT)
+  (OUT_B   ,   1  , OUT)
+  (OUT_C   ,   3  , OUT)
+  (LED     ,  25  , OUT)
+
+  );}
+}
+
+/// Some macro foo that allows us to extract the configuration above and use it for different pin initializations
+macro_rules! set_function_pins {
+      // Defining Aliases
+      (ALIASES, $pins:ident, $obj:ident, $(($id:ident, $pin:tt, $type:ident))*) => {
+        build_pin_aliases!($obj, $(( $id, $pin))*);
+      };
+
+      // Loop Expansion
+      ($func:ident, $pins:ident, $obj:ident, $( ($id:ident, $pin:tt, $type:ident) )* ) => {
+          $(set_function_pins!(@each $func, $pins, $obj, $id, $pin, $type); )*
+        };
+
+      (@each ADC, $pins:ident, $obj:ident, $id:ident, $pin:literal, ADC) => {
+        paste!($obj.[<set_ $id:lower>]($pins.[<gpio $pin>]));
+      };
+
+      (@each PWM, $pins:ident, $obj:ident, $id:ident, $pin:literal, PWM) => {
+        paste!($obj.[<set_ $id:lower>]($pins.[<gpio $pin>]));
+      };
+
+      (@each I2C, $pins:ident, $obj:ident, $id:ident, $pin:literal, I2C) => {
+        paste!(
+          #[allow(non_snake_case)]
+          let $id = $pins.[<gpio $pin>];
+        );
+      };
+
+      (@each SPI, $pins:ident, $obj:ident, $id:ident, $pin:literal, SPI) => {
+        paste!(
+          #[allow(non_snake_case)]
+          let $id = $pins.[<gpio $pin>];
+        );
+      };
+
+      (@each UART, $pins:ident, $obj:ident, $id:ident, $pin:literal, UART) => {
+        paste!(
+          #[allow(non_snake_case)]
+          let $id = $pins.[<gpio $pin>];
+        );
+      };
+
+      (@each GPIO_IN, $pins:ident, $obj:ident, $id:ident, $pin:literal, IN) => {
+        paste!(
+          let pin: InputType = $pins.[<gpio $pin>].reconfigure().into_dyn_pin();
+          $obj.add_pin(pin, $pin);
+        );
+      };
+
+      (@each GPIO_OUT, $pins:ident, $obj:ident, $id:ident, $pin:literal, OUT) => {
+        paste!(
+          let pin: OutputType = $pins.[<gpio $pin>].reconfigure().into_dyn_pin();
+          $obj.add_pin(pin, $pin);
+        );
+      };
+
+      // Skip
+      (@each $func:ident, $pins:ident, $obj:ident, $id:ident, $pin:tt, $type:ident ) => {};
+    }
+
+/// Build Global Pin ID Aliases. E.g. PinID::LED = 25 as usize.
+/// Useful for referencing pin ids from aliases in the main program.
+macro_rules! build_pin_aliases {
+    // Entry
+    ($obj:ident, $(($id:ident, $pin:tt))*) => {
+        impl $obj {
+            $(
+                build_pin_aliases!(@each $id, $pin);
+            )*
+        }
+    };
+    // Match a literal pin
+    (@each $id:ident, $pin:literal) => {
+        pub const $id: usize = $pin;
+    };
+    // Match "NA" (skip)
+    (@each $id:ident, NA) => {};
+}
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                           Globals
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-// Pin Aliases
-pub const LED: usize = 25;
-pub const BUTTON: usize = 23; // built-in button on WeAct RP2040
+// GPIO Pin ID Aliases. E.g. PinID::LED = 25 as usize
+pub struct PinID;
+setup_pins!(ALIASES, None, PinID);
 
 pub static SYS_CLK_HZ: AtomicU32 = AtomicU32::new(0);
 
+// Interrupts
 static ALARM_0: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(None));
 const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(10_000); // 10ms - 100hz
 
@@ -104,8 +263,6 @@ pub struct Device {
 }
 
 impl Device {
-  // ——————————————————————————————————————————— New ——————————————————————————————————————————————
-
   pub fn new() -> Self {
     // ———————————————————————————————————— Hal Boilerplate ———————————————————————————————————————
 
@@ -139,9 +296,7 @@ impl Device {
     // ————————————————————————————————————————— Delay  ————————————————————————————————————————————
 
     let delay = Delay::new(core.SYST, sys_clk_hz);
-
-    // Init DELAY Global
-    delay::init(delay);
+    delay::init(delay); // Init DELAY Global
 
     // ———————————————————————————————————————— USB Bus ———————————————————————————————————————————
 
@@ -156,11 +311,9 @@ impl Device {
 
     // Storing UsbBus into a singleton and getting a mutable reference
     let usb_bus = cortex_m::singleton!(: UsbBusAllocator<usb::UsbBus> = usb_bus_alloc).unwrap();
+    DELAY.us(200); // Small pause for initialisation
 
-    // Small pause for initialisation
-    DELAY.us(200);
-
-    // ————————————————————————————————————— Serial Device ————————————————————————————————————————
+    // ————————————————————————————————————— Serial Port ————————————————————————————————————————
 
     // SerialPort needs to be created before UsbDev and requires a reference to the UsbBus
     let serial_port = SerialPort::new(usb_bus);
@@ -170,102 +323,72 @@ impl Device {
     // Usb Device creation using the UsbBus
     let usb_dev = UsbDeviceBuilder::new(usb_bus, UsbVidPid(0x16c0, 0x27dd))
       .strings(&[StringDescriptors::default()
-        .manufacturer("LH_Eng")
-        .product("embedded_serial_cli")
-        .serial_number("TEST")])
+        .manufacturer("LH Eng")
+        .product("Rpi Pico - USB Serial CLI")
+        .serial_number("0000")])
       .unwrap()
       .device_class(usbd_serial::USB_CLASS_CDC)
       .build();
 
-    // ————————————————————————————————————— SERIAL Handle ————————————————————————————————————————
+    // ————————————————————————————————————————— SERIAL ————————————————————————————————————————————
 
-    // Init SERIAL Global
-    // This is the main interface for interacting with the Serial and the Usb Device
+    // Init SERIAL Global - main interface for interacting with the Serial and the Usb Device
     serial_io::init(serial_port, usb_dev);
-    SERIAL.poll_usb();
-
-    // ————————————————————————————————————————— Interrupts ———————————————————————————————————————
-
-    // ————————————————————————————————————— USB Interrupt ————————————————————————————————————————
-
-    // Enabling the USB interrupt
-    unsafe {
-      pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
-    };
-
-    // Priming USB otherwise connection is not established with the hosts
-    SERIAL.poll_usb();
-
-    // ———————————————————————————————————————— Alarm 0 ———————————————————————————————————————————
-
-    // Creating a timer interrupt
-    let mut alarm0 = timer.alarm_0().unwrap();
-    alarm0.schedule(INTERRUPT_0_US).unwrap();
-    alarm0.enable_interrupt();
-
-    free(|cs| {
-      ALARM_0.borrow_ref_mut(cs).replace(alarm0);
-    });
-
-    // Enable Interrupt
-    unsafe {
-      pac::NVIC::unmask(pac::Interrupt::TIMER_IRQ_0);
-    }
 
     // —————————————————————————————————————————— ADC —————————————————————————————————————————————
 
-    // The hal_adc is the main gateway for interracting with the ADC
-    // We store it in device.adcs.hal_adc
+    // The hal_adc (device.adcs.hal_adc) is the main interface for interracting with the ADC
     let mut hal_adc = hal::Adc::new(pac.ADC, &mut pac.RESETS); // Needs to be set after clocks
     let temp_sense = hal_adc.take_temp_sensor().unwrap();
+    let mut adcs = Adcs::new(hal_adc, temp_sense);
 
-    // Analog pins assigned to the Adc channels
-    let adc0 = Some(AdcPin::new(pins.gpio26).unwrap());
-    let adc1 = Some(AdcPin::new(pins.gpio27).unwrap());
-    let adc2 = Some(AdcPin::new(pins.gpio28).unwrap());
-    let adc3 = Some(AdcPin::new(pins.gpio29).unwrap());
-
-    let acds = Adcs {
-      hal_adc,
-      temp_sense,
-      adc0,
-      adc1,
-      adc2,
-      adc3,
-    };
+    // Initialise ADC pins from setup_pins by calling e.g. adcs.set_adc0(pins.gpio26); ...
+    setup_pins!(ADC, pins, adcs);
 
     // —————————————————————————————————————————— PWM —————————————————————————————————————————————
 
     let pwm_slices = pwm::Slices::new(pac.PWM, &mut pac.RESETS);
+    const DEFAULT_FREQUENCY: u32 = 50; //hz
+    let mut pwms = Pwms::new(pwm_slices, sys_clk_hz, DEFAULT_FREQUENCY);
 
-    // device.pwms is the main interface for the pwm channels
-    let mut pwms = Pwms::new(pwm_slices, sys_clk_hz, 50);
+    // Initialise PWM pins from setup_pins by calling e.g. pwms.set_pwm2_b(pins.gpio21); ...
+    setup_pins!(PWM, pins, pwms);
 
-    // Assigning PWM pins to the appropriate channels
-    pwms.pwm2.get_channel_b().output_to(pins.gpio21);
-    pwms.pwm3.get_channel_a().output_to(pins.gpio6);
-    pwms.pwm4.get_channel_a().output_to(pins.gpio8);
+    // ———————————————————————————————————— Extra Function Pins ———————————————————————————————————
+
+    // Sets pin variables, e.g. let I2C0_SDA = pins.gpio0. Use these to build interfaces.
+    setup_pins!(I2C, pins, None);
+    setup_pins!(SPI, pins, None);
+    setup_pins!(UART, pins, None);
 
     // ———————————————————————————————————————— GP Pins ———————————————————————————————————————————
 
-    // Digital - General Purpose Inputs
-    let input_pins: [InputType; _] = [
-      pins.gpio9.reconfigure().into_dyn_pin(),
-      pins.gpio20.reconfigure().into_dyn_pin(),
-      pins.gpio22.reconfigure().into_dyn_pin(),
-      pins.gpio23.reconfigure().into_dyn_pin(), // BUTTON on WeAct RP2040
-    ];
+    let mut inputs = IoPins::<InputType>::new();
+    let mut outputs = IoPins::<OutputType>::new();
 
-    // Digital - General Purpose Outputs
-    let output_pins: [OutputType; _] = [
-      pins.gpio0.reconfigure().into_dyn_pin(),
-      pins.gpio1.reconfigure().into_dyn_pin(),
-      pins.gpio3.reconfigure().into_dyn_pin(),
-      pins.gpio25.reconfigure().into_dyn_pin(), // LED
-    ];
+    // Initialise GPIO pins i.e. inputs.add_pin(pins.gpio23, 23)
+    setup_pins!(GPIO_IN, pins, inputs);
+    setup_pins!(GPIO_OUT, pins, outputs);
 
-    let inputs = IoPins::new(input_pins);
-    let outputs = IoPins::new(output_pins);
+    // ————————————————————————————————————————— Interrupts ———————————————————————————————————————
+
+    // ALARM0 interrupt setup
+    let mut alarm0 = timer.alarm_0().unwrap();
+    alarm0.schedule(INTERRUPT_0_US).unwrap();
+    alarm0.enable_interrupt();
+    free(|cs| {
+      ALARM_0.borrow(cs).replace(Some(alarm0));
+    });
+
+    // Enabling IRQ 0 - ALARM0
+    unsafe {
+      pac::NVIC::unmask(pac::Interrupt::TIMER_IRQ_0);
+    }
+
+    // Enabling the USB IRQ
+    unsafe {
+      pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
+    };
 
     // ————————————————————————————————————————— State ————————————————————————————————————————————
 
@@ -277,7 +400,7 @@ impl Device {
       timer,
       watchdog,
       pwms,
-      adcs: acds,
+      adcs,
       inputs,
       outputs,
       state,

@@ -1,9 +1,15 @@
 use embedded_hal::pwm::SetDutyCycle;
+use rp_pico::hal::gpio;
 use rp_pico::hal::pwm;
+
+use duplicate::duplicate_item;
+use pastey::paste;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                              Pwms
 // ————————————————————————————————————————————————————————————————————————————————————————————————
+
+pub type RawPin<T> = gpio::Pin<T, gpio::FunctionNull, gpio::PullDown>;
 
 pub struct Pwms {
   pub pwm0: PwmSlice<pwm::Pwm0>,
@@ -19,6 +25,34 @@ pub struct Pwms {
 // ————————————————————————————————————————— Pwms Impl ————————————————————————————————————————————
 
 impl Pwms {
+  // Generating pub fn set_pwm0_a() ..
+  #[duplicate_item(
+    pwm_slice pwm_chan;
+    [0]       [A];
+    [1]       [A];
+    [2]       [A];
+    [3]       [A];
+    [4]       [A];
+    [5]       [A];
+    [6]       [A];
+    [7]       [A];
+    [0]       [B];
+    [1]       [B];
+    [2]       [B];
+    [3]       [B];
+    [4]       [B];
+    [5]       [B];
+    [6]       [B];
+    [7]       [B];
+    )]
+  paste! {
+  pub fn [<set_pwm pwm_slice _ pwm_chan:lower>]<P: gpio::AnyPin>(&mut self, pin: P)
+  where
+    P::Id: pwm::ValidPwmOutputPin<pwm::[<Pwm pwm_slice>], pwm::[<pwm_chan>]>
+   {
+      self.[<pwm pwm_slice>].[<get_channel _ pwm_chan:lower>]().output_to(pin);
+  }}
+
   pub fn new(slices: pwm::Slices, sys_clk_hz: u32, default_freq: u32) -> Self {
     Pwms {
       pwm0: PwmSlice::new(slices.pwm0, default_freq, false, sys_clk_hz),
@@ -104,7 +138,8 @@ where
 
     if enable {
       self.slice.set_ph_correct();
-    } else {
+    }
+    else {
       self.slice.clr_ph_correct();
     }
     self.set_freq(self.freq);
@@ -166,7 +201,8 @@ impl<T: SetDutyCycle> PwmChannelExt for T {
       // Period is too large for a u16; scale both values down.
       let scaler = freq_us / MAX_U16 + 1;
       ((duty_us as u32 / scaler) as u16, (freq_us / scaler) as u16)
-    } else {
+    }
+    else {
       // Period fits, no scaling needed.
       (duty_us, freq_us as u16)
     };

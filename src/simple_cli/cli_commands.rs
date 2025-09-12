@@ -150,7 +150,7 @@ fn blink_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
 // Separating functions from commands for stand alone use
 fn blink(device: &mut Context, times: u16, interval: u16) -> Result<()> {
   println!("---- Blinking Led! ----");
-  let led = device.outputs.get_pin(LED).unwrap();
+  let led = device.outputs.get_pin(PinID::LED).unwrap();
   let mut blink = 1;
 
   // Non blocking timer based task
@@ -237,7 +237,8 @@ fn sample_adc(device: &mut Context, channel: u8, ref_res: u32, interval: u16) ->
       let adc_res = adc_raw.to_resistance(ref_res);
       println!("> v:{:.2}, ohm:{:.1}, raw:{} \r", adc_vol, adc_res, adc_raw);
       device.timer.delay_ms(interval as u32);
-    } else {
+    }
+    else {
       println!("Cannot read channel: {}", channel);
     }
   }
@@ -387,16 +388,19 @@ where
   if us > 0 {
     if channel == "a" {
       pwm_slice.get_channel_a().set_duty_cycle_us(us as u16, freq);
-    } else {
+    }
+    else {
       pwm_slice.get_channel_b().set_duty_cycle_us(us as u16, freq);
     }
 
     println!("duty: {}µs", us);
-  } else {
+  }
+  else {
     let duty = duty.clamp(0, 100) as u16;
     if channel == "a" {
       pwm_slice.get_channel_a().set_duty_cycle_fraction(duty, 100).unwrap();
-    } else {
+    }
+    else {
       pwm_slice.get_channel_b().set_duty_cycle_fraction(duty, 100).unwrap();
     }
 
@@ -429,7 +433,8 @@ fn test_gpio_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   while !SERIAL.interrupt_cmd_triggered() {
     if input.is_low().unwrap() {
       output.set_high().unwrap();
-    } else {
+    }
+    else {
       output.set_low().unwrap();
     }
   }

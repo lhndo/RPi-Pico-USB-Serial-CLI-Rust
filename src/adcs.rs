@@ -2,6 +2,9 @@ use embedded_hal_0_2::adc::OneShot;
 use rp_pico::hal::adc::{Adc, AdcPin, TempSense};
 use rp_pico::hal::gpio;
 
+use duplicate::duplicate_item;
+use pastey::paste;
+
 pub const ADC_BITS: u32 = 12;
 pub const ADC_MAX: f32 = ((1 << ADC_BITS) - 1) as f32;
 pub const ADC_VREF: f32 = 3.3;
@@ -13,7 +16,7 @@ pub const TEMP_SENSE_CHN: u8 = 255;
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub type AdcPinType<T> = AdcPin<gpio::Pin<T, gpio::FunctionNull, gpio::PullDown>>;
-pub type AdcDynPinType = AdcPinType<gpio::DynPinId>;
+pub type RawPin<T> = gpio::Pin<T, gpio::FunctionNull, gpio::PullDown>;
 
 pub struct Adcs {
   pub hal_adc:    Adc,
@@ -25,6 +28,35 @@ pub struct Adcs {
 }
 
 impl Adcs {
+  pub fn new(hal_adc: Adc, temp_sense: TempSense) -> Self {
+    Self {
+      hal_adc,
+      temp_sense,
+      adc0: None,
+      adc1: None,
+      adc2: None,
+      adc3: None,
+    }
+  }
+
+  // Generating pub fn set_adc0()... Used creating Analog Pins. 
+  #[duplicate_item(
+    adc_num   gpio_num; 
+    [0]       [26];
+    [1]       [27];
+    [2]       [28];
+    [3]       [29];
+
+    )]
+  paste! {
+      pub fn [<set_adc adc_num>](&mut self, pin: RawPin<gpio::bank0::[<Gpio gpio_num>]>) -> &mut Self {
+          self.[<adc adc_num>] = AdcPin::new(pin).ok();
+          self
+      }
+  }
+
+
+
   /// One shot read of the ADC channel 0-3, and 255 (as TEMP_SENSE_CHN)
   /// Returns Some or None
   pub fn read_channel(&mut self, id: u8) -> Option<u16> {

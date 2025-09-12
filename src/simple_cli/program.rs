@@ -32,7 +32,7 @@ impl Program {
   // ———————————————————————————————————————————— Init —————————————————————————————————————————————
 
   pub fn init(&mut self, device: &mut Device) {
-    let led = device.outputs.get_pin(LED).unwrap();
+    let led = device.outputs.get_pin(PinID::LED).unwrap();
 
     // While we don't have a serial monitor connection we keep polling
     while !SERIAL.is_connected() {
@@ -72,12 +72,12 @@ impl Program {
   pub fn run(&mut self, device: &mut Device) {
     let mut cli = Cli::new(&CMDS);
 
-    let led = device.outputs.get_pin(LED).unwrap();
+    let led = device.outputs.get_pin(PinID::LED).unwrap();
     led.set_high().unwrap();
 
     loop {
       // While we don't have a serial monitor connection we keep polling
-      let led = device.outputs.get_pin(LED).unwrap();
+      let led = device.outputs.get_pin(PinID::LED).unwrap();
       while !SERIAL.is_connected() {
         led.toggle().unwrap();
         device.timer.delay_ms(80);
@@ -122,7 +122,7 @@ impl Program {
         print!("\n========= DONE =========== (T: {}) \n", device.timer.print_time());
       }
 
-      let led = device.outputs.get_pin(LED).unwrap();
+      let led = device.outputs.get_pin(PinID::LED).unwrap();
       for _ in 0..3 {
         led.set_low().unwrap();
         device.timer.delay_ms(50);
