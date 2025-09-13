@@ -56,11 +56,14 @@ pub struct SerialHandle;
 impl SerialHandle {
   /// Executes a closure with a mutable reference to the serial peripheral.
   pub fn with<F, R>(&self, f: F) -> R
-  where F: FnOnce(&mut Serialio) -> R {
+  where
+    F: FnOnce(&mut Serialio) -> R,
+  {
     free(|cs| {
       if let Some(cell) = SERIAL_CELL.borrow_ref_mut(cs).as_mut() {
         f(cell)
-      } else {
+      }
+      else {
         panic!("SERIAL not initialized");
       }
     })
@@ -86,11 +89,6 @@ impl SerialHandle {
     self.with(|cell| cell.serial.dtr())
   }
 
-  /// flush the rx buffer discarding the data
-  pub fn flush_rx(&self) {
-    self.with(|cell| cell.flush_rx())
-  }
-
   /// Polls for interrupt cmd though the serial read buffer
   /// This should be only called by the USB Interrupt
   pub fn poll_for_interrupt_cmd(&self) {
@@ -106,6 +104,11 @@ impl SerialHandle {
   pub fn clear_interrupt_cmd(&self) {
     self.with(|cell| cell.interrupt_cmd_triggered = false);
   }
+
+  /// Drain the read buffer
+  pub fn drain(&self) {
+    self.with(|cell| cell.drain());
+  }
 }
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
@@ -113,10 +116,10 @@ impl SerialHandle {
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Serialio {
-  serial: SerialDev,
-  usb_dev: UsbDev,
+  serial:                     SerialDev,
+  usb_dev:                    UsbDev,
   request_poll_for_interrupt: bool,
-  interrupt_cmd_triggered: bool,
+  interrupt_cmd_triggered:    bool,
 }
 
 impl Serialio {
@@ -140,7 +143,7 @@ impl Serialio {
   }
 
   /// flush the rx buffer discarding the data
-  fn flush_rx(&mut self) {
+  fn drain(&mut self) {
     let mut discard_buffer = [0u8; 64];
 
     // Keep reading until buffer is empty
@@ -174,7 +177,7 @@ impl Serialio {
           if buffer[..bytes_read].contains(&INTERRUPT_CHAR) {
             // Found interrupt character, flush and set flag
             self.interrupt_cmd_triggered = true;
-            self.flush_rx();
+            self.drain();
             return;
           }
           continue;
@@ -202,7 +205,7 @@ impl Serialio {
         Err(UsbError::WouldBlock) => {
           // If not connected to serial, we exit
           if !self.serial.dtr() {
-            return Err(UsbError::WouldBlock);
+            return Err(UsbError::InvalidEndpoint);
           }
           // Otherwise The serial buffer is full and we must keep polling
         },
@@ -261,7 +264,8 @@ impl Serialio {
         if overflow {
           // We finished reading the oversized line. Return the error.
           return Err(UsbError::BufferOverflow);
-        } else {
+        }
+        else {
           // Done! End of line found and it fit in the buffer.
           return Ok(bytes_read);
         }
@@ -272,7 +276,8 @@ impl Serialio {
         // There is space, store the byte.
         buffer[bytes_read] = byte;
         bytes_read += 1;
-      } else {
+      }
+      else {
         // No more space, set overflow flag. We will now discard bytes.
         overflow = true;
       }
