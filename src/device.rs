@@ -22,6 +22,7 @@ use rp_pico::hal;
 use rp_pico::hal::Clock;
 use rp_pico::hal::fugit::{Duration, ExtU32, MicrosDurationU32};
 use rp_pico::hal::gpio::{self};
+use rp_pico::hal::sio::SioFifo;
 use rp_pico::hal::timer::Alarm;
 use rp_pico::hal::timer::Timer;
 use rp_pico::hal::{clocks, pac, pac::interrupt, pwm, sio, timer, usb, watchdog};
@@ -253,6 +254,7 @@ const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(10_000);
 // ———————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Device {
+  pub sio_fifo: SioFifo,
   pub timer:    Timer,
   pub watchdog: watchdog::Watchdog,
   pub pwms:     Pwms,
@@ -271,6 +273,7 @@ impl Device {
     let mut watchdog = watchdog::Watchdog::new(pac.WATCHDOG);
     let sio = sio::Sio::new(pac.SIO);
     let pins = gpio::Pins::new(pac.IO_BANK0, pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
+    let sio_fifo = sio.fifo;
 
     // ————————————————————————————————————————— Clocks ———————————————————————————————————————————
 
@@ -397,6 +400,7 @@ impl Device {
     // —————————————————————————————————————— Construct ———————————————————————————————————————————
 
     Self {
+      sio_fifo,
       timer,
       watchdog,
       pwms,
@@ -416,7 +420,7 @@ impl Device {
 
 pub trait TimerExt {
   fn now(&self) -> Duration<u64, 1, 1_000_000>;
-  fn print_time(&self) -> String<16>;
+  fn print_time(&self) -> String<32>;
   fn delay_ms(&self, millis: u32);
   fn delay_us(&self, us: u32);
 }
@@ -428,21 +432,24 @@ impl TimerExt for Timer {
     self.get_counter().duration_since_epoch()
   }
 
-  /// Printing Time
-  fn print_time(&self) -> String<16> {
-    let total_micros = self.now().to_micros();
+  /// Printing Time with formatted units
+  fn print_time(&self) -> String<32> {
+    let total_us = self.now().to_micros();
 
-    // Calculate components
-    let total_millis = total_micros / 1_000;
-    let total_seconds = total_millis / 1_000;
-    let min = total_seconds / 60;
-    let sec = total_seconds % 60;
-    let mil = total_millis % 1_000;
-    let mic = total_micros % 1_000;
+    // Isolate the second and sub-second components
+    let total_secs = total_us / 1_000_000;
+    let sub_s_us = total_us % 1_000_000;
 
-    // Use heapless::String for formatting
-    let mut time: String<16> = String::new();
-    write!(&mut time, "{min}:{sec:02}.{mil:03}.{mic:03}").expect("print time fmt");
+    // Calculate each unit from the components
+    let hr = total_secs / 3600;
+    let min = (total_secs % 3600) / 60;
+    let sec = total_secs % 60;
+    let mil = sub_s_us / 1_000;
+    let mic = sub_s_us % 1_000;
+
+    // Format into a heapless String with unit labels
+    let mut time: String<32> = String::new();
+    write!(&mut time, "{hr}h {min:02}m {sec:02}s {mil:03}ms {mic:03}us").unwrap();
     time
   }
 
