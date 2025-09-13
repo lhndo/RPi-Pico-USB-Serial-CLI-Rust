@@ -77,13 +77,13 @@ pub const CMDS: [Command; NUM_COMMANDS] = [
   },
   Command {
     name: "test_gpio",
-    desc: "Sets GPIO 0 High when GPIO 9 is Low",
+    desc: "Sets GPIO 0 High when GPIO 9 is Low\n Interrupt with char \"~\" ",
     func: test_gpio_cmd,
   },
   Command {
     name: "test_analog",
     desc: "Voltage controlled PWM Duty Cycle (i.e. Potentiometer on GPIO 26 dimming a Led on GPIO \
-           8) ",
+           8) \n Interrupt with char \"~\" ",
     func: test_analog_cmd,
   },
 ];

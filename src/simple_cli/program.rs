@@ -61,8 +61,8 @@ impl Program {
     }
 
     println!("\n========= HELLO =========== ");
-    let time = device.timer.get_counter().ticks();
-    println!("Current timer ticks: {} (T: {})", time, device.timer.print_time());
+    let time_ticks = device.timer.get_counter().ticks();
+    println!("Current timer ticks: {time_ticks} (T: {})", device.timer.print_time());
     println!("Frequency: {}hz", SYS_CLK_HZ.load(Ordering::Relaxed));
     println!("Type \"help\" for the command lists\n");
   }
@@ -101,7 +101,7 @@ impl Program {
           Ok(len) => {
             self.command_buf.advance(len);
             self.command_read = true;
-            println!("\n>> Received Command: (T: {}) ", device.timer.print_time());
+            println!("\n>> Received Command:");
           },
           Err(e) => {
             println!("\nErr: {:?} \n", e);
@@ -113,13 +113,15 @@ impl Program {
       // Execute command
       if self.command_read {
         let input = self.command_buf.data().as_str().unwrap();
-        println!(">> '{}' \n", input);
+        println!(">> '{}' ", input);
+
+        println!("\n======== RUNNING ========= (T: {}) \n", device.timer.print_time());
         cli.execute(input, device).unwrap_or_else(|e| println!("Err: {}", e));
 
         // Cleanup
         self.command_buf.clear();
         self.command_read = false; // Done, accepting new cmds
-        print!("\n========= DONE =========== (T: {}) \n", device.timer.print_time());
+        print!("\n========== DONE ========== (T: {}) \n", device.timer.print_time());
       }
 
       let led = device.outputs.get_pin(PinID::LED).unwrap();
