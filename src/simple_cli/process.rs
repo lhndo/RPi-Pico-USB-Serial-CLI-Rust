@@ -106,8 +106,8 @@ struct CommandWithArgs {
 
 #[derive(Debug, Default, Clone)]
 pub struct Arguments {
-  param: String<MAX_PARAM_LENGTH>,
-  value: String<MAX_VALUE_LENGTH>,
+  pub param: String<MAX_PARAM_LENGTH>,
+  pub value: String<MAX_VALUE_LENGTH>,
 }
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
@@ -169,7 +169,8 @@ fn split_into_cmd_args(input: &str) -> Result<CommandWithArgs> {
           value: String::new(),
         })
         .map_err(|_| CliError::BufferWrite)?;
-    } else if len >= 2 {
+    }
+    else if len >= 2 {
       let arg_param = String::try_from(elements[0]).map_err(|_| CliError::BufferWrite)?;
 
       let mut arg_value: String<MAX_VALUE_LENGTH> = String::new();
@@ -197,7 +198,9 @@ fn split_into_cmd_args(input: &str) -> Result<CommandWithArgs> {
 
 /// Matches a string parameter name and retrives the value from an argument list
 pub fn get_parsed_param<T>(param: &str, arg_list: &[Arguments]) -> Result<T>
-where T: FromStr {
+where
+  T: FromStr,
+{
   // Find argument
   let arg = arg_list.iter().find(|s| s.param.eq_ignore_ascii_case(param)).ok_or_else(|| {
     String::try_from(param)
