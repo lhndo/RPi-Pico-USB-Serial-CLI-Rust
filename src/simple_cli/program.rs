@@ -1,7 +1,5 @@
 //! Main CLI program logic
-/// ———————————————————————————————————————————————————————————————————————————————————————————————
-///                                            Program
-/// ———————————————————————————————————————————————————————————————————————————————————————————————
+
 use super::*;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
@@ -11,7 +9,7 @@ use super::*;
 static CMD_BUFF_SIZE: usize = 192;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
-//                                        Program Struct
+//                                            Program
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Program {
@@ -20,8 +18,6 @@ pub struct Program {
 }
 
 impl Program {
-  // ———————————————————————————————————————————— New ——————————————————————————————————————————————
-
   pub fn new() -> Self {
     let command_buf = FifoBuffer::new();
     let command_read = false;
@@ -29,12 +25,14 @@ impl Program {
     Self { command_buf, command_read }
   }
 
-  // ———————————————————————————————————————————— Init —————————————————————————————————————————————
+  // —————————————————————————————————————————————————————————————————————————————————————————————————
+  //                                              Init
+  // —————————————————————————————————————————————————————————————————————————————————————————————————
 
   pub fn init(&mut self, device: &mut Device) {
     let led = device.outputs.get_pin(PinID::LED).unwrap();
 
-    // While we don't have a serial monitor connection we keep polling
+    // While we don't have a serial monitor connection we keep polling and bliking led for status
     while !SERIAL.is_connected() {
       led.toggle().unwrap();
       device.timer.delay_ms(80);
@@ -43,7 +41,7 @@ impl Program {
     #[cfg(feature = "defmt")]
     info!("USB Serial Monitor: Connected!");
 
-    // Blink leds four times to notify
+    // Blink leds four times to notify connected
     for _ in 0..4 {
       led.set_low().unwrap();
       device.timer.delay_ms(200);
@@ -60,6 +58,7 @@ impl Program {
       }
     }
 
+    // Print greeting msg
     println!("\n========= HELLO =========== ");
     let time_ticks = device.timer.get_counter().ticks();
     println!("Current timer ticks: {time_ticks} (T: {})", device.timer.print_time());
@@ -67,10 +66,12 @@ impl Program {
     println!("Type \"help\" for the command lists\n");
   }
 
-  // ———————————————————————————————————————————— Run ———————————————————————————————————————————————
+  // —————————————————————————————————————————————————————————————————————————————————————————————————
+  //                                               Run
+  // —————————————————————————————————————————————————————————————————————————————————————————————————
 
-  pub fn run(&mut self, device: &mut Device) {
-    let mut cli = Cli::new(&CMDS);
+  pub fn run(&mut self, device: &mut Device, commands: CommandList) {
+    let mut cli = Cli::new(commands);
 
     let led = device.outputs.get_pin(PinID::LED).unwrap();
     led.set_high().unwrap();
@@ -124,6 +125,7 @@ impl Program {
         print!("\n========== DONE ========== (T: {}) \n", device.timer.print_time());
       }
 
+      // Signal End
       let led = device.outputs.get_pin(PinID::LED).unwrap();
       for _ in 0..3 {
         led.set_low().unwrap();

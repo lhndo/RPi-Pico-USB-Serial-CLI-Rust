@@ -1,130 +1,131 @@
-//! CLI Commands/Functions
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-//                                          CLI Commands
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-
 use super::*;
 
-type Result<T> = core::result::Result<T, CliError>;
-type Context = Device;
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                      Command List Builder
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
-pub struct Command {
-  pub name: &'static str,
-  pub desc: &'static str,
-  pub func: fn(&[Arguments], &mut Device) -> Result<()>,
-}
+pub fn build_commands() -> CommandList {
+  let mut list = CommandList::default();
 
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-//                                         Commands List
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-
-const NUM_COMMANDS: usize = 12;
-
-pub const CMDS: [Command; NUM_COMMANDS] = [
-  Command {
+  list.register_command(Command {
     name: "help",
     desc: "Show command help - [command_name=all]",
     func: help_cmd,
-  },
-  Command {
+  });
+
+  list.register_command(Command {
     name: "reset",
     desc: "Reset device - [help]",
     func: reset_cmd,
-  },
-  Command {
+  });
+
+  list.register_command(Command {
     name: "flash",
     desc: "Restart device in USB Flash mode - [help]",
     func: flash_cmd,
-  },
-  Command {
+  });
+
+  list.register_command(Command {
     name: "example",
     desc: "Print Example \n <arg(float)> [opt=0(u8)] [on=false(bool)] [path=\"\"(string)] [help]",
     func: example_cmd,
-  },
-  Command {
+  });
+
+  list.register_command(Command {
     name: "blink",
     desc: "Blink Onboard Led \n [times=10] [interval=200(ms)] [help]",
     func: blink_cmd,
-  },
-  Command {
+  });
+
+  list.register_command(Command {
     name: "read_adc",
     desc: "Read all ADC channels \n [ref_res=10000(ohm)] [help]",
     func: read_adc_cmd,
-  },
-  Command {
+  });
+
+  list.register_command(Command {
     name: "sample_adc",
     desc: "Continuous sampling of an ADC channel \n [channel=0(u8)] [ref_res=10000(ohm)] \
            [interval=200(ms)] [help]\n Interrupt with char \"~\" ",
     func: sample_adc_cmd,
-  },
-  Command {
+  });
+
+  list.register_command(Command {
     name: "servo",
     desc: "Set Servo PWM on GPIO 8 \n [us=1500(us)] [pause=1500(ms)] [sweep=false(bool)] \
            [max_us=2000(us)] [help]",
     func: servo_cmd,
-  },
-  Command {
+  });
+
+  list.register_command(Command {
     name: "set_pwm",
     desc: "Sets PWM  (defaults on GPIO 6 - PWM3A ) \n [pwm_id=3(id)] [channel=a(a/b)] \
            [freq=50(hz)] [us=-1(us)] [duty=50(%)] \n [top=-1(u16)] [phase=false(bool)] \
            [disable=false(bool)] [help]",
     func: set_pwm_cmd,
-  },
-  Command {
+  });
+
+  list.register_command(Command {
     name: "panic_test",
     desc: "Panics the program. On the next serial connection, the panic msg is printed - [help]",
     func: panic_test_cmd,
-  },
-  Command {
+  });
+
+  list.register_command(Command {
     name: "test_gpio",
     desc: "Sets GPIO 0 High when GPIO 9 is Low - [help] \n Interrupt with char \"~\" ",
     func: test_gpio_cmd,
-  },
-  Command {
+  });
+
+  list.register_command(Command {
     name: "test_analog",
     desc: "Voltage controlled PWM Duty Cycle (i.e. Potentiometer on GPIO 26 dimming a Led on GPIO \
            8) - [help] \n Interrupt with char \"~\" ",
     func: test_analog_cmd,
-  },
-];
+  });
 
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-//                                        Commands Config
-// ————————————————————————————————————————————————————————————————————————————————————————————————
+  list
+}
 
-// ———————————————————————————————————————————— Help ——————————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                            Commands
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
-fn help_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                              Help
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
+pub fn help_cmd(args: &[Arguments], device: &mut Device, commands: &CommandList) -> Result<()> {
   let mut input = "all";
   if let Some(arg) = &args.first() {
     input = &arg.param;
   }
   else {
-    return help(input);
+    return help(input, commands);
   }
 
-  if let Some(cmd) = CMDS.iter().find(|cmd| cmd.name.contains(input)) {
-    help(cmd.name)
+  if let Ok(cmd_desc) = commands.get_description(input) {
+    help(input, commands)
   }
   else {
     Err(CliError::CmdNotFound(String::from_str(input).unwrap()))
   }
 }
 
-pub fn help(command: &str) -> Result<()> {
+pub fn help(command: &str, commands: &CommandList) -> Result<()> {
   if command == "all" {
     println!("All available commands:\n");
-    for cmd in CMDS.iter() {
+    for cmd in commands.commands.iter() {
       println!(" {} - {} \n", &cmd.name, &cmd.desc);
     }
     return Ok(());
   }
 
   if !command.is_empty()
-    && let Some(cmd) = CMDS.into_iter().find(|cmd| cmd.name == command)
+    && let Ok(desc) = commands.get_description(command)
   {
-    println!(" Help: {} \n", &cmd.name);
-    println!(" {} - {} \n", &cmd.name, &cmd.desc);
+    println!(" Help: {} \n", command);
+    println!(" {} - {} \n", command, desc);
     Ok(())
   }
   else {
@@ -132,12 +133,14 @@ pub fn help(command: &str) -> Result<()> {
   }
 }
 
-// ———————————————————————————————————————————— Test ——————————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                             Example
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
-fn example_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
+pub fn example_cmd(args: &[Arguments], device: &mut Device, commands: &CommandList) -> Result<()> {
   // Print Help
   if let Some(arg) = args.iter().find(|arg| arg.param.contains("help")) {
-    return help("example");
+    return help("example", commands);
   }
 
   let arg: f32 = get_parsed_param("arg", args)?;
@@ -155,12 +158,14 @@ fn example_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   Ok(())
 }
 
-// ——————————————————————————————————————————— Reset ——————————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                              Reset
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
-pub fn reset_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
+pub fn reset_cmd(args: &[Arguments], device: &mut Device, commands: &CommandList) -> Result<()> {
   // Print Help
   if let Some(arg) = args.iter().find(|arg| arg.param.contains("help")) {
-    return help("reset");
+    return help("reset", commands);
   }
 
   print!("\nResetting...\n");
@@ -169,12 +174,14 @@ pub fn reset_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   Ok(())
 }
 
-// ——————————————————————————————————————————— Flash ——————————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                              Flash
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
-fn flash_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
+pub fn flash_cmd(args: &[Arguments], device: &mut Device, commands: &CommandList) -> Result<()> {
   // Print Help
   if let Some(arg) = args.iter().find(|arg| arg.param.contains("help")) {
-    return help("flash");
+    return help("flash", commands);
   }
 
   print!("\nRestarting in USB Flash mode!...\n");
@@ -183,13 +190,15 @@ fn flash_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   Ok(())
 }
 
-// —————————————————————————————————————————— Blink —————————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                              Blink
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 // ex: blink times=4
 
-fn blink_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
+pub fn blink_cmd(args: &[Arguments], device: &mut Device, commands: &CommandList) -> Result<()> {
   // Print Help
   if let Some(arg) = args.iter().find(|arg| arg.param.contains("help")) {
-    return help("blink");
+    return help("blink", commands);
   }
 
   let times: u16 = get_parsed_param("times", args).unwrap_or(10); // 10 default
@@ -198,7 +207,7 @@ fn blink_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
 }
 
 // Separating functions from commands for stand alone use
-pub fn blink(device: &mut Context, times: u16, interval: u16) -> Result<()> {
+pub fn blink(device: &mut Device, times: u16, interval: u16) -> Result<()> {
   println!("---- Blinking Led! ----");
   let led = device.outputs.get_pin(PinID::LED).unwrap();
   let mut blink = 1;
@@ -230,12 +239,14 @@ pub fn blink(device: &mut Context, times: u16, interval: u16) -> Result<()> {
   Ok(())
 }
 
-// —————————————————————————————————————————— Read ADC —————————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                            Read ADC
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
-fn read_adc_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
+pub fn read_adc_cmd(args: &[Arguments], device: &mut Device, commands: &CommandList) -> Result<()> {
   // Print Help
   if let Some(arg) = args.iter().find(|arg| arg.param.contains("help")) {
-    return help("read_adc");
+    return help("read_adc", commands);
   }
 
   let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000);
@@ -243,7 +254,7 @@ fn read_adc_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   read_adc(device, ref_res)
 }
 
-pub fn read_adc(device: &mut Context, ref_res: u32) -> Result<()> {
+pub fn read_adc(device: &mut Device, ref_res: u32) -> Result<()> {
   println!("---- Read ADC ----");
   println!("Reference Pullup Resistor: {}ohm", ref_res);
 
@@ -268,13 +279,19 @@ pub fn read_adc(device: &mut Context, ref_res: u32) -> Result<()> {
   Ok(())
 }
 
-// ————————————————————————————————————————— Sample Adc ———————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                           Sample ADC
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 // GPIO 26
 
-fn sample_adc_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
+pub fn sample_adc_cmd(
+  args: &[Arguments],
+  device: &mut Device,
+  commands: &CommandList,
+) -> Result<()> {
   // Print Help
   if let Some(arg) = args.iter().find(|arg| arg.param.contains("help")) {
-    return help("sample_adc");
+    return help("sample_adc", commands);
   }
 
   let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000);
@@ -284,7 +301,7 @@ fn sample_adc_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   sample_adc(device, channel, ref_res, interval)
 }
 
-pub fn sample_adc(device: &mut Context, channel: u8, ref_res: u32, interval: u16) -> Result<()> {
+pub fn sample_adc(device: &mut Device, channel: u8, ref_res: u32, interval: u16) -> Result<()> {
   println!("---- Sample ADC ----");
   println!("Reference Pullup Resistor: {}ohm", ref_res);
   println!("ADC Channel: {} \n", { channel });
@@ -308,16 +325,19 @@ pub fn sample_adc(device: &mut Context, channel: u8, ref_res: u32, interval: u16
   Ok(())
 }
 
-// —————————————————————————————————————————— Servo —————————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                              Servo
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
 // GPIO 8 pwm4A
 // Angle Controlled RC Servo
 // ex: servo us=1200 pause=1000
 // ex: servo sweep=true max_us=1800
 
-fn servo_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
+pub fn servo_cmd(args: &[Arguments], device: &mut Device, commands: &CommandList) -> Result<()> {
   // Print Help
   if let Some(arg) = args.iter().find(|arg| arg.param.contains("help")) {
-    return help("servo");
+    return help("servo", commands);
   }
 
   let us: u16 = get_parsed_param("us", args).unwrap_or(1500); //  1500 us default
@@ -328,7 +348,7 @@ fn servo_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   servo(device, us, pause, sweep, max_us)
 }
 
-pub fn servo(device: &mut Context, us: u16, pause: u32, sweep: bool, max_us: u16) -> Result<()> {
+pub fn servo(device: &mut Device, us: u16, pause: u32, sweep: bool, max_us: u16) -> Result<()> {
   println!("---- Servo ----");
   println!("GPIO 8 pwm4A");
 
@@ -381,13 +401,15 @@ pub fn servo(device: &mut Context, us: u16, pause: u32, sweep: bool, max_us: u16
   Ok(())
 }
 
-// —————————————————————————————————————————— Set PWM —————————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                             Set PWM
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 // GPIO 6 pwm3A
 
-fn set_pwm_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
+pub fn set_pwm_cmd(args: &[Arguments], device: &mut Device, commands: &CommandList) -> Result<()> {
   // Print Help
   if let Some(arg) = args.iter().find(|arg| arg.param.contains("help")) {
-    return help("set_pwm");
+    return help("set_pwm", commands);
   }
 
   let pwm_id: usize = get_parsed_param("pwm_id", args).unwrap_or(3); //  -1 eq not set
@@ -486,31 +508,43 @@ where
   Ok(())
 }
 
-// ——————————————————————————————————————————— Panic Test —————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                           Panic Test
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
-fn panic_test_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
+pub fn panic_test_cmd(
+  args: &[Arguments],
+  device: &mut Device,
+  commands: &CommandList,
+) -> Result<()> {
   // Print Help
   if let Some(arg) = args.iter().find(|arg| arg.param.contains("help")) {
-    return help("panic_test");
+    return help("panic_test", commands);
   }
 
   print!("\n On the next boot you should see the msg \"PANIC TEST\"\n Panicking.... :O\n");
   panic!("PANIC TEST");
 }
 
-// ————————————————————————————————————————— Test GPIO ————————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                            Test GPIO
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
-fn test_gpio_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
+pub fn test_gpio_cmd(
+  args: &[Arguments],
+  device: &mut Device,
+  commands: &CommandList,
+) -> Result<()> {
   // Print Help
   if let Some(arg) = args.iter().find(|arg| arg.param.contains("help")) {
-    return help("test_gpio");
+    return help("test_gpio", commands);
   }
 
   println!("---- Testing GPIO ----");
   println!("Send '~' to exit");
 
-  let input = device.inputs.get_pin(9).unwrap();
-  let output = device.outputs.get_pin(0).unwrap();
+  let input = device.inputs.get_pin(PinID::IN_A).unwrap();
+  let output = device.outputs.get_pin(PinID::OUT_A).unwrap();
 
   SERIAL.clear_interrupt_cmd();
   while !SERIAL.interrupt_cmd_triggered() {
@@ -526,12 +560,18 @@ fn test_gpio_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
   Ok(())
 }
 
-// ———————————————————————————————————————— Test Analog ———————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                           Test Analog
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
-fn test_analog_cmd(args: &[Arguments], device: &mut Context) -> Result<()> {
+pub fn test_analog_cmd(
+  args: &[Arguments],
+  device: &mut Device,
+  commands: &CommandList,
+) -> Result<()> {
   // Print Help
   if let Some(arg) = args.iter().find(|arg| arg.param.contains("help")) {
-    return help("test_analog");
+    return help("test_analog", commands);
   }
 
   println!("---- Testing Analog Input ----");

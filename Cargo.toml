@@ -28,6 +28,8 @@ heapless    = "0.9.1"
 pastey      = "0.1.1"
 duplicate   = "2.0.0"
 
+# once_cell = { version = "1.21.3", default-features = false, features = ["critical-section"] }
+
 
 [features]
 default = ["panic-persist"]

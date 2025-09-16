@@ -53,8 +53,9 @@ fn main() -> ! {
 
   if !RUN_STANDALONE {
     let mut program = simple_cli::program::Program::new();
+    let command_list = simple_cli::commands::build_commands();
     program.init(&mut device);
-    program.run(&mut device);
+    program.run(&mut device, command_list);
   }
 
   loop {
