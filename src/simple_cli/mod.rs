@@ -73,9 +73,26 @@ impl Cli {
     let cmd_name = command.cmd.as_str();
     let cmd_arg = command.args;
 
+    // Check if built-in help was called
+    if cmd_name == "help" {
+      self.built_in_help();
+      return Ok(());
+    }
+
     let cmd = self.commands.get_command(cmd_name)?;
     // Execute Command
-    (cmd.func)(&cmd_arg, device, &self.commands)
+    (cmd.func)(&cmd_arg, device)
+  }
+
+  pub fn built_in_help(&self) {
+    println!("\nAvailable Commands:");
+    println!("-----------------------------");
+
+    for command in self.commands.commands.iter() {
+      println!("{} - {}", command.name, command.desc);
+    }
+    println!("-----------------------------");
+    println!("For more information type: command_name help\n");
   }
 }
 
@@ -84,7 +101,7 @@ impl Cli {
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
 const MAX_CMDS: usize = 20;
-type FunctionCmd = fn(&[Arguments], &mut Device, &CommandList) -> Result<()>;
+type FunctionCmd = fn(&[Arguments], &mut Device) -> Result<()>;
 
 // ———————————————————————————————————————— Command List ———————————————————————————————————————————
 
@@ -265,4 +282,15 @@ pub fn get_str_param<'a>(param: &str, arg_list: &'a [Arguments]) -> Option<&'a s
     .iter()
     .find(|arg| arg.param.eq_ignore_ascii_case(param))
     .map(|arg| arg.value.as_str())
+}
+
+// —————————————————————————————————————— Contains argument ————————————————————————————————————————
+
+/// Checks if the argument list contains a certain str param and returns true or false
+pub fn contains_param(str: &str, args: &[Arguments]) -> bool {
+  // Print Help
+  if let Some(arg) = args.iter().find(|arg| arg.param.contains(str)) {
+    return true;
+  }
+  false
 }
