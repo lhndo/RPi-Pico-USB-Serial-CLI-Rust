@@ -1,9 +1,10 @@
-pub mod core;
+pub mod base;
 pub mod examples;
 
-pub use super::*;
-pub use core::*;
+pub use base::*;
 pub use examples::*;
+
+pub use super::*;
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                      Command List Builder
