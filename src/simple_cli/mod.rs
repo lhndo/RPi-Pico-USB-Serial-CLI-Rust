@@ -3,8 +3,7 @@
 pub mod commands;
 pub mod program;
 
-use crate::prelude::*;
-use heapless::{String, Vec};
+pub use crate::prelude::*;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                             Errors

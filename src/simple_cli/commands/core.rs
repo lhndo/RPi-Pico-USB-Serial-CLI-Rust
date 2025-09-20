@@ -1,0 +1,308 @@
+//! Core commands
+// Register new commands in commands.rs > Command List Builder
+
+use super::*;
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                              Reset
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
+pub fn build_reset_cmd() -> Command {
+  Command {
+    name: "reset",
+    desc: "Resets Device",
+    func: reset_cmd,
+  }
+}
+
+pub fn reset_cmd_help() {
+  println!("Help: reset");
+  println!(
+    "Resets device \n
+    reset [help]"
+  )
+}
+
+pub fn reset_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+  // Print Help
+  if contains_param("help", args) {
+    reset_cmd_help();
+    return Ok(());
+  }
+
+  print!("\nResetting...\n");
+  device.timer.delay_ms(500); // Waiting for msg to appear
+  device_reset();
+  Ok(())
+}
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                              Flash
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
+pub fn build_flash_cmd() -> Command {
+  Command {
+    name: "flash",
+    desc: "Restart device in USB Flash mode",
+    func: flash_cmd,
+  }
+}
+
+pub fn flash_cmd_help() {
+  println!("Help: flash");
+  println!(
+    "Restart device in USB Flash mode\n
+    flash [help]"
+  )
+}
+
+pub fn flash_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+  // Print Help
+  if contains_param("help", args) {
+    flash_cmd_help();
+    return Ok(());
+  }
+
+  print!("\nRestarting in USB Flash mode!...\n");
+  device_reset_to_usb();
+
+  Ok(())
+}
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                            Read ADC
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
+pub fn build_read_adc_cmd() -> Command {
+  Command {
+    name: "read_adc",
+    desc: "Read all ADC channels",
+    func: read_adc_cmd,
+  }
+}
+
+pub fn read_adc_cmd_help() {
+  println!("Help: read_adc");
+  println!(
+    "Read all ADC channels \n
+    read_adc [ref_res=10000(ohm)] [help]"
+  )
+}
+
+pub fn read_adc_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+  // Print Help
+  if contains_param("help", args) {
+    read_adc_cmd_help();
+    return Ok(());
+  }
+
+  let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000);
+  read_adc(device, ref_res)
+}
+
+pub fn read_adc(device: &mut Device, ref_res: u32) -> Result<()> {
+  println!("---- Read ADC ----");
+  println!("Reference Pullup Resistor: {}ohm", ref_res);
+
+  let channels_to_read: [u8; _] = [0, 1, 2, 3];
+
+  for &channel in &channels_to_read {
+    if let Some(r) = device.adcs.read_channel(channel) {
+      let adc_raw = r;
+      let adc_vol = adc_raw.to_voltage();
+      let adc_res = adc_raw.to_resistance(ref_res);
+      println!("> ACD {}: v:{:.2}, ohm:{:.1}, raw:{} \r", channel, adc_vol, adc_res, adc_raw);
+    }
+  }
+
+  // read Temp Sense
+  let adc_raw: u16 = device.adcs.read_channel(TEMP_SENSE_CHN).unwrap_or(0);
+  let adc_vol = adc_raw.to_voltage();
+  let adc_res = adc_raw.to_resistance(ref_res);
+  let sys_temp = 27.0 - (adc_raw.to_voltage() - 0.706) / 0.001721;
+  println!("Temp Sense: C:{:.1}, v:{:.2}, raw:{}", sys_temp, adc_vol, adc_raw);
+
+  Ok(())
+}
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                           Sample ADC
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+// GPIO 26
+
+pub fn build_sample_adc_cmd() -> Command {
+  Command {
+    name: "sample_adc",
+    desc: "Continuous sampling of an ADC channel",
+    func: sample_adc_cmd,
+  }
+}
+
+pub fn sample_adc_cmd_help() {
+  println!("Help: sample_adc");
+  println!(
+    "Continuous sampling of an ADC channel \n
+    sample_adc [channel=0(u8)] [ref_res=10000(ohm)] [interval=200(ms)] [help]\n
+    Interrupt with char \"~\" "
+  )
+}
+
+pub fn sample_adc_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+  // Print Help
+  if contains_param("help", args) {
+    sample_adc_cmd_help();
+    return Ok(());
+  }
+
+  let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000);
+  let channel: u8 = get_parsed_param("channel", args).unwrap_or(0);
+  let interval: u16 = get_parsed_param("interval", args).unwrap_or(200);
+
+  sample_adc(device, channel, ref_res, interval)
+}
+
+pub fn sample_adc(device: &mut Device, channel: u8, ref_res: u32, interval: u16) -> Result<()> {
+  println!("---- Sample ADC ----");
+  println!("Reference Pullup Resistor: {}ohm", ref_res);
+  println!("ADC Channel: {} \n", { channel });
+
+  SERIAL.clear_interrupt_cmd();
+  while !SERIAL.interrupt_cmd_triggered() {
+    if let Some(r) = device.adcs.read_channel(channel) {
+      let adc_raw: u16 = r;
+      let adc_vol = adc_raw.to_voltage();
+      let adc_res = adc_raw.to_resistance(ref_res);
+      println!("> v:{:.2}, ohm:{:.1}, raw:{} \r", adc_vol, adc_res, adc_raw);
+      device.timer.delay_ms(interval as u32);
+    }
+    else {
+      println!("Cannot read channel: {}", channel);
+    }
+  }
+
+  println!("Sampling Interrupted. Done!");
+
+  Ok(())
+}
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                             Set PWM
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+// GPIO 6 pwm3A
+
+pub fn build_set_pwm_cmd() -> Command {
+  Command {
+    name: "set_pwm",
+    desc: "Sets PWM  (defaults on GPIO 6 - PWM3A)",
+    func: set_pwm_cmd,
+  }
+}
+
+pub fn set_pwm_cmd_help() {
+  println!("Help: set_pwm");
+  println!(
+    "Sets PWM  (defaults on GPIO 6 - PWM3A ) \n
+    set_pwm [pwm_id=3(id)] [channel=a(a/b)] [freq=50(hz)] [us=-1(us)] [duty=50(%)]\n
+    [top=-1(u16)] [phase=false(bool)] [disable=false(bool)] [help]"
+  )
+}
+
+pub fn set_pwm_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+  // Print Help
+  if contains_param("help", args) {
+    set_pwm_cmd_help();
+    return Ok(());
+  }
+
+  let pwm_id: usize = get_parsed_param("pwm_id", args).unwrap_or(3); //  -1 eq not set
+  let channel = get_str_param("channel", args).unwrap_or("a"); // false
+  let us: i32 = get_parsed_param("us", args).unwrap_or(-1); //  -1 eq not set
+  let duty: u8 = get_parsed_param("duty", args).unwrap_or(50); //  50% default
+  let freq: u32 = get_parsed_param("freq", args).unwrap_or(50); // hz
+  let top: i32 = get_parsed_param("top", args).unwrap_or(-1); // 
+  let phase: bool = get_parsed_param("phase", args).unwrap_or(false); // 
+  let disable: bool = get_parsed_param("disable", args).unwrap_or(false); // false
+
+  if channel != "a" && channel != "b" {
+    println!("Channel can be only a or b");
+    return Err(CliError::Exit);
+  }
+
+  println!("---- PWM ----");
+  println!("PWM: {pwm_id}, channel: {channel}");
+
+  // Using a 'with' macro to be able to select the PWM slice
+  // In a regular program you would use the pwm slice directly
+  with_pwm_slice!(&mut device.pwms, pwm_id, |pwm_slice| {
+    set_pwm(pwm_slice, channel, us, duty, freq, top, phase, disable)
+  })
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn set_pwm<I>(
+  pwm_slice: &mut crate::pwms::PwmSlice<I>,
+  channel: &str,
+  us: i32,
+  duty: u8,
+  freq: u32,
+  top: i32,
+  phase: bool,
+  disable: bool,
+) -> Result<()>
+where
+  I: pwm::SliceId,
+  <I as pwm::SliceId>::Reset: pwm::ValidSliceMode<I>,
+{
+  //
+  if disable {
+    pwm_slice.disable();
+    println!("PWM Pin disabled");
+    return Ok(());
+  }
+
+  // Set PWM
+  if pwm_slice.ph_correct != phase {
+    pwm_slice.set_ph_correct(phase);
+  }
+
+  // Set TOP
+  let top = if top > 0 { top.clamp(0, u16::MAX as i32) as u16 } else { u16::MAX };
+  if pwm_slice.slice.get_top() != top {
+    pwm_slice.set_top(top);
+  }
+
+  // Set Frequency
+  if pwm_slice.freq != freq {
+    pwm_slice.set_freq(freq);
+  }
+
+  print!("Seting PWM | freq: {}hz, top: {}, phase: {} ", freq, top, phase);
+
+  // Set Duty
+  if us > 0 {
+    if channel == "a" {
+      pwm_slice.get_channel_a().set_duty_cycle_us(us as u16, freq);
+    }
+    else {
+      pwm_slice.get_channel_b().set_duty_cycle_us(us as u16, freq);
+    }
+
+    println!("duty: {}µs", us);
+  }
+  else {
+    let duty = duty.clamp(0, 100) as u16;
+    if channel == "a" {
+      pwm_slice.get_channel_a().set_duty_cycle_fraction(duty, 100).unwrap();
+    }
+    else {
+      pwm_slice.get_channel_b().set_duty_cycle_fraction(duty, 100).unwrap();
+    }
+
+    println!("duty: {}%", duty);
+  }
+
+  // End
+  pwm_slice.enable();
+
+  Ok(())
+}
