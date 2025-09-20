@@ -4,10 +4,16 @@
 * The intent is to develop an easy prototyping workflow by using the **Raspberry Pi Pico** over **Serial USB** though a **CL** like **interface**
 
 * The "**device**" is set up in **device.rs** and encapsulated in a **Device** struct which is then borrowed to various **CLI** **commands**/**programs** 
-* **CLI commands** are implemented in **simple_cli/commands.rs**
+* **CLI commands** are implemented in **simple_cli/commands/**
 
 ## Setup:
 
 * Clone this repository
-* Connect the Pico in **BOOTSEL** mode and execute `cargo run` (*assuming you have the rust toolchain installed*)
+* Connect the Pico in `BOOTSEL` mode and execute `cargo run` (*assuming you have the rust toolchain installed*)
 * Connect to the Pico though a COM port using a **Serial Monitor tool** and follow the instructions
+
+<br>
+
+* For `probe-rs` with a swd interface you can flash/debug by running: `cargo embed-d` or `cargo embed default -- --no-default-features --features defmt`
+
+* VS Code debug/tasks are also available
