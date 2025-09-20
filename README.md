@@ -4,7 +4,7 @@
 * The intent is to develop an easy prototyping workflow by using the **Raspberry Pi Pico** over **Serial USB** though a **CL** like **interface**
 
 * The "**device**" is set up in **device.rs** and encapsulated in a **Device** struct which is then borrowed to various **CLI** **commands**/**programs** 
-* **CLI commands** are implemented in **simple_cli/cli_commands.rs**
+* **CLI commands** are implemented in **simple_cli/commands.rs**
 
 ## Setup:
 
