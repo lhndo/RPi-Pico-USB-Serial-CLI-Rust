@@ -11,10 +11,13 @@ pub use crate::prelude::*;
 
 type Result<T> = core::result::Result<T, CliError>;
 
+const ERR_STR_LENGTH: usize = 64;
+
 #[non_exhaustive]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum CliError {
   BufferWrite,
+  ParseBuffer,
   IoInput,
   Parse(String<ERR_STR_LENGTH>),
   MissingArg(String<ERR_STR_LENGTH>),
@@ -31,21 +34,36 @@ impl fmt::Display for CliError {
       CliError::BufferWrite => {
         write!(f, "failed to process the buffer into a valid command!")
       },
+      CliError::ParseBuffer => {
+        write!(f, "while parsing buffer!")
+      },
       CliError::IoInput => write!(f, "IO Input!"),
       CliError::Parse(e) => {
-        write!(f, "argument parse, arg: {}", e.as_str())
+        write!(f, "argument parse, arg: {e}")
       },
       CliError::MissingArg(e) => {
-        write!(f, "missing argument <{}>", e.as_str())
+        write!(f, "missing argument <{e}>")
       },
-      CliError::CmdExec(e) => write!(f, "command failed with: {}", e.as_str()),
+      CliError::CmdExec(e) => write!(f, "command failed with: {e}"),
       CliError::CmdNotFound(e) => {
-        write!(f, "command not found: {}", e.as_str())
+        write!(f, "command not found: {e}")
       },
       CliError::CriticalFail => write!(f, "critical failure!"),
       CliError::Exit => write!(f, "exit!"),
       CliError::Other => write!(f, "internal error!"),
     }
+  }
+}
+
+trait IntoTruncate {
+  fn into_truncate<const N: usize>(self) -> String<N>;
+}
+
+impl IntoTruncate for &str {
+  fn into_truncate<const N: usize>(self) -> String<N> {
+    let mut s = String::<N>::new();
+    let _ = s.push_str(self); // truncates if too long
+    s
   }
 }
 
@@ -63,7 +81,7 @@ impl Cli {
   }
 
   pub fn execute(&mut self, input: &str, device: &mut Device) -> Result<()> {
-    let command = split_into_cmd_args(input)?;
+    let command = parse_input(input)?;
     self.execute_command(command, device)?;
     Ok(())
   }
@@ -151,7 +169,6 @@ const MAX_CMD_LENGTH: usize = 24;
 const MAX_NUMBER_PARAMS: usize = 5;
 const MAX_PARAM_LENGTH: usize = 16;
 const MAX_VALUE_LENGTH: usize = 64;
-const ERR_STR_LENGTH: usize = 64;
 
 #[derive(Debug, Default)]
 struct CommandWithArgs {
@@ -169,10 +186,10 @@ pub struct Arguments {
 //                                        Helper Functions
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-// —————————————————————————————————— Split Into Cmd and Args —————————————————————————————————————
+// ————————————————————————————————————————— Parse Input ———————————————————————————————————————————
 
 /// Takes an input string and processes it creating a CommandWithArgs struct
-fn split_into_cmd_args(input: &str) -> Result<CommandWithArgs> {
+fn parse_input(input: &str) -> Result<CommandWithArgs> {
   // --- Stage 1: All text to lowercase, detect and strip quotes
   // and switch spaces inside with a key (0x1E) symbol ---
   let mut processed_buf: String<CLI_READ_BUFFER_LENGTH> = String::new();
@@ -183,13 +200,13 @@ fn split_into_cmd_args(input: &str) -> Result<CommandWithArgs> {
         in_quotes = !in_quotes;
       },
       ' ' if in_quotes => {
-        processed_buf.push(char::from(0x1E)).map_err(|_| CliError::BufferWrite)?;
+        processed_buf.push(char::from(0x1E)).map_err(|_| CliError::ParseBuffer)?;
       },
       c if c.is_ascii_uppercase() => {
-        processed_buf.push(c.to_ascii_lowercase()).map_err(|_| CliError::BufferWrite)?;
+        processed_buf.push(c.to_ascii_lowercase()).map_err(|_| CliError::ParseBuffer)?;
       },
       c => {
-        processed_buf.push(c).map_err(|_| CliError::BufferWrite)?;
+        processed_buf.push(c).map_err(|_| CliError::ParseBuffer)?;
       },
     }
   }
@@ -198,7 +215,7 @@ fn split_into_cmd_args(input: &str) -> Result<CommandWithArgs> {
   let mut iter = processed_buf.split_ascii_whitespace();
   let cmd_str = iter.next().unwrap_or("help"); // defaulting to help command on error
   let command: String<MAX_CMD_LENGTH> =
-    String::try_from(cmd_str).map_err(|_| CliError::BufferWrite)?;
+    String::try_from(cmd_str).map_err(|_| CliError::ParseBuffer)?;
 
   let mut split_input = CommandWithArgs {
     cmd:  command,
@@ -216,7 +233,7 @@ fn split_into_cmd_args(input: &str) -> Result<CommandWithArgs> {
     let len = elements.len();
 
     if len == 1 {
-      let arg_param = String::try_from(elements[0]).map_err(|_| CliError::BufferWrite)?;
+      let arg_param = String::try_from(elements[0]).map_err(|_| CliError::ParseBuffer)?;
       split_input
         .args
         .push(Arguments {
@@ -226,14 +243,14 @@ fn split_into_cmd_args(input: &str) -> Result<CommandWithArgs> {
         .map_err(|_| CliError::BufferWrite)?;
     }
     else if len >= 2 {
-      let arg_param = String::try_from(elements[0]).map_err(|_| CliError::BufferWrite)?;
+      let arg_param = String::try_from(elements[0]).map_err(|_| CliError::ParseBuffer)?;
 
       let mut arg_value: String<MAX_VALUE_LENGTH> = String::new();
 
       // Restoring space characters
       for char in elements[1].chars() {
         let c_to_push = if char == char::from(0x1E) { ' ' } else { char };
-        arg_value.push(c_to_push).map_err(|_| CliError::BufferWrite)?;
+        arg_value.push(c_to_push).map_err(|_| CliError::ParseBuffer)?;
       }
 
       // Creating argument with value
@@ -243,7 +260,7 @@ fn split_into_cmd_args(input: &str) -> Result<CommandWithArgs> {
           param: arg_param,
           value: arg_value,
         })
-        .map_err(|_| CliError::BufferWrite)?;
+        .map_err(|_| CliError::ParseBuffer)?;
     }
   }
   Ok(split_input)
@@ -257,18 +274,14 @@ where
   T: FromStr,
 {
   // Find argument
-  let arg = arg_list.iter().find(|s| s.param.eq_ignore_ascii_case(param)).ok_or_else(|| {
-    String::try_from(param)
-      .map(CliError::MissingArg)
-      .unwrap_or(CliError::BufferWrite)
-    // Or map directly if try_from returns a compatible error
-  })?;
+  let arg = arg_list
+    .iter()
+    .find(|s| s.param.eq_ignore_ascii_case(param))
+    .ok_or_else(|| CliError::MissingArg(param.into_truncate()))?;
 
   let val_as_str = arg.value.as_str();
 
-  let value: T = val_as_str
-    .parse()
-    .map_err(|_| String::try_from(param).map(CliError::Parse).unwrap_or(CliError::BufferWrite))?;
+  let value: T = val_as_str.parse().map_err(|_| CliError::Parse(param.into_truncate()))?;
 
   Ok(value)
 }
