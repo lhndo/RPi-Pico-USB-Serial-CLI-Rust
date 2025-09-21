@@ -3,8 +3,9 @@
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 /// Simple generic FIFO buffer implementation.
-pub struct FifoBuffer<T, const BUF_SIZE: usize> {
-  buffer: [T; BUF_SIZE],
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FifoBuffer<const BUF_SIZE: usize> {
+  buffer: [u8; BUF_SIZE],
   used:   usize,
 }
 
@@ -12,7 +13,7 @@ pub struct FifoBuffer<T, const BUF_SIZE: usize> {
 //                                            Methods
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-impl<const BUF_SIZE: usize> FifoBuffer<u8, BUF_SIZE> {
+impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
   /// Creates a new, empty `u8` buffer in a `const` context.
   ///
   /// This is useful for initializing `static` variables, as `u8` has a known
@@ -20,17 +21,6 @@ impl<const BUF_SIZE: usize> FifoBuffer<u8, BUF_SIZE> {
   pub const fn new() -> Self {
     Self {
       buffer: [0; BUF_SIZE],
-      used:   0,
-    }
-  }
-}
-
-// General methods for any type `T` that can be copied and has a default value.
-impl<T: Copy + Default, const BUF_SIZE: usize> FifoBuffer<T, BUF_SIZE> {
-  /// Creates a new, empty buffer.
-  pub fn new_generic() -> Self {
-    Self {
-      buffer: [T::default(); BUF_SIZE],
       used:   0,
     }
   }
@@ -74,13 +64,13 @@ impl<T: Copy + Default, const BUF_SIZE: usize> FifoBuffer<T, BUF_SIZE> {
   /// Returns a mutable slice to the unused part of the buffer.
   /// Remember to set .advance(n) to set the endpoint
   #[inline(always)]
-  pub fn receive_buffer(&mut self) -> &mut [T] {
+  pub fn receive_buffer(&mut self) -> &mut [u8] {
     &mut self.buffer[self.used..]
   }
 
   /// Adds a single item to the buffer. Returns `false` if full.
   #[inline(always)]
-  pub fn add_single(&mut self, item: T) -> bool {
+  pub fn add_single(&mut self, item: u8) -> bool {
     if self.is_full() {
       return false;
     }
@@ -92,7 +82,7 @@ impl<T: Copy + Default, const BUF_SIZE: usize> FifoBuffer<T, BUF_SIZE> {
   /// Appends items from a slice to the buffer.
   /// Returns the number of items written, or 0 if the buffer is full.
   #[inline(always)]
-  pub fn append(&mut self, buf: &[T]) -> usize {
+  pub fn append(&mut self, buf: &[u8]) -> usize {
     let into = self.receive_buffer();
     let len = into.len().min(buf.len());
 
@@ -105,16 +95,28 @@ impl<T: Copy + Default, const BUF_SIZE: usize> FifoBuffer<T, BUF_SIZE> {
     len
   }
 
+  /// Safer write access than direct receive_buffer. Must return a written usize
+  pub fn try_write<F>(&mut self, f: F) -> usize
+  where
+    F: FnOnce(&mut [u8]) -> usize,
+  {
+    let available = self.receive_buffer();
+    let available_len = available.len();
+    let written = f(available).min(available_len);
+    self.advance(written);
+    written
+  }
+
   /// Returns a slice of the items currently in the buffer.
   #[inline(always)]
-  pub fn data(&self) -> &[T] {
+  pub fn get_data(&self) -> &[u8] {
     &self.buffer[0..self.used]
   }
 
   /// Reads items from the buffer into a provided slice.
   /// The read items are removed. Returns the number of items transferred.
   #[inline(always)]
-  pub fn read(&mut self, data: &mut [T]) -> usize {
+  pub fn read(&mut self, data: &mut [u8]) -> usize {
     let len = self.used.min(data.len());
     if len == 0 {
       return 0;
@@ -126,7 +128,7 @@ impl<T: Copy + Default, const BUF_SIZE: usize> FifoBuffer<T, BUF_SIZE> {
 
   /// Reads and removes the first item from the buffer.
   #[inline(always)]
-  pub fn read_single(&mut self) -> Option<T> {
+  pub fn read_single(&mut self) -> Option<u8> {
     if self.is_empty() {
       return None;
     }
@@ -148,29 +150,17 @@ impl<T: Copy + Default, const BUF_SIZE: usize> FifoBuffer<T, BUF_SIZE> {
   pub fn set_end(&mut self, index: usize) {
     self.used = index.min(BUF_SIZE);
   }
-}
-
-// Methods that require the type `T` to be comparable.
-impl<T: Copy + Default + PartialEq, const BUF_SIZE: usize> FifoBuffer<T, BUF_SIZE> {
-  /// Returns the index of the first matching item, or `None`.
-  #[inline(always)]
-  pub fn contains(&self, item: &T) -> Option<usize> {
-    self.data().iter().position(|b| b == item)
-  }
 
   /// Searches for a sub-slice and returns the starting index if found.
   #[inline(always)]
-  pub fn contains_slice(&self, slice: &[T]) -> Option<usize> {
+  pub fn contains_slice(&self, slice: &[u8]) -> Option<usize> {
     if slice.is_empty() {
-      return None;
+      return Some(0);
     };
-    self.data().windows(slice.len()).position(|w| w == slice)
+    self.get_data().windows(slice.len()).position(|w| w == slice)
   }
-}
 
-// Methods specific to a buffer holding `u8`.
-impl<const BUF_SIZE: usize> FifoBuffer<u8, BUF_SIZE> {
-  /// Searches for a string slice and returns the starting index if found.
+  /// Searches for a string and returns the starting index if found.
   #[inline(always)]
   pub fn contains_str(&self, word: &str) -> Option<usize> {
     self.contains_slice(word.as_bytes())
@@ -180,6 +170,12 @@ impl<const BUF_SIZE: usize> FifoBuffer<u8, BUF_SIZE> {
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                             Traits
 // ————————————————————————————————————————————————————————————————————————————————————————————————
+
+impl<const BUF_SIZE: usize> Default for FifoBuffer<BUF_SIZE> {
+  fn default() -> Self {
+    Self::new()
+  }
+}
 
 use core::str::Utf8Error;
 

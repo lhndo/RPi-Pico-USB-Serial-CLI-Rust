@@ -13,7 +13,7 @@ static CMD_BUFF_SIZE: usize = 192;
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Program {
-  pub command_buf:  FifoBuffer<u8, CMD_BUFF_SIZE>,
+  pub command_buf:  FifoBuffer<CMD_BUFF_SIZE>,
   pub command_read: bool,
 }
 
@@ -113,7 +113,7 @@ impl Program {
 
       // Execute command
       if self.command_read {
-        let input = self.command_buf.data().as_str().unwrap();
+        let input = self.command_buf.get_data().as_str().unwrap();
         println!(">> '{}' ", input);
 
         println!("\n======== RUNNING ========= (T: {}) \n", device.timer.print_time());
