@@ -15,8 +15,6 @@ pub struct FifoBuffer<const BUF_SIZE: usize> {
 
 impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
   /// Creates a new, empty `u8` buffer in a `const` context.
-  ///
-  /// This is useful for initializing `static` variables, as `u8` has a known
   /// constant default value (0).
   pub const fn new() -> Self {
     Self {
