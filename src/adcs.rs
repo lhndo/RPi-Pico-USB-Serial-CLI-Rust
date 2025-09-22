@@ -1,5 +1,5 @@
 use embedded_hal_0_2::adc::OneShot;
-use rp_pico::hal::adc::{Adc, AdcPin, TempSense};
+use rp_pico::hal::adc::{self, Adc, AdcPin, TempSense};
 use rp_pico::hal::gpio;
 
 use duplicate::duplicate_item;
@@ -9,7 +9,7 @@ pub const ADC_BITS: u32 = 12;
 pub const ADC_MAX: f32 = ((1 << ADC_BITS) - 1) as f32;
 pub const ADC_VREF: f32 = 3.3;
 
-pub const TEMP_SENSE_CHN: u8 = 255;
+pub const TEMP_SENSE_CHN: u8 = 4;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                              Adcs
@@ -56,7 +56,7 @@ impl Adcs {
   }
 
 
-  /// One shot read of the ADC channel 0-3, and 255 (as TEMP_SENSE_CHN)
+  /// One shot read of the ADC channel 0-3, and 4 as TEMP_SENSE channel
   /// Returns Some or None
   pub fn read_channel(&mut self, id: u8) -> Option<u16> {
     match id {
@@ -69,19 +69,38 @@ impl Adcs {
     }
   }
 
-  /// One shot read based on the Pin ID (255 as TEMP_SENSE ID)
-  pub fn read_by_pin_id(&mut self, id: u8) -> Option<u16> {
-      match id {
-      26 => self.adc0.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
-      27 => self.adc1.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
-      28 => self.adc2.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
-      29 => self.adc3.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
-      TEMP_SENSE_CHN => self.hal_adc.read(&mut self.temp_sense).unwrap_or(None),
+  /// One shot read based on the Pin ID (4 as TEMP_SENSE ID)
+  pub fn read_by_pin_id(&mut self, gpio: u8) -> Option<u16> {
+      match gpio {
+      26 => self.read_channel(0),
+      27 => self.read_channel(1),
+      28 => self.read_channel(2),
+      29 => self.read_channel(3),
+      TEMP_SENSE_CHN => self.read_channel(TEMP_SENSE_CHN),
       _ => None,
     }
   }
 
+  /// Returns the main HAL ADC object 
+  pub fn get_hal_adc(&mut self) -> &mut Adc {
+    &mut self.hal_adc  
+  }
+
+  /// Returns ADC Channel by ADC channel id as dyn AdcChannel  
+  pub fn get_dyn_adc_channel (&mut self, id: u8) -> Option<&mut dyn adc::AdcChannel> {
+      #[allow(clippy::option_map_or_none)] // Needed for Option to dyn recast to work
+      match id {
+      0 => self.adc0.as_mut().map_or(None, |a| Some(a)),
+      1 => self.adc1.as_mut().map_or(None, |a| Some(a)),
+      2 => self.adc2.as_mut().map_or(None, |a| Some(a)),
+      3 => self.adc3.as_mut().map_or(None, |a| Some(a)),
+      TEMP_SENSE_CHN => Some (&mut self.temp_sense),
+      _ => None
+      }
+  }
+
 }
+
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                             Traits

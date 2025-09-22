@@ -266,13 +266,13 @@ pub fn sample_adc_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
   let interval: u16 = get_parsed_param("interval", args).unwrap_or(200);
 
   // Getting ADC channel based on pin number
-  if let Ok(pin_) = get_parsed_param("gpio", args) {
-    match pin_ {
+  if let Ok(gpio_) = get_parsed_param("gpio", args) {
+    match gpio_ {
       26 => channel = 0,
       27 => channel = 1,
       28 => channel = 2,
       29 => channel = 3,
-      255 => channel = 255, // default TEMP_SENSE channel
+      255 => channel = 4, // default TEMP_SENSE channel
       _ => return Err(CliError::CmdExec("pin not configured for ADC read".into_truncate())),
     }
   }
