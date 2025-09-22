@@ -64,13 +64,13 @@ impl Adcs {
       1 => self.adc1.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
       2 => self.adc2.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
       3 => self.adc3.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
-      TEMP_SENSE_CHN => self.hal_adc.read(&mut self.temp_sense).unwrap_or(None),
+      TEMP_SENSE_CHN => self.hal_adc.read(&mut self.temp_sense).ok(),
       _ => None,
     }
   }
 
   /// One shot read based on the Pin ID (4 as TEMP_SENSE ID)
-  pub fn read_by_pin_id(&mut self, gpio: u8) -> Option<u16> {
+  pub fn read_by_gpio_id(&mut self, gpio: u8) -> Option<u16> {
     match gpio {
       26 => self.read_channel(0),
       27 => self.read_channel(1),
@@ -87,7 +87,7 @@ impl Adcs {
   }
 
   /// Returns ADC Channel by ADC channel id as dyn AdcChannel  
-  pub fn get_dyn_adc_channel(&mut self, id: u8) -> Option<&mut dyn adc::AdcChannel> {
+  pub fn as_dyn_adc_channel(&mut self, id: u8) -> Option<&mut dyn adc::AdcChannel> {
     #[allow(clippy::option_map_or_none)] // Needed for Option to dyn recast to work
     match id {
       0 => self.adc0.as_mut().map_or(None, |a| Some(a)),
