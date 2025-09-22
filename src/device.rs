@@ -89,7 +89,7 @@ macro_rules! setup_pins {
   set_function_pins!($func, $pins, $obj,
   
   //ADC  
-  //Ident     Pin  Function
+  //Alias    GPIO  Func  Valid_Pins
   (ADC0,      26,  ADC) // GP26
   (ADC1,      27,  ADC) // GP27
   (ADC2,      28,  ADC) // GP28
@@ -229,7 +229,7 @@ macro_rules! build_pin_aliases {
     };
     // Match a literal pin
     (@each $id:ident, $pin:literal) => {
-        pub const $id: usize = $pin;
+        pub const $id: u8 = $pin;
     };
     // Match "NA" (skip)
     (@each $id:ident, NA) => {};

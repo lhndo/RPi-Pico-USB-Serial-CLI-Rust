@@ -56,7 +56,6 @@ impl Adcs {
   }
 
 
-
   /// One shot read of the ADC channel 0-3, and 255 (as TEMP_SENSE_CHN)
   /// Returns Some or None
   pub fn read_channel(&mut self, id: u8) -> Option<u16> {
@@ -65,10 +64,23 @@ impl Adcs {
       1 => self.adc1.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
       2 => self.adc2.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
       3 => self.adc3.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
-      255 => self.hal_adc.read(&mut self.temp_sense).unwrap_or(None),
+      TEMP_SENSE_CHN => self.hal_adc.read(&mut self.temp_sense).unwrap_or(None),
       _ => None,
     }
   }
+
+  /// One shot read based on the Pin ID (255 as TEMP_SENSE ID)
+  pub fn read_by_pin_id(&mut self, id: u8) -> Option<u16> {
+      match id {
+      26 => self.adc0.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+      27 => self.adc1.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+      28 => self.adc2.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+      29 => self.adc3.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+      TEMP_SENSE_CHN => self.hal_adc.read(&mut self.temp_sense).unwrap_or(None),
+      _ => None,
+    }
+  }
+
 }
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————

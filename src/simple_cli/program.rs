@@ -30,7 +30,7 @@ impl Program {
   // —————————————————————————————————————————————————————————————————————————————————————————————————
 
   pub fn init(&mut self, device: &mut Device) {
-    let led = device.outputs.get_pin(PinID::LED).unwrap();
+    let led = device.outputs.get_by_id(PinID::LED).unwrap();
 
     // While we don't have a serial monitor connection we keep polling and bliking led for status
     while !SERIAL.is_connected() {
@@ -73,12 +73,12 @@ impl Program {
   pub fn run(&mut self, device: &mut Device, commands: CommandList) {
     let mut cli = Cli::new(commands);
 
-    let led = device.outputs.get_pin(PinID::LED).unwrap();
+    let led = device.outputs.get_by_id(PinID::LED).unwrap();
     led.set_high().unwrap();
 
     loop {
       // While we don't have a serial monitor connection we keep polling
-      let led = device.outputs.get_pin(PinID::LED).unwrap();
+      let led = device.outputs.get_by_id(PinID::LED).unwrap();
       while !SERIAL.is_connected() {
         led.toggle().unwrap();
         device.timer.delay_ms(80);
@@ -126,7 +126,7 @@ impl Program {
       }
 
       // Signal End
-      let led = device.outputs.get_pin(PinID::LED).unwrap();
+      let led = device.outputs.get_by_id(PinID::LED).unwrap();
       for _ in 0..3 {
         led.set_low().unwrap();
         device.timer.delay_ms(50);

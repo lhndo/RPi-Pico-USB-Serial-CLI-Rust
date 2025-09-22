@@ -25,7 +25,7 @@ pub struct Pwms {
 // ————————————————————————————————————————— Pwms Impl ————————————————————————————————————————————
 
 impl Pwms {
-  // Generating pub fn set_pwm0_a() ..
+  // Generating pub fn set_pwm0_a(pin) ..
   #[duplicate_item(
     pwm_slice pwm_chan;
     [0]       [A];
@@ -158,6 +158,12 @@ where
   pub fn disable(&mut self) {
     self.enabled = false;
     self.slice.disable();
+  }
+
+  /// Only use for functions not covered by this wrapper.
+  /// Don't set enable, freq, ph_correct, top directly
+  pub fn get_slice(&mut self) -> &mut pwm::Slice<I, <I as pwm::SliceId>::Reset> {
+    &mut self.slice
   }
 
   pub fn get_channel_a(

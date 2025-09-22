@@ -26,22 +26,22 @@ impl<I: PinId, F: Function, P: PullType> IoPins<Pin<I, F, P>> {
     Self { pins }
   }
 
-  pub fn add_pin(&mut self, pin: Pin<I, F, P>, id: usize) {
-    if id >= NUM_MCU_PINS {
+  pub fn add_pin(&mut self, pin: Pin<I, F, P>, id: u8) {
+    if id >= NUM_MCU_PINS as u8 {
       panic!("ID > NUM_MCU_PINS")
     }
-    self.pins[id] = Some(pin);
+    self.pins[id as usize] = Some(pin);
   }
 }
 
 impl<T> IoPins<T> {
   /// Get a mutable reference to a pin by its GPIO number.
   #[inline]
-  pub fn get_pin(&mut self, id: usize) -> Option<&mut T> {
-    if id >= NUM_MCU_PINS {
+  pub fn get_by_id(&mut self, id: u8) -> Option<&mut T> {
+    if id >= NUM_MCU_PINS as u8 {
       return None;
     }
 
-    self.pins[id].as_mut()
+    self.pins[id as usize].as_mut()
   }
 }
