@@ -19,12 +19,12 @@ pub type AdcPinType<T> = AdcPin<gpio::Pin<T, gpio::FunctionNull, gpio::PullDown>
 pub type RawPin<T> = gpio::Pin<T, gpio::FunctionNull, gpio::PullDown>;
 
 pub struct Adcs {
-  pub hal_adc:    Adc,
-  pub temp_sense: TempSense,
-  pub adc0:       Option<AdcPinType<gpio::bank0::Gpio26>>,
-  pub adc1:       Option<AdcPinType<gpio::bank0::Gpio27>>,
-  pub adc2:       Option<AdcPinType<gpio::bank0::Gpio28>>,
-  pub adc3:       Option<AdcPinType<gpio::bank0::Gpio29>>,
+  hal_adc:    Adc,
+  temp_sense: TempSense,
+  adc0:       Option<AdcPinType<gpio::bank0::Gpio26>>,
+  adc1:       Option<AdcPinType<gpio::bank0::Gpio27>>,
+  adc2:       Option<AdcPinType<gpio::bank0::Gpio28>>,
+  adc3:       Option<AdcPinType<gpio::bank0::Gpio29>>,
 }
 
 impl Adcs {
@@ -71,7 +71,7 @@ impl Adcs {
 
   /// One shot read based on the Pin ID (4 as TEMP_SENSE ID)
   pub fn read_by_pin_id(&mut self, gpio: u8) -> Option<u16> {
-      match gpio {
+    match gpio {
       26 => self.read_channel(0),
       27 => self.read_channel(1),
       28 => self.read_channel(2),
@@ -81,26 +81,44 @@ impl Adcs {
     }
   }
 
-  /// Returns the main HAL ADC object 
+  /// Returns the main HAL ADC object
   pub fn get_hal_adc(&mut self) -> &mut Adc {
-    &mut self.hal_adc  
+    &mut self.hal_adc
   }
 
   /// Returns ADC Channel by ADC channel id as dyn AdcChannel  
-  pub fn get_dyn_adc_channel (&mut self, id: u8) -> Option<&mut dyn adc::AdcChannel> {
-      #[allow(clippy::option_map_or_none)] // Needed for Option to dyn recast to work
-      match id {
+  pub fn get_dyn_adc_channel(&mut self, id: u8) -> Option<&mut dyn adc::AdcChannel> {
+    #[allow(clippy::option_map_or_none)] // Needed for Option to dyn recast to work
+    match id {
       0 => self.adc0.as_mut().map_or(None, |a| Some(a)),
       1 => self.adc1.as_mut().map_or(None, |a| Some(a)),
       2 => self.adc2.as_mut().map_or(None, |a| Some(a)),
       3 => self.adc3.as_mut().map_or(None, |a| Some(a)),
-      TEMP_SENSE_CHN => Some (&mut self.temp_sense),
-      _ => None
-      }
+      TEMP_SENSE_CHN => Some(&mut self.temp_sense),
+      _ => None,
+    }
   }
 
-}
+  pub fn get_adc0(&mut self) -> Option<&mut AdcPinType<gpio::bank0::Gpio26>> {
+    self.adc0.as_mut()
+  }
 
+  pub fn get_adc1(&mut self) -> Option<&mut AdcPinType<gpio::bank0::Gpio27>> {
+    self.adc1.as_mut()
+  }
+
+  pub fn get_adc2(&mut self) -> Option<&mut AdcPinType<gpio::bank0::Gpio28>> {
+    self.adc2.as_mut()
+  }
+
+  pub fn get_adc3(&mut self) -> Option<&mut AdcPinType<gpio::bank0::Gpio29>> {
+    self.adc3.as_mut()
+  }
+
+  pub fn get_temp_sense(&mut self) -> &mut TempSense {
+    &mut self.temp_sense
+  }
+}
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                             Traits
