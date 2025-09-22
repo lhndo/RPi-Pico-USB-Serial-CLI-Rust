@@ -343,18 +343,18 @@ impl Device {
     // The hal_adc (device.adcs.hal_adc) is the main interface for interracting with the ADC
     let mut hal_adc = hal::Adc::new(pac.ADC, &mut pac.RESETS); // Needs to be set after clocks
     let temp_sense = hal_adc.take_temp_sensor().unwrap();
-    let mut adcs = Adcs::new(hal_adc, temp_sense);
 
     // Initialise ADC pins from setup_pins by calling e.g. adcs.set_adc0(pins.gpio26); ...
+    let mut adcs = Adcs::new(hal_adc, temp_sense);
     setup_pins!(ADC, pins, adcs);
 
     // —————————————————————————————————————————— PWM —————————————————————————————————————————————
 
     let pwm_slices = pwm::Slices::new(pac.PWM, &mut pac.RESETS);
     const DEFAULT_FREQUENCY: u32 = 50; //hz
-    let mut pwms = Pwms::new(pwm_slices, sys_clk_hz, DEFAULT_FREQUENCY);
 
     // Initialise PWM pins from setup_pins by calling e.g. pwms.set_pwm2_b(pins.gpio21); ...
+    let mut pwms = Pwms::new(pwm_slices, sys_clk_hz, DEFAULT_FREQUENCY);
     setup_pins!(PWM, pins, pwms);
 
     // ———————————————————————————————————— Extra Function Pins ———————————————————————————————————
@@ -366,10 +366,9 @@ impl Device {
 
     // ———————————————————————————————————————— GP Pins ———————————————————————————————————————————
 
+    // Initialise GPIO pins i.e. inputs.add_pin(pins.gpio23, 23)
     let mut inputs = IoPins::<InputType>::new();
     let mut outputs = IoPins::<OutputType>::new();
-
-    // Initialise GPIO pins i.e. inputs.add_pin(pins.gpio23, 23)
     setup_pins!(GPIO_IN, pins, inputs);
     setup_pins!(GPIO_OUT, pins, outputs);
 
