@@ -10,6 +10,7 @@ mod delay;
 mod device;
 mod fifo_buffer;
 mod gpios;
+mod macros;
 mod prelude;
 mod pwms;
 mod serial_io;
