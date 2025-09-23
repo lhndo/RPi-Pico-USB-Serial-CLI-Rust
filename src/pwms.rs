@@ -1,3 +1,5 @@
+//! Pulse Width Modulation (PWM) Wrapper for the RP2040 microcontroller
+
 use embedded_hal::pwm::SetDutyCycle;
 use rp_pico::hal::gpio;
 use rp_pico::hal::pwm;

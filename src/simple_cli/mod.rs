@@ -1,4 +1,4 @@
-//! Simple CLI
+//! A Simple CLI Module
 
 pub mod commands;
 pub mod program;

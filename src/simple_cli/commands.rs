@@ -1,3 +1,7 @@
+//! Commands Module
+//!
+//! Command registration is done in the build_commands() function below
+
 pub mod base;
 pub mod examples;
 

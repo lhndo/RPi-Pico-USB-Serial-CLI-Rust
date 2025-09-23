@@ -1,4 +1,11 @@
-//! Hardware Device Configuration
+//! Main device abstraction layer for the RP2040 microcontroller
+//!
+//! This module provides a unified `Device` struct that initializes and manages
+//! all hardware peripherals including GPIO pins, PWM channels, ADCs, timers,
+//! and system resources. It handles the low-level HAL boilerplate and presents
+//! an organized interface for application code.
+//!
+//! The main Pin Configuration is done thought the setup_pins macro data structure
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                           Device

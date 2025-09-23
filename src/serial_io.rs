@@ -1,4 +1,7 @@
-//! This module owns the serial interface and the usb device
+//! Serial IO and USB Wrapper for the RP2040 microcontroller
+//!
+//! Holds a SERIAL global object for safe usb and serial interaction
+
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                           Serial IO
 // ————————————————————————————————————————————————————————————————————————————————————————————————

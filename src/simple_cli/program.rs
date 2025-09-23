@@ -1,4 +1,15 @@
-//! Main CLI program logic
+//! Main CLI entry point and program logic
+//!
+//! To be used in main program loop
+//!
+//! ```no_run
+//! fn main() -> ! {
+//!   let mut program = simple_cli::program::Program::new();
+//!   let command_list = simple_cli::commands::build_commands();
+//!   program.init(&mut device);
+//!   program.run(&mut device, command_list);
+//! }
+//! ```
 
 use super::*;
 

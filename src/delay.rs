@@ -1,5 +1,6 @@
-//! A global, safe, non-efficient spinning interruptible delay provider.
-//! A better choice is to use device.timer.delay_ms()
+//! Global Delay Provider
+//! Safe, non-efficient spinning non-interruptible.
+//! Reach for device.timer.delay_ms() in most use cases
 
 use core::cell::RefCell;
 use cortex_m::delay::Delay as CortexmDelay;
@@ -45,11 +46,14 @@ impl DelayHandle {
   /// Executes a closure with a mutable reference to the delay object.
   /// Panics if the DELAY has not been initialized.
   fn with<F>(&self, f: F)
-  where F: FnOnce(&mut CortexmDelay) {
+  where
+    F: FnOnce(&mut CortexmDelay),
+  {
     free(|cs| {
       if let Some(cell) = DELAY_CELL.borrow_ref_mut(cs).as_mut() {
         f(cell);
-      } else {
+      }
+      else {
         panic!("DELAY not initialized");
       }
     });

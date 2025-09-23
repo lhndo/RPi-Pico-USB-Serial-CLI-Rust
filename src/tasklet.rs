@@ -1,3 +1,24 @@
+//! A tasklet utility that allows creation and execution of timed tasks
+//!
+//! To be used in main program loops.
+//!
+//!
+//! Example - Non blocking timer based task:
+//! ```no_run
+//!   
+//! let mut ledtask = Tasklet::new(interval as u32, times * 2, &device.timer);
+//!
+//! while !ledtask.is_exhausted() {
+//!   if ledtask.is_ready() {
+//!     led.toggle().unwrap();
+//!
+//!     if led.is_set_high().unwrap() {
+//!       print!("Blink {} | ", blink);
+//!       blink += 1;
+//!     }
+//!   }
+//! ```
+
 use embedded_hal_0_2::timer::{Cancel, CountDown as CountDownT};
 use rp_pico::hal::fugit::{ExtU32, MicrosDurationU32};
 use rp_pico::hal::timer::{CountDown, Timer};
@@ -48,7 +69,8 @@ impl<'a> Tasklet<'a> {
         }
       }
       true
-    } else {
+    }
+    else {
       false
     }
   }

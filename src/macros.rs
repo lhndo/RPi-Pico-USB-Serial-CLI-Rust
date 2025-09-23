@@ -1,3 +1,5 @@
+//! Various Utility Macros
+
 /// Some macro foo that allows us to extract the configuration above and use it for different pin initializations
 #[macro_export]
 macro_rules! set_function_pins {

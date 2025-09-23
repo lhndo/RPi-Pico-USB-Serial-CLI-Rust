@@ -1,3 +1,5 @@
+//! Input/Output GP Pin Storage for the RP2040 microcontroller
+
 use rp_pico::hal::gpio::{self, Function, Pin, PinId, PullType};
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
