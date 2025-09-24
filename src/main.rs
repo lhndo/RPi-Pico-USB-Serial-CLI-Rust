@@ -48,7 +48,7 @@ const RUN_STANDALONE: bool = false;
 fn main() -> ! {
   //
   #[cfg(feature = "defmt")]
-  info!("Alive");
+  info!("Alive! {} : v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
 
   let mut device = device::Device::new();
 

@@ -103,11 +103,11 @@ pub fn set_pin_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
 
   if let Some(pin) = device.outputs.get_by_id(gpio_id) {
     if high {
-      println!("GPIO {gpio_id}: Set High");
+      println!("GPIO {gpio_id}: Set HIGH");
       pin.set_high().unwrap();
     }
     else if low {
-      println!("GPIO {gpio_id}: Set Low");
+      println!("GPIO {gpio_id}: Set LOW");
       pin.set_low().unwrap();
     }
     else {

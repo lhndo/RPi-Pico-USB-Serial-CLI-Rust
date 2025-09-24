@@ -26,7 +26,7 @@ use crate::state::State;
 use crate::{build_pin_aliases, set_function_pins};
 
 use critical_section::{Mutex, with as free};
-use rp_pico::hal;
+use rp_pico::hal::Adc;
 use rp_pico::hal::Clock;
 use rp_pico::hal::fugit::{Duration, ExtU32, MicrosDurationU32};
 use rp_pico::hal::gpio::{self};
@@ -271,7 +271,7 @@ impl Device {
     // —————————————————————————————————————————— ADC —————————————————————————————————————————————
 
     // The hal_adc (device.adcs.hal_adc) is the main interface for interracting with the ADC
-    let mut hal_adc = hal::Adc::new(pac.ADC, &mut pac.RESETS); // Needs to be set after clocks
+    let mut hal_adc = Adc::new(pac.ADC, &mut pac.RESETS); // Needs to be set after clocks
     let temp_sense = hal_adc.take_temp_sensor().unwrap();
 
     // Initialise ADC pins from setup_pins by calling e.g. adcs.set_adc0(pins.gpio26); ...
@@ -319,7 +319,7 @@ impl Device {
 
     // Enabling the USB IRQ
     unsafe {
-      pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
+      pac::NVIC::unmask(pac::Interrupt::USBCTRL_IRQ);
     };
 
     // ————————————————————————————————————————— State ————————————————————————————————————————————
