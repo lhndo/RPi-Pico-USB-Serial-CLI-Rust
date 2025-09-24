@@ -22,6 +22,7 @@ pub use crate::{print, println, with_pwm_slice};
 
 pub use embedded_hal::digital::{InputPin, OutputPin, StatefulOutputPin};
 pub use embedded_hal::pwm::SetDutyCycle;
+pub use embedded_hal_0_2::blocking::delay::{DelayMs, DelayUs};
 pub use heapless::{String, Vec};
 
 #[cfg(feature = "defmt")]

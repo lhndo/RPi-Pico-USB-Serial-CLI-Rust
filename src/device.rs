@@ -26,19 +26,19 @@ use crate::state::State;
 use crate::{build_pin_aliases, set_function_pins};
 
 use critical_section::{Mutex, with as free};
-use embedded_hal_0_2::timer::CountDown;
 
 use rp2040_hal as hal;
 //
 use hal::Adc;
 use hal::Clock;
-use hal::fugit::{Duration, ExtU32, MicrosDurationU32};
+use hal::fugit::{Duration, MicrosDurationU32};
 use hal::pac::interrupt;
 use hal::sio::SioFifo;
 use hal::timer::{Alarm, Timer};
 use hal::{clocks, gpio, pac, pwm, sio, timer, usb, watchdog};
 
 use cortex_m::delay::Delay;
+
 use heapless::String;
 use pastey::paste;
 use usb_device::class_prelude::*;
@@ -359,8 +359,6 @@ impl Device {
 pub trait TimerExt {
   fn now(&self) -> Duration<u64, 1, 1_000_000>;
   fn print_time(&self) -> String<32>;
-  fn delay_ms(&self, millis: u32);
-  fn delay_us(&self, us: u32);
 }
 
 /// Timer extension that provides extra utilities such as a better delay implementation
@@ -389,20 +387,6 @@ impl TimerExt for Timer {
     let mut time: String<32> = String::new();
     write!(&mut time, "{hr}h {min:02}m {sec:02}s {mil:03}ms {mic:03}us").unwrap();
     time
-  }
-
-  /// Count Down Delay ms - Precise and async-friendly
-  fn delay_ms(&self, millis: u32) {
-    let mut count_down = self.count_down();
-    count_down.start(millis.millis());
-    let _ = nb::block!(count_down.wait());
-  }
-
-  /// Count Down Delay us
-  fn delay_us(&self, us: u32) {
-    let mut count_down = self.count_down();
-    count_down.start(us.micros());
-    let _ = nb::block!(count_down.wait());
   }
 }
 
