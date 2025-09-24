@@ -1,11 +1,17 @@
 //! Pulse Width Modulation (PWM) Wrapper for the RP2040 microcontroller
 
+use core::convert::Infallible;
+use core::stringify;
+
 use embedded_hal::pwm::SetDutyCycle;
+use heapless::Vec;
 use rp_pico::hal::gpio;
 use rp_pico::hal::pwm;
 
 use duplicate::duplicate_item;
 use pastey::paste;
+
+const MAX_PWM_PINS: usize = 16;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                              Pwms
@@ -14,14 +20,27 @@ use pastey::paste;
 pub type RawPin<T> = gpio::Pin<T, gpio::FunctionNull, gpio::PullDown>;
 
 pub struct Pwms {
-  pub pwm0: PwmSlice<pwm::Pwm0>,
-  pub pwm1: PwmSlice<pwm::Pwm1>,
-  pub pwm2: PwmSlice<pwm::Pwm2>,
-  pub pwm3: PwmSlice<pwm::Pwm3>,
-  pub pwm4: PwmSlice<pwm::Pwm4>,
-  pub pwm5: PwmSlice<pwm::Pwm5>,
-  pub pwm6: PwmSlice<pwm::Pwm6>,
-  pub pwm7: PwmSlice<pwm::Pwm7>,
+  pub pwm0:    PwmSlice<pwm::Pwm0>,
+  pub pwm1:    PwmSlice<pwm::Pwm1>,
+  pub pwm2:    PwmSlice<pwm::Pwm2>,
+  pub pwm3:    PwmSlice<pwm::Pwm3>,
+  pub pwm4:    PwmSlice<pwm::Pwm4>,
+  pub pwm5:    PwmSlice<pwm::Pwm5>,
+  pub pwm6:    PwmSlice<pwm::Pwm6>,
+  pub pwm7:    PwmSlice<pwm::Pwm7>,
+  pwm_aliases: Vec<PwmAlias, MAX_PWM_PINS>,
+}
+
+struct PwmAlias {
+  gpio:     u8,
+  slice_id: u8,
+  channel:  Channel,
+}
+
+#[derive(PartialEq, Copy, Clone)]
+pub enum Channel {
+  A,
+  B,
 }
 
 // ————————————————————————————————————————— Pwms Impl ————————————————————————————————————————————
@@ -52,20 +71,71 @@ impl Pwms {
   where
     P::Id: pwm::ValidPwmOutputPin<pwm::[<Pwm pwm_slice>], pwm::[<pwm_chan>]>
    {
-      self.[<pwm pwm_slice>].[<get_channel _ pwm_chan:lower>]().output_to(pin);
+      // Setting pwm slice output to gpio pin
+      let pin = self.[<pwm pwm_slice>].[<get_channel _ pwm_chan:lower>]().output_to(pin);
+
+      // Registering Pin alias and storing gpio ID, PWM Slice ID and Channel
+      // Used for later retrieval
+      let gpio = pin.id().num;
+      let chan_str = stringify!(pwm_chan);
+      let channel = if chan_str == "A" {Channel::A} else {Channel::B};
+
+      // Creating Pin Alias used for slice and channel retrival by gpio id
+      let _ = self.pwm_aliases.push(
+        PwmAlias{
+          gpio,
+          slice_id: pwm_slice,
+          channel
+        });
   }}
 
   pub fn new(slices: pwm::Slices, sys_clk_hz: u32, default_freq: u32) -> Self {
     Pwms {
-      pwm0: PwmSlice::new(slices.pwm0, default_freq, false, sys_clk_hz),
-      pwm1: PwmSlice::new(slices.pwm1, default_freq, false, sys_clk_hz),
-      pwm2: PwmSlice::new(slices.pwm2, default_freq, false, sys_clk_hz),
-      pwm3: PwmSlice::new(slices.pwm3, default_freq, false, sys_clk_hz),
-      pwm4: PwmSlice::new(slices.pwm4, default_freq, false, sys_clk_hz),
-      pwm5: PwmSlice::new(slices.pwm5, default_freq, false, sys_clk_hz),
-      pwm6: PwmSlice::new(slices.pwm6, default_freq, false, sys_clk_hz),
-      pwm7: PwmSlice::new(slices.pwm7, default_freq, false, sys_clk_hz),
+      pwm0:        PwmSlice::new(slices.pwm0, default_freq, false, sys_clk_hz),
+      pwm1:        PwmSlice::new(slices.pwm1, default_freq, false, sys_clk_hz),
+      pwm2:        PwmSlice::new(slices.pwm2, default_freq, false, sys_clk_hz),
+      pwm3:        PwmSlice::new(slices.pwm3, default_freq, false, sys_clk_hz),
+      pwm4:        PwmSlice::new(slices.pwm4, default_freq, false, sys_clk_hz),
+      pwm5:        PwmSlice::new(slices.pwm5, default_freq, false, sys_clk_hz),
+      pwm6:        PwmSlice::new(slices.pwm6, default_freq, false, sys_clk_hz),
+      pwm7:        PwmSlice::new(slices.pwm7, default_freq, false, sys_clk_hz),
+      pwm_aliases: Vec::new(),
     }
+  }
+
+  /// Returns slice id and channel associated with the pin
+  pub fn find_slice_by_gpio(&self, gpio: u8) -> Option<(u8, Channel)> {
+    let alias = self.pwm_aliases.iter().find(|alias| alias.gpio == gpio)?;
+    Some((alias.slice_id, alias.channel))
+  }
+
+  /// Get PWM Slice Channel from GPIO id
+  pub fn get_channel_by_gpio(
+    &mut self,
+    gpio: u8,
+  ) -> Option<&mut dyn SetDutyCycle<Error = Infallible>> {
+    //
+    let (slice_id, channel) = self.find_slice_by_gpio(gpio)?;
+
+    Some(match (slice_id, channel) {
+      (0, Channel::A) => self.pwm0.get_channel_a(),
+      (0, Channel::B) => self.pwm0.get_channel_b(),
+      (1, Channel::A) => self.pwm1.get_channel_a(),
+      (1, Channel::B) => self.pwm1.get_channel_b(),
+      (2, Channel::A) => self.pwm2.get_channel_a(),
+      (2, Channel::B) => self.pwm2.get_channel_b(),
+      (3, Channel::A) => self.pwm3.get_channel_a(),
+      (3, Channel::B) => self.pwm3.get_channel_b(),
+      (4, Channel::A) => self.pwm4.get_channel_a(),
+      (4, Channel::B) => self.pwm4.get_channel_b(),
+      (5, Channel::A) => self.pwm5.get_channel_a(),
+      (5, Channel::B) => self.pwm5.get_channel_b(),
+      (6, Channel::A) => self.pwm6.get_channel_a(),
+      (6, Channel::B) => self.pwm6.get_channel_b(),
+      (7, Channel::A) => self.pwm7.get_channel_a(),
+      (7, Channel::B) => self.pwm7.get_channel_b(),
+      _ => return None, // Invalid slice_id
+    })
   }
 }
 
@@ -73,7 +143,7 @@ impl Pwms {
 //                                            PwmSlice
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-/// PwmSlice Handler
+/// PwmSlice Wrapper
 /// Set freq, ph_correct, and enable status though its methods, and not directly on the slice member
 pub struct PwmSlice<I>
 where
@@ -95,7 +165,7 @@ where
   I: pwm::SliceId,
   <I as pwm::SliceId>::Reset: pwm::ValidSliceMode<I>,
 {
-  pub fn new(
+  fn new(
     slice: pwm::Slice<I, <I as pwm::SliceId>::Reset>,
     freq: u32,
     ph_correct: bool,
@@ -110,7 +180,6 @@ where
     };
 
     slice.set_freq(freq);
-
     slice
   }
 
@@ -184,6 +253,8 @@ where
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                             Traits
 // ————————————————————————————————————————————————————————————————————————————————————————————————
+
+// ————————————————————————————————————————— Pwm Channel ———————————————————————————————————————————
 
 pub trait PwmChannelExt {
   fn set_duty_cycle_us(&mut self, us: u16, freq_hz: u32);
@@ -280,3 +351,5 @@ macro_rules! with_pwm_slice {
     }
   };
 }
+
+// TODO slice migrate functions to trait to be able to access it by id
