@@ -4,9 +4,10 @@ use core::convert::Infallible;
 use core::stringify;
 
 use embedded_hal::pwm::SetDutyCycle;
+use hal::gpio;
+use hal::pwm;
 use heapless::Vec;
-use rp_pico::hal::gpio;
-use rp_pico::hal::pwm;
+use rp2040_hal as hal;
 
 use duplicate::duplicate_item;
 use pastey::paste;

@@ -11,7 +11,8 @@ use core::fmt;
 use core::fmt::Write;
 
 use critical_section::{Mutex, with as free};
-use rp_pico::hal::usb::UsbBus;
+use hal::usb::UsbBus;
+use rp2040_hal as hal;
 use usb_device::UsbError;
 use usb_device::device::UsbDevice;
 use usbd_serial::SerialPort;

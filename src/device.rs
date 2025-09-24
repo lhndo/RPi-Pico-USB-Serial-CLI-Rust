@@ -26,22 +26,29 @@ use crate::state::State;
 use crate::{build_pin_aliases, set_function_pins};
 
 use critical_section::{Mutex, with as free};
-use rp_pico::hal::Adc;
-use rp_pico::hal::Clock;
-use rp_pico::hal::fugit::{Duration, ExtU32, MicrosDurationU32};
-use rp_pico::hal::gpio::{self};
-use rp_pico::hal::sio::SioFifo;
-use rp_pico::hal::timer::Alarm;
-use rp_pico::hal::timer::Timer;
-use rp_pico::hal::{clocks, pac, pac::interrupt, pwm, sio, timer, usb, watchdog};
+use embedded_hal_0_2::timer::CountDown;
+
+use rp2040_hal as hal;
+//
+use hal::Adc;
+use hal::Clock;
+use hal::fugit::{Duration, ExtU32, MicrosDurationU32};
+use hal::pac::interrupt;
+use hal::sio::SioFifo;
+use hal::timer::{Alarm, Timer};
+use hal::{clocks, gpio, pac, pwm, sio, timer, usb, watchdog};
 
 use cortex_m::delay::Delay;
-use cortex_m::prelude::*;
 use heapless::String;
 use pastey::paste;
 use usb_device::class_prelude::*;
 use usb_device::prelude::*;
 use usbd_serial::SerialPort;
+
+// Bootloader
+#[unsafe(link_section = ".boot2")]
+#[used]
+pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                         Pin Definitions
@@ -169,15 +176,17 @@ macro_rules! setup_pins {
 //                                           Globals
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-// GPIO Pin ID Aliases. E.g. PinID::LED = 25 as usize
-pub struct PinID;
-setup_pins!(ALIASES, None, PinID);
+pub const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // 12Mhz
 
 pub static SYS_CLK_HZ: AtomicU32 = AtomicU32::new(0);
 
 // Interrupts
 static ALARM_0: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(None));
 const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(10_000); // 10ms - 100hz
+
+// GPIO Pin ID Aliases. E.g. PinID::LED = 25 as usize
+pub struct PinID;
+setup_pins!(ALIASES, None, PinID);
 
 // ———————————————————————————————————————————————————————————————————————————————————————————————
 //                                         Device Struct
@@ -208,7 +217,7 @@ impl Device {
     // ————————————————————————————————————————— Clocks ———————————————————————————————————————————
 
     let sys_clocks = clocks::init_clocks_and_plls(
-      rp_pico::XOSC_CRYSTAL_FREQ, // 12Mhz
+      XOSC_CRYSTAL_FREQ,
       pac.XOSC,
       pac.CLOCKS,
       pac.PLL_SYS,
@@ -403,9 +412,7 @@ impl TimerExt for Timer {
 
 /// Reset to USB Flash mode
 pub fn device_reset_to_usb() {
-  unsafe {
-    rp2040_rom::ROM::reset_usb_boot(0, 0);
-  }
+  rp2040_hal::rom_data::reset_to_usb_boot(0, 0);
 }
 
 /// Reset device

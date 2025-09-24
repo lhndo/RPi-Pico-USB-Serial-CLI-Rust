@@ -1,8 +1,10 @@
 //! Analog-Digital Converter (ADC) Wrapper for the RP2040 microcontroller
 
 use embedded_hal_0_2::adc::OneShot;
-use rp_pico::hal::adc::{self, Adc, AdcPin, TempSense};
-use rp_pico::hal::gpio;
+use rp2040_hal as hal;
+//
+use hal::adc::{self, Adc, AdcPin, TempSense};
+use hal::gpio;
 
 use duplicate::duplicate_item;
 use pastey::paste;

@@ -44,7 +44,7 @@ const RUN_STANDALONE: bool = false;
 //                                              Main
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-#[rp_pico::entry]
+#[rp2040_hal::entry]
 fn main() -> ! {
   //
   #[cfg(feature = "defmt")]

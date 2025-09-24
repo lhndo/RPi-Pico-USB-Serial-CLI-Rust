@@ -20,19 +20,20 @@
 //! ```
 
 use embedded_hal_0_2::timer::{Cancel, CountDown as CountDownT};
-use rp_pico::hal::fugit::{ExtU32, MicrosDurationU32};
-use rp_pico::hal::timer::{CountDown, Timer};
+use hal::fugit::{ExtU32, MicrosDurationU32};
+use hal::timer::{CountDown, Timer};
+use rp2040_hal as hal;
 
 /// Non blocking periodic task for in-loop usage
-pub struct Tasklet<'a> {
-  count_down:     CountDown<'a>,
+pub struct Tasklet {
+  count_down:     CountDown,
   interval:       MicrosDurationU32,
   initial_runs:   u16,
   remaining_runs: u16,
   is_first_poll:  bool,
 }
 
-impl<'a> Tasklet<'a> {
+impl<'a> Tasklet {
   /// Create a new task. Runs: 0 equals infinite
   #[inline]
   pub fn new(interval_ms: u32, runs: u16, timer: &'a Timer) -> Self {

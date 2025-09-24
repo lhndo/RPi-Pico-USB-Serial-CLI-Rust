@@ -357,6 +357,8 @@ pub fn set_pwm_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
   })
 }
 
+use rp2040_hal::pwm;
+
 #[allow(clippy::too_many_arguments)]
 pub fn set_pwm<I>(
   pwm: &mut crate::pwms::PwmSlice<I>,
