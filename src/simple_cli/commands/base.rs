@@ -113,7 +113,12 @@ pub fn set_pin_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
     else {
       print!("GPIO {gpio_id}: Toggled ");
       pin.toggle().unwrap();
-      if pin.is_set_high().unwrap() { println!("HIGH") } else { println!("LOW") }
+      if pin.is_set_high().unwrap() {
+        println!("HIGH")
+      }
+      else {
+        println!("LOW")
+      }
     }
   }
   else {

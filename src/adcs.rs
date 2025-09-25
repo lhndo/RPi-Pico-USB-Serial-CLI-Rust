@@ -32,20 +32,9 @@ pub struct Adcs {
 }
 
 impl Adcs {
-  pub fn new(hal_adc: Adc, temp_sense: TempSense) -> Self {
-    Self {
-      hal_adc,
-      temp_sense,
-      adc0: None,
-      adc1: None,
-      adc2: None,
-      adc3: None,
-    }
-  }
-
-  // Generating pub fn set_adc0()... Used creating Analog Pins. 
+  // Generating pub fn set_adc0()... Used creating Analog Pins.
   #[duplicate_item(
-    adc_num   gpio_num; 
+    adc_num   gpio_num;
     [0]       [26];
     [1]       [27];
     [2]       [28];
@@ -59,6 +48,16 @@ impl Adcs {
       }
   }
 
+  pub fn new(hal_adc: Adc, temp_sense: TempSense) -> Self {
+    Self {
+      hal_adc,
+      temp_sense,
+      adc0: None,
+      adc1: None,
+      adc2: None,
+      adc3: None,
+    }
+  }
 
   /// One shot read of the ADC channel 0-3, and 4 as TEMP_SENSE channel
   /// Returns Some or None
