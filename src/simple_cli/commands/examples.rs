@@ -74,7 +74,7 @@ pub fn blink_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
   }
 
   let times: u16 = get_parsed_param("times", args).unwrap_or(10); // 10 default
-  let interval: u16 = get_parsed_param("interval", args).unwrap_or(200); // 10 default
+  let interval: u16 = get_parsed_param("interval", args).unwrap_or(200); // 200ms default
   blink(device, times, interval)
 }
 
@@ -103,9 +103,9 @@ pub fn blink(device: &mut Device, times: u16, interval: u16) -> Result<()> {
   // for n in 1..(times + 1) {
   //   print!("Blink {} | ", n);
   //   led.set_high().unwrap();
-  //   device.timer.delay_ms(200);
+  //   device.timer.delay_ms(interval);
   //   led.set_low().unwrap();
-  //   device.timer.delay_ms(200);
+  //   device.timer.delay_ms(interval);
   // }
 
   Ok(())
