@@ -4,26 +4,19 @@
 # - probe-rs   - provides flashing and defmt via a hardware debugger, and stack unwind on panic
 #                use --target-sel 0x01002927 instead of --chip if exp freezing issues
 
-runner = "elf2uf2-rs -d"
 # runner = "probe-rs run --chip rp2040 --protocol swd"
+runner = "elf2uf2-rs -d"
 
 linker = "flip-link"
 
-rustflags = [
-  "-C",
-  "link-arg=--nmagic",
-  "-C",
-  "link-arg=-Tlink.x",
-  "-C",
-  "no-vectorize-loops",
-  # defmt flag is automatically included by build.rs depending on the build feature flag
-]
 
 [build]
 target = "thumbv6m-none-eabi"
 
+
 [env]
 DEFMT_LOG = "debug"
+
 
 [alias]
 build-d = 'build --no-default-features --features defmt'

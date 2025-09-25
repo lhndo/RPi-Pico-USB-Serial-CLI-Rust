@@ -29,6 +29,11 @@ fn main() {
   // `memory.x` is changed.
   println!("cargo:rerun-if-changed=memory.x");
 
+  println!("cargo:rustc-arg=-C");
+  println!("cargo:rustc-arg=no-vectorize-loops");
+  println!("cargo:rustc-link-arg-bins=--nmagic");
+  println!("cargo:rustc-link-arg-bins=-Tlink.x");
+
   // Linking defmt only when we build with that feature
   if env::var("CARGO_FEATURE_DEFMT").is_ok() {
     println!("cargo:rustc-link-arg=-Tdefmt.x");
