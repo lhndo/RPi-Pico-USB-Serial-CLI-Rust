@@ -4,7 +4,10 @@
 # - probe-rs   - provides flashing and defmt via a hardware debugger, and stack unwind on panic
 #                use --target-sel 0x01002927 instead of --chip if exp freezing issues
 
-# runner = "probe-rs run --chip rp2040 --protocol swd"
+# Flashing via a hardware probe
+# runner = "probe-rs run --chip rp2040 --protocol swd" 
+
+# Flashing to a USB mounted Pico
 runner = "elf2uf2-rs -d"
 
 linker = "flip-link"

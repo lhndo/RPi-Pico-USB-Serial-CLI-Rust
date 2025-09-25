@@ -33,6 +33,7 @@ fn main() {
   println!("cargo:rustc-arg=no-vectorize-loops");
   println!("cargo:rustc-link-arg-bins=--nmagic");
   println!("cargo:rustc-link-arg-bins=-Tlink.x");
+  // println!("cargo:rustc-link-arg=-Tdefmt.x");
 
   // Linking defmt only when we build with that feature
   if env::var("CARGO_FEATURE_DEFMT").is_ok() {
