@@ -10,7 +10,7 @@ use core::cell::RefCell;
 use core::fmt;
 use core::fmt::Write;
 
-use critical_section::{Mutex, with as free};
+use critical_section::{Mutex, with};
 use hal::usb::UsbBus;
 use rp2040_hal as hal;
 use usb_device::UsbError;
@@ -37,7 +37,7 @@ pub type Result<T> = core::result::Result<T, UsbError>;
 
 /// Initialise the SERIAL global object once
 pub fn init(serial: SerialDev, usb_dev: UsbDev) {
-  free(|cs| {
+  with(|cs| {
     let mut cell = SERIAL_CELL.borrow_ref_mut(cs);
 
     if cell.is_some() {
@@ -63,7 +63,7 @@ impl SerialHandle {
   where
     F: FnOnce(&mut Serialio) -> R,
   {
-    free(|cs| {
+    with(|cs| {
       if let Some(cell) = SERIAL_CELL.borrow_ref_mut(cs).as_mut() {
         f(cell)
       }

@@ -25,8 +25,7 @@ use crate::serial_io::SERIAL;
 use crate::state::State;
 use crate::{build_pin_aliases, set_function_pins};
 
-use critical_section::{Mutex, with as free};
-
+use critical_section::{Mutex, with};
 use rp2040_hal as hal;
 //
 use hal::Adc;
@@ -317,7 +316,7 @@ impl Device {
     let mut alarm0 = timer.alarm_0().unwrap();
     alarm0.schedule(INTERRUPT_0_US).unwrap();
     alarm0.enable_interrupt();
-    free(|cs| {
+    with(|cs| {
       ALARM_0.borrow(cs).replace(Some(alarm0));
     });
 
@@ -414,7 +413,7 @@ fn TIMER_IRQ_0() {
   // Do something here in a timed interrupt
 
   // Reset interrupt timer safely
-  free(|cs| {
+  with(|cs| {
     if let Some(alarm) = ALARM_0.borrow_ref_mut(cs).as_mut() {
       alarm.clear_interrupt();
       alarm.schedule(INTERRUPT_0_US).unwrap();
