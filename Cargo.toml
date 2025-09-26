@@ -39,13 +39,13 @@ default-dev = ["defmt"]
 # Secondary Features
 # Custom panic and logging strategies
 # E.g. cargo build --no-default-features --features "defmt"
-panic-usb     = ["dep:rp2040-panic-usb-boot"]
-panic-persist = ["dep:panic-persist"]
-panic-probe   = ["dep:panic-probe"]
-
 defmt = ["dep:defmt", "dep:defmt-rtt", "rp2040-hal/defmt", "panic-probe"]
 
 defmt-bypass = [] # include this into defmt feature set to bypass defmt and reduce release memory size
+
+panic-usb     = ["dep:rp2040-panic-usb-boot"]
+panic-persist = ["dep:panic-persist"]
+panic-probe   = ["dep:panic-probe"]
 
 
 # cargo build/run
