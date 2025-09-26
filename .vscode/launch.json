@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "preLaunchTask": "cargo build debug defmt",
+      "preLaunchTask": "cargo build default-dev",
       "type": "probe-rs-debug",
       "request": "launch",
       "name": "rp2040-debug",
@@ -21,7 +21,7 @@
       "coreConfigs": [
         {
           "coreIndex": 0,
-          "programBinary": "target/thumbv6m-none-eabi/debug/rust_rp2040_cli",
+          "programBinary": "target/thumbv6m-none-eabi/debug/pico_usb_serial_cli",
           "rttEnabled": true,
           "svdFile": "./.vscode/rp2040.svd"
         }
@@ -40,7 +40,7 @@
       "coreConfigs": [
         {
           "coreIndex": 0,
-          "programBinary": "target/thumbv6m-none-eabi/debug/rust_rp2040_cli",
+          "programBinary": "target/thumbv6m-none-eabi/debug/pico_usb_serial_cli",
           "rttEnabled": true,
           "svdFile": "./.vscode/rp2040.svd"
         }

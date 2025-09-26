@@ -2,26 +2,27 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "cargo build debug defmt",
+      "label": "cargo build default-dev",
       "type": "shell",
       "command": "cargo",
-      "args": ["build", "--no-default-features", "--features", "defmt"],
+      "args": ["build-d"],
       "group": "build",
       "problemMatcher": ["$rustc"]
     },
     {
-      "label": "cargo run defmt - probe-rs",
+      "label": "cargo build",
       "type": "shell",
       "command": "cargo",
-      "args": ["run", "--no-default-features", "--features", "defmt"],
-      "group": {
-        "kind": "build"
-      },
-      "options": {
-        "env": {
-          "CARGO_TARGET_THUMBV6M_NONE_EABI_RUNNER": "probe-rs run --chip rp2040 --protocol swd"
-        }
-      },
+      "args": ["build"],
+      "group": "build",
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "cargo build release",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["build", "--release"],
+      "group": "build",
       "problemMatcher": ["$rustc"]
     },
     {
@@ -35,8 +36,9 @@
       },
       "problemMatcher": ["$rustc"]
     },
+
     {
-      "label": "cargo run dev",
+      "label": "cargo run",
       "type": "shell",
       "command": "cargo",
       "args": ["run"],
@@ -44,7 +46,7 @@
       "problemMatcher": ["$rustc"]
     },
     {
-      "label": "cargo run release - probe-rs",
+      "label": "probe-rs - cargo run release",
       "type": "shell",
       "command": "cargo",
       "args": ["run", "--release"],
@@ -59,11 +61,26 @@
       "problemMatcher": ["$rustc"]
     },
     {
-      "label": "cargo run dev - probe-rs",
+      "label": "probe-rs - cargo run",
       "type": "shell",
       "command": "cargo",
       "args": ["run"],
       "group": "build",
+      "options": {
+        "env": {
+          "CARGO_TARGET_THUMBV6M_NONE_EABI_RUNNER": "probe-rs run --chip rp2040 --protocol swd"
+        }
+      },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "probe-rs - cargo run default-dev",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["run-d"],
+      "group": {
+        "kind": "build"
+      },
       "options": {
         "env": {
           "CARGO_TARGET_THUMBV6M_NONE_EABI_RUNNER": "probe-rs run --chip rp2040 --protocol swd"

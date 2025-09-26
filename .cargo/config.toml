@@ -22,5 +22,7 @@ DEFMT_LOG = "debug"
 
 
 [alias]
-build-d = 'build --no-default-features --features defmt'
-embed-d = 'embed default -- --no-default-features --features defmt'
+build-d = 'build --no-default-features --features default-dev'
+run-d   = 'run --no-default-features --features default-dev'
+embed-d = 'embed default -- --no-default-features --features default-dev'
+size-d  = 'size --no-default-features --features default-dev'
