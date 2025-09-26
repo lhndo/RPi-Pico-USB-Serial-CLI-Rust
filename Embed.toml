@@ -1,10 +1,13 @@
 # To launch the cargo embed with the correct set of features "defmt" run the following:
-# cargo embed default -- --no-default-features --features defmt
+# cargo embed default -- --no-default-features --features default-dev
 # or the Alias: cargo embed-d  
+
+# Default config Reference: 
+# https://github.com/probe-rs/probe-rs/blob/master/probe-rs-tools/src/bin/probe-rs/cmd/cargo_embed/config/default.toml
 
 [default.general]
 chip                = "RP2040"
-log_level           = "INFO"
+log_level           = "WARN"
 connect_under_reset = false    # RP2040 does not support connect_under_reset
 
 [default.probe]
