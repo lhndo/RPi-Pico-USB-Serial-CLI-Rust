@@ -19,15 +19,18 @@ mod state;
 mod tasklet;
 
 // ———————————————————————————————————— Debug dfmt features ——————————————————————————————————————
-#[cfg(feature = "defmt")]
+#[cfg(all(feature = "defmt", not(feature = "defmt-bypass")))]
 use defmt_rtt as _;
+
+#[cfg(all(feature = "defmt", feature = "defmt-bypass"))]
+mod defmt_bypass;
 
 #[allow(unused_imports)]
 #[cfg(feature = "defmt")]
 use defmt::{debug, error, info, warn};
 
 // ——————————————————————————————— Panic handler select features ——————————————————————————————————
-#[cfg(feature = "defmt")]
+#[cfg(feature = "panic-probe")]
 extern crate panic_probe;
 
 #[cfg(feature = "panic-usb")]
