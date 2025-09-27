@@ -64,7 +64,7 @@ debug            = true  # no overhead for bare-metal
 debug-assertions = false
 incremental      = false
 lto              = 'fat'
-opt-level        = "s"
+opt-level        = "z"
 overflow-checks  = false
 
 
