@@ -4,12 +4,14 @@ use core::convert::Infallible;
 use core::stringify;
 
 use embedded_hal::pwm::SetDutyCycle;
+
+use rp2040_hal as hal;
+//
 use hal::gpio;
 use hal::pwm;
-use heapless::Vec;
-use rp2040_hal as hal;
 
 use duplicate::duplicate_item;
+use heapless::Vec;
 use pastey::paste;
 
 const MAX_PWM_PINS: usize = 16;
@@ -68,6 +70,7 @@ impl Pwms {
     [7]       [B];
     )]
   paste! {
+  /// Assign GPIO pin to corresponding PWM slice
   pub fn [<set_pwm pwm_slice _ pwm_chan:lower>]<P: gpio::AnyPin>(&mut self, pin: P)
   where
     P::Id: pwm::ValidPwmOutputPin<pwm::[<Pwm pwm_slice>], pwm::[<pwm_chan>]>
@@ -104,8 +107,8 @@ impl Pwms {
     }
   }
 
-  /// Returns slice id and channel associated with the pin
-  pub fn find_slice_by_gpio(&self, gpio: u8) -> Option<(u8, Channel)> {
+  /// Returns Slice ID AND Channel associated with the gpio pin
+  pub fn get_slice_id_by_gpio(&self, gpio: u8) -> Option<(u8, Channel)> {
     let alias = self.pwm_aliases.iter().find(|alias| alias.gpio == gpio)?;
     Some((alias.slice_id, alias.channel))
   }
@@ -116,7 +119,7 @@ impl Pwms {
     gpio: u8,
   ) -> Option<&mut dyn SetDutyCycle<Error = Infallible>> {
     //
-    let (slice_id, channel) = self.find_slice_by_gpio(gpio)?;
+    let (slice_id, channel) = self.get_slice_id_by_gpio(gpio)?;
 
     Some(match (slice_id, channel) {
       (0, Channel::A) => self.pwm0.get_channel_a(),

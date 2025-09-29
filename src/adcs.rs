@@ -59,47 +59,9 @@ impl Adcs {
     }
   }
 
-  /// One shot read of the ADC channel 0-3, and 4 as TEMP_SENSE channel
-  /// Returns Some or None
-  pub fn read_channel(&mut self, id: u8) -> Option<u16> {
-    match id {
-      0 => self.adc0.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
-      1 => self.adc1.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
-      2 => self.adc2.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
-      3 => self.adc3.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
-      TEMP_SENSE_CHN => self.hal_adc.read(&mut self.temp_sense).ok(),
-      _ => None,
-    }
-  }
-
-  /// One shot read based on the Pin ID (4 as TEMP_SENSE ID)
-  pub fn read_by_gpio_id(&mut self, gpio: u8) -> Option<u16> {
-    match gpio {
-      26 => self.read_channel(0),
-      27 => self.read_channel(1),
-      28 => self.read_channel(2),
-      29 => self.read_channel(3),
-      TEMP_SENSE_CHN => self.read_channel(TEMP_SENSE_CHN),
-      _ => None,
-    }
-  }
-
   /// Returns the main HAL ADC object
   pub fn get_hal_adc(&mut self) -> &mut Adc {
     &mut self.hal_adc
-  }
-
-  /// Returns ADC Channel by ADC channel id as dyn AdcChannel  
-  pub fn as_dyn_adc_channel(&mut self, id: u8) -> Option<&mut dyn adc::AdcChannel> {
-    #[allow(clippy::option_map_or_none)] // Needed for Option to dyn recast to work
-    match id {
-      0 => self.adc0.as_mut().map_or(None, |a| Some(a)),
-      1 => self.adc1.as_mut().map_or(None, |a| Some(a)),
-      2 => self.adc2.as_mut().map_or(None, |a| Some(a)),
-      3 => self.adc3.as_mut().map_or(None, |a| Some(a)),
-      TEMP_SENSE_CHN => Some(&mut self.temp_sense),
-      _ => None,
-    }
   }
 
   pub fn get_adc0(&mut self) -> Option<&mut AdcPinType<gpio::bank0::Gpio26>> {
@@ -120,6 +82,44 @@ impl Adcs {
 
   pub fn get_temp_sense(&mut self) -> &mut TempSense {
     &mut self.temp_sense
+  }
+
+  /// One shot read of the ADC channel 0-3, and 4 as TEMP_SENSE channel
+  /// Returns Some or None
+  pub fn read_channel(&mut self, id: u8) -> Option<u16> {
+    match id {
+      0 => self.adc0.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+      1 => self.adc1.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+      2 => self.adc2.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+      3 => self.adc3.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+      TEMP_SENSE_CHN => self.hal_adc.read(&mut self.temp_sense).ok(),
+      _ => None,
+    }
+  }
+
+  /// One shot read based on the Pin ID (4 as TEMP_SENSE ID)
+  pub fn read_channel_by_gpio_id(&mut self, gpio: u8) -> Option<u16> {
+    match gpio {
+      26 => self.read_channel(0),
+      27 => self.read_channel(1),
+      28 => self.read_channel(2),
+      29 => self.read_channel(3),
+      TEMP_SENSE_CHN => self.read_channel(TEMP_SENSE_CHN),
+      _ => None,
+    }
+  }
+
+  /// Returns ADC Channel by ADC channel id as dyn AdcChannel  
+  pub fn as_dyn_adc_channel(&mut self, id: u8) -> Option<&mut dyn adc::AdcChannel> {
+    #[allow(clippy::option_map_or_none)] // Needed for Option to dyn recast to work
+    match id {
+      0 => self.adc0.as_mut().map_or(None, |a| Some(a)),
+      1 => self.adc1.as_mut().map_or(None, |a| Some(a)),
+      2 => self.adc2.as_mut().map_or(None, |a| Some(a)),
+      3 => self.adc3.as_mut().map_or(None, |a| Some(a)),
+      TEMP_SENSE_CHN => Some(&mut self.temp_sense),
+      _ => None,
+    }
   }
 }
 
@@ -142,7 +142,7 @@ impl AdcConversion for u16 {
 
   fn to_resistance(&self, ref_res: u32) -> f32 {
     let x: f32 = (ADC_MAX / *self as f32) - 1.0;
-    // ref_res / x // If you ref resistor to Gnd instead of V+
+    // "ref_res / x" // If you ref resistor to Gnd instead of V+
     ref_res as f32 * x
   }
 }
