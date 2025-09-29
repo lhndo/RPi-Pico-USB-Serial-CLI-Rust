@@ -176,6 +176,7 @@ macro_rules! setup_pins {
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // 12Mhz
+const DEFAULT_PWM_FREQUENCY: u32 = 50; //hz
 
 pub static SYS_CLK_HZ: AtomicU32 = AtomicU32::new(0);
 
@@ -289,10 +290,9 @@ impl Device {
     // —————————————————————————————————————————— PWM —————————————————————————————————————————————
 
     let pwm_slices = pwm::Slices::new(pac.PWM, &mut pac.RESETS);
-    const DEFAULT_FREQUENCY: u32 = 50; //hz
 
     // Initialise PWM pins from setup_pins by calling e.g. pwms.set_pwm2_b(pins.gpio21); ...
-    let mut pwms = Pwms::new(pwm_slices, sys_clk_hz, DEFAULT_FREQUENCY);
+    let mut pwms = Pwms::new(pwm_slices, sys_clk_hz, DEFAULT_PWM_FREQUENCY);
     setup_pins!(PWM, pins, pwms);
 
     // ———————————————————————————————————— Extra Function Pins ———————————————————————————————————
