@@ -98,7 +98,7 @@ impl Cli {
 
     let cmd = self.commands.get_command(cmd_name)?;
     // Execute Command
-    (cmd.func)(&cmd_arg, device)
+    (cmd.func)(cmd, &cmd_arg, device)
   }
 
   pub fn built_in_help(&self) {
@@ -118,7 +118,6 @@ impl Cli {
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
 const MAX_CMDS: usize = 20;
-type FunctionCmd = fn(&[Arguments], &mut Device) -> Result<()>;
 
 // ———————————————————————————————————————— Command List ———————————————————————————————————————————
 
@@ -153,11 +152,25 @@ impl CommandList {
 
 // ——————————————————————————————————————————— Command —————————————————————————————————————————————
 
+type FunctionCmd = fn(cmd: &Command, &[Arguments], &mut Device) -> Result<()>;
+
 #[derive(Debug)]
 pub struct Command {
   pub name: &'static str,
   pub desc: &'static str,
+  pub help: &'static str,
   pub func: FunctionCmd,
+}
+
+impl Command {
+  pub fn print_help(&self) {
+    println!("{}", self.desc);
+    println!("{}", self.help)
+  }
+
+  pub fn print_description(&self) {
+    println!("{}", self.desc);
+  }
 }
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————

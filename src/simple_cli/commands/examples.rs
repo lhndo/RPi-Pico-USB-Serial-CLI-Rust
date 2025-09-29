@@ -11,22 +11,15 @@ pub fn build_example_cmd() -> Command {
   Command {
     name: "example",
     desc: "Prints example args",
+    help: "example <arg(float)> [opt=0(u8)] [on=false(bool)] [path=\"\"(string)] [help]",
     func: example_cmd,
   }
 }
 
-pub fn example_cmd_help() {
-  println!("Help: example");
-  println!(
-    "Prints Example Arguments\n
-    example <arg(float)> [opt=0(u8)] [on=false(bool)] [path=\"\"(string)] [help]"
-  )
-}
-
-pub fn example_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn example_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
   if contains_param("help", args) {
-    example_cmd_help();
+    cmd.print_help();
     return Ok(());
   }
 
@@ -54,22 +47,15 @@ pub fn build_blink_cmd() -> Command {
   Command {
     name: "blink",
     desc: "Blinks Onboard Led",
+    help: "blink [times=10] [interval=200(ms)] [help]",
     func: blink_cmd,
   }
 }
 
-pub fn blink_cmd_help() {
-  println!("Help: blink");
-  println!(
-    "Blinks Onboard Led \n
-    blink [times=10] [interval=200(ms)] [help]"
-  )
-}
-
-pub fn blink_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn blink_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
   if contains_param("help", args) {
-    blink_cmd_help();
+    cmd.print_help();
     return Ok(());
   }
 
@@ -119,22 +105,15 @@ pub fn build_panic_test_cmd() -> Command {
   Command {
     name: "panic_test",
     desc: "Panics the program",
+    help: "panic_test [help]",
     func: panic_test_cmd,
   }
 }
 
-pub fn panic_test_cmd_help() {
-  println!("Help: panic_test");
-  println!(
-    "Panics the program. On the next serial connection, the panic msg is printed\n
-    panic_test [help]"
-  )
-}
-
-pub fn panic_test_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn panic_test_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
   if contains_param("help", args) {
-    panic_test_cmd_help();
+    cmd.print_help();
     return Ok(());
   }
 
@@ -154,22 +133,15 @@ pub fn build_servo_cmd() -> Command {
   Command {
     name: "servo",
     desc: "Set Servo PWM on GPIO 8",
+    help: "servo [us=1500(us)] [pause=1500(ms)] [sweep=false(bool)] [max_us=2000(us)] [help]",
     func: servo_cmd,
   }
 }
 
-pub fn servo_cmd_help() {
-  println!("Help: servo");
-  println!(
-    "Set Servo PWM on GPIO 8\n
-    servo [us=1500(us)] [pause=1500(ms)] [sweep=false(bool)] [max_us=2000(us)] [help]"
-  )
-}
-
-pub fn servo_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn servo_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
   if contains_param("help", args) {
-    servo_cmd_help();
+    cmd.print_help();
     return Ok(());
   }
 
@@ -242,26 +214,17 @@ pub fn build_test_gpio_cmd() -> Command {
   Command {
     name: "test_gpio",
     desc: "Sets GPIO 0 High when GPIO 9 is Low",
+    help: "test_gpio [help] \nInterrupt with char \"~\" ",
     func: test_gpio_cmd,
   }
 }
 
-pub fn test_gpio_cmd_help() {
-  println!("Help: test_gpio");
-  println!(
-    "Sets GPIO 0 High when GPIO 9 is Low\n
-   test_gpio [help] \n
-   Interrupt with char \"~\" "
-  )
-}
-
-pub fn test_gpio_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn test_gpio_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
   if contains_param("help", args) {
-    test_gpio_cmd_help();
+    cmd.print_help();
     return Ok(());
   }
-
   println!("---- Testing GPIO ----");
   println!("Send '~' to exit");
 
@@ -290,26 +253,17 @@ pub fn build_test_analog_cmd() -> Command {
   Command {
     name: "test_analog",
     desc: "Voltage controlled PWM Duty Cycle",
+    help: "test_analog [help] \nInterrupt with char \"~\" ",
     func: test_analog_cmd,
   }
 }
 
-pub fn test_analog_cmd_help() {
-  println!("Help: test_analog");
-  println!(
-    "Voltage controlled PWM Duty Cycle (i.e. Potentiometer on GPIO 26 dimming a Led on GPIO 8)\n
-    test_analog [help] \n
-    Interrupt with char \"~\" "
-  )
-}
-
-pub fn test_analog_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn test_analog_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
   if contains_param("help", args) {
-    test_analog_cmd_help();
+    cmd.print_help();
     return Ok(());
   }
-
   println!("---- Testing Analog Input ----");
   println!("Input: GPIO 26 >> PWM Output: GPIO 8");
   println!("Send '~' to exit");

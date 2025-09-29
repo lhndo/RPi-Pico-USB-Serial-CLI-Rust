@@ -11,22 +11,15 @@ pub fn build_reset_cmd() -> Command {
   Command {
     name: "reset",
     desc: "Resets Device",
+    help: "reset [help]",
     func: reset_cmd,
   }
 }
 
-pub fn reset_cmd_help() {
-  println!("Help: reset");
-  println!(
-    "Resets device \n
-    reset [help]"
-  )
-}
-
-pub fn reset_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn reset_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
   if contains_param("help", args) {
-    reset_cmd_help();
+    cmd.print_help();
     return Ok(());
   }
 
@@ -44,22 +37,15 @@ pub fn build_flash_cmd() -> Command {
   Command {
     name: "flash",
     desc: "Restart device in USB Flash mode",
+    help: "flash [help]",
     func: flash_cmd,
   }
 }
 
-pub fn flash_cmd_help() {
-  println!("Help: flash");
-  println!(
-    "Restart device in USB Flash mode\n
-    flash [help]"
-  )
-}
-
-pub fn flash_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn flash_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
   if contains_param("help", args) {
-    flash_cmd_help();
+    cmd.print_help();
     return Ok(());
   }
 
@@ -77,23 +63,15 @@ pub fn build_set_pin_cmd() -> Command {
   Command {
     name: "set_pin",
     desc: "Set GPIO Pin State",
+    help: "set_pin [gpio=1(u8)] [toggle] [high] [low] [help]",
     func: set_pin_cmd,
   }
 }
 
-pub fn set_pin_cmd_help() {
-  println!("Help: set_pin");
-  println!(
-    "Set GPIO Pin State \n
-    set_pin [gpio=1(u8)] [toggle] [high] [low] [help]\n
-    "
-  )
-}
-
-pub fn set_pin_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn set_pin_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
   if contains_param("help", args) {
-    set_pin_cmd_help();
+    cmd.print_help();
     return Ok(());
   }
 
@@ -135,23 +113,15 @@ pub fn build_read_pin_cmd() -> Command {
   Command {
     name: "read_pin",
     desc: "Set GPIO Pin State",
+    help: "read_pin [gpio=1(u8)]",
     func: read_pin_cmd,
   }
 }
 
-pub fn read_pin_cmd_help() {
-  println!("Help: read_pin");
-  println!(
-    "Read GPIO Pin State \n
-    read_pin [gpio=1(u8)]\n
-    "
-  )
-}
-
-pub fn read_pin_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn read_pin_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
   if contains_param("help", args) {
-    read_pin_cmd_help();
+    cmd.print_help();
     return Ok(());
   }
 
@@ -189,22 +159,15 @@ pub fn build_read_adc_cmd() -> Command {
   Command {
     name: "read_adc",
     desc: "Read all ADC channels",
+    help: "read_adc [ref_res=10000(ohm)] [help]",
     func: read_adc_cmd,
   }
 }
 
-pub fn read_adc_cmd_help() {
-  println!("Help: read_adc");
-  println!(
-    "Read all ADC channels \n
-    read_adc [ref_res=10000(ohm)] [help]"
-  )
-}
-
-pub fn read_adc_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn read_adc_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
   if contains_param("help", args) {
-    read_adc_cmd_help();
+    cmd.print_help();
     return Ok(());
   }
 
@@ -246,23 +209,17 @@ pub fn build_sample_adc_cmd() -> Command {
   Command {
     name: "sample_adc",
     desc: "Continuous sampling of an ADC channel",
+    help: "sample_adc [gpio(u8)] or [channel=0(u8)]  [ref_res=10000(ohm)] [interval=200(ms)] \
+           [help]\n
+    Interrupt with char \"~\"",
     func: sample_adc_cmd,
   }
 }
 
-pub fn sample_adc_cmd_help() {
-  println!("Help: sample_adc");
-  println!(
-    "Continuous sampling of an ADC channel \n
-    sample_adc [gpio(u8)] or [channel=0(u8)]  [ref_res=10000(ohm)] [interval=200(ms)] [help]\n
-    Interrupt with char \"~\" "
-  )
-}
-
-pub fn sample_adc_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn sample_adc_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
   if contains_param("help", args) {
-    sample_adc_cmd_help();
+    cmd.print_help();
     return Ok(());
   }
 
@@ -318,23 +275,17 @@ pub fn build_set_pwm_cmd() -> Command {
   Command {
     name: "set_pwm",
     desc: "Sets PWM  (defaults on GPIO 6 - PWM3A)",
+    help:
+      "set_pwm [pwm_id=3(id)] [channel=a(a/b)] [freq=50(hz)] [us=-1(us)] [duty=50(%)]\n        \
+       [top=-1(u16)] [phase=false(bool)] [disable=false(bool)] [help]",
     func: set_pwm_cmd,
   }
 }
 
-pub fn set_pwm_cmd_help() {
-  println!("Help: set_pwm");
-  println!(
-    "Sets PWM (defaults on GPIO 6 - PWM3A ) \n
-    set_pwm [pwm_id=3(id)] [channel=a(a/b)] [freq=50(hz)] [us=-1(us)] [duty=50(%)]\n
-    [top=-1(u16)] [phase=false(bool)] [disable=false(bool)] [help]"
-  )
-}
-
-pub fn set_pwm_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn set_pwm_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
   if contains_param("help", args) {
-    set_pwm_cmd_help();
+    cmd.print_help();
     return Ok(());
   }
 
