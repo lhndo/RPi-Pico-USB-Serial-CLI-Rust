@@ -9,9 +9,17 @@ pub use crate::prelude::*;
 //                                             Errors
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-type Result<T> = core::result::Result<T, CliError>;
-
+const CLI_READ_BUFFER_LENGTH: usize = 128;
 const ERR_STR_LENGTH: usize = 64;
+
+const MAX_CMDS: usize = 20;
+const MAX_CMD_LENGTH: usize = 24;
+
+const MAX_NUMBER_PARAMS: usize = 5;
+const MAX_PARAM_LENGTH: usize = 16;
+const MAX_VALUE_LENGTH: usize = 64;
+
+type Result<T> = core::result::Result<T, CliError>;
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -117,8 +125,6 @@ impl Cli {
 //                                          Command Structs
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
-const MAX_CMDS: usize = 20;
-
 // ———————————————————————————————————————— Command List ———————————————————————————————————————————
 
 #[derive(Default, Debug)]
@@ -176,12 +182,6 @@ impl Command {
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                            Inputs
 // ————————————————————————————————————————————————————————————————————————————————————————————————
-
-const CLI_READ_BUFFER_LENGTH: usize = 128;
-const MAX_CMD_LENGTH: usize = 24;
-const MAX_NUMBER_PARAMS: usize = 5;
-const MAX_PARAM_LENGTH: usize = 16;
-const MAX_VALUE_LENGTH: usize = 64;
 
 #[derive(Debug, Default)]
 struct CommandWithArgs {
