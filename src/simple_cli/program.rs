@@ -128,12 +128,26 @@ impl Program {
         println!(">> '{}' ", input);
 
         println!("\n======== RUNNING ========= (T: {}) \n", device.timer.print_time());
+        let exec_time = device.timer.get_counter();
+
         cli.execute(input, device).unwrap_or_else(|e| println!("Err: {}", e));
+
+        let exec_time = device
+          .timer
+          .get_counter()
+          .checked_duration_since(exec_time)
+          .unwrap()
+          .to_micros();
 
         // Cleanup
         self.command_buf.clear();
         self.command_read = false; // Done, accepting new cmds
-        print!("\n========== DONE ========== (T: {}) \n", device.timer.print_time());
+
+        print!(
+          "\n===== DONE in {time:.3}ms ===== (T: {}) \n",
+          device.timer.print_time(),
+          time = exec_time as f32 / 1000.0
+        );
       }
 
       // Signal End
