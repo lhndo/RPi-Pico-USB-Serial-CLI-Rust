@@ -35,15 +35,14 @@ pub fn build_blink_cmd() -> Command {
 }
 
 pub fn blink_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
-
-  if contains_param("help", args) {
+  // Print Help
+  if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
 
-  let times: u16 = get_parsed_param("times", args).unwrap_or(10); // 10 default
-  let interval: u16 = get_parsed_param("interval", args).unwrap_or(200); // 200ms default
-  
+  let times: u16 = args.get_parsed_param("times").unwrap_or(10); // 10 default
+  let interval: u16 = args.get_parsed_param("interval").unwrap_or(200); // 200ms default
   blink(device, times, interval)
 }
 
@@ -51,9 +50,9 @@ pub fn blink_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Resu
 pub fn blink(device: &mut Device, times: u16, interval: u16) -> Result<()> {
   println!("---- Blinking Led! ----");
   let led = device.outputs.get_by_id(PinID::LED).unwrap();
-  let mut blink = 1;
+  let blink = 1;
 
-  for n in 1..(times + 1) {
+  for n in 1..=times {
     print!("Blink {} | ", n);
     led.set_high().unwrap();
     device.timer.delay_ms(interval);
