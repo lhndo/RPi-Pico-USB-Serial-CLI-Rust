@@ -120,10 +120,9 @@ impl SerialHandle {
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Serialio {
-  serial:                     SerialDev,
-  usb_dev:                    UsbDev,
-  request_poll_for_interrupt: bool,
-  interrupt_cmd_triggered:    bool,
+  serial:                  SerialDev,
+  usb_dev:                 UsbDev,
+  interrupt_cmd_triggered: bool,
 }
 
 impl Serialio {
@@ -131,8 +130,7 @@ impl Serialio {
     Self {
       serial,
       usb_dev,
-      request_poll_for_interrupt: false,
-      interrupt_cmd_triggered: false,
+      interrupt_cmd_triggered: true,
     }
   }
 
@@ -166,10 +164,15 @@ impl Serialio {
   /// To be used in loops that need to be interrupted from the command line
   /// WARNING: This will throw away the read buffer
   fn poll_for_interrupt(&mut self) {
-    // If no serial connection return false
+    //
     if !self.serial.dtr() {
       self.interrupt_cmd_triggered = false;
       return;
+    }
+
+    // if interrupt cmd already triggered, we just drain/read the buffer to avoid an usb interrupt storm
+    if self.interrupt_cmd_triggered {
+      self.drain();
     }
 
     let mut buffer = [0u8; 64];
