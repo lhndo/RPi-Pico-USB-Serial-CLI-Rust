@@ -320,9 +320,6 @@ impl ArgList for &[Arguments] {
   }
 
   fn contains_param(&self, str: &str) -> bool {
-    if let Some(arg) = self.iter().find(|arg| arg.param.contains(str)) {
-      return true;
-    }
-    false
+    self.iter().any(|arg| arg.param.contains(str))
   }
 }
