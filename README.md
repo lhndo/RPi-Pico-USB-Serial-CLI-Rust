@@ -29,27 +29,21 @@ pub fn build_blink_cmd() -> Command {
   Command {
     name: "blink",
     desc: "Blinks Onboard Led",
+    help: "blink [times=10] [interval=200(ms)] [help]",
     func: blink_cmd,
   }
 }
 
-pub fn blink_cmd_help() {
-  println!("Help: blink");
-  println!(
-    "Blinks Onboard Led \n
-    blink [times=10] [interval=200(ms)] [help]"
-  )
-}
+pub fn blink_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
 
-pub fn blink_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
-  // Print Help
   if contains_param("help", args) {
-    blink_cmd_help();
+    cmd.print_help();
     return Ok(());
   }
 
   let times: u16 = get_parsed_param("times", args).unwrap_or(10); // 10 default
-  let interval: u16 = get_parsed_param("interval", args).unwrap_or(200); // 200 default
+  let interval: u16 = get_parsed_param("interval", args).unwrap_or(200); // 200ms default
+  
   blink(device, times, interval)
 }
 
@@ -57,6 +51,7 @@ pub fn blink_cmd(args: &[Arguments], device: &mut Device) -> Result<()> {
 pub fn blink(device: &mut Device, times: u16, interval: u16) -> Result<()> {
   println!("---- Blinking Led! ----");
   let led = device.outputs.get_by_id(PinID::LED).unwrap();
+  let mut blink = 1;
 
   for n in 1..(times + 1) {
     print!("Blink {} | ", n);
