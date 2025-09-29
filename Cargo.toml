@@ -1,8 +1,8 @@
 [package]
 edition = "2024"
 name    = "pico_usb_serial_cli"
-version = "0.1.0"
-license = "MIT OR Apache-2.0"
+version = "0.2.0"
+license = "MIT"
 
 
 [dependencies]
@@ -43,6 +43,7 @@ defmt = ["dep:defmt", "dep:defmt-rtt", "rp2040-hal/defmt", "panic-probe"]
 
 defmt-bypass = [] # include this into defmt feature set to bypass defmt and reduce release memory size
 
+# Panic Strategies
 panic-usb     = ["dep:rp2040-panic-usb-boot"]
 panic-persist = ["dep:panic-persist"]
 panic-probe   = ["dep:panic-probe"]
@@ -60,7 +61,7 @@ overflow-checks  = true
 # cargo build/run --release
 [profile.release]
 codegen-units    = 1
-debug            = true  # no overhead for bare-metal
+debug            = true
 debug-assertions = false
 incremental      = false
 lto              = 'fat'
