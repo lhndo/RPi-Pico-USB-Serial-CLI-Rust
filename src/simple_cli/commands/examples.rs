@@ -226,7 +226,7 @@ pub fn test_gpio_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> 
     return Ok(());
   }
   println!("---- Testing GPIO ----");
-  println!("Send '~' to exit");
+  println!("Send '~' to exit\n");
 
   let input = device.inputs.get_by_id(PinID::IN_A).unwrap();
   let output = device.outputs.get_by_id(PinID::OUT_A).unwrap();
@@ -266,7 +266,7 @@ pub fn test_analog_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -
   }
   println!("---- Testing Analog Input ----");
   println!("Input: GPIO 26 >> PWM Output: GPIO 8");
-  println!("Send '~' to exit");
+  println!("Send '~' to exit\n");
 
   const FREQ: u32 = 60;
   const MAX_V: f32 = 3.3;

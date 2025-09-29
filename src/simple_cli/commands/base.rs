@@ -246,6 +246,7 @@ pub fn sample_adc(device: &mut Device, channel: u8, ref_res: u32, interval: u16)
   println!("---- Sample ADC ----");
   println!("Reference Pullup Resistor: {}ohm", ref_res);
   println!("ADC Channel: {} \n", { channel });
+  println!("Send '~' to exit\n");
 
   SERIAL.clear_interrupt_cmd();
   while !SERIAL.interrupt_cmd_triggered() {
