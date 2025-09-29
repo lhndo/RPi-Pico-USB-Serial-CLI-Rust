@@ -18,15 +18,15 @@ pub fn build_example_cmd() -> Command {
 
 pub fn example_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
-  if contains_param("help", args) {
+  if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
 
-  let arg: f32 = get_parsed_param("arg", args)?; // required argument
-  let opt: u8 = get_parsed_param("opt", args).unwrap_or(0); // argument with default
-  let on: bool = get_parsed_param("on", args).unwrap_or(false);
-  let path: &str = get_str_param("path", args).unwrap_or("");
+  let arg: f32 = args.get_parsed_param("arg")?; // required argument
+  let opt: u8 = args.get_parsed_param("opt").unwrap_or(0); // argument with default
+  let on: bool = args.get_parsed_param("on").unwrap_or(false);
+  let path: &str = args.get_str_param("path").unwrap_or("");
 
   println!("---- Running 'Example' ---- \n");
 
@@ -54,13 +54,13 @@ pub fn build_blink_cmd() -> Command {
 
 pub fn blink_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
-  if contains_param("help", args) {
+  if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
 
-  let times: u16 = get_parsed_param("times", args).unwrap_or(10); // 10 default
-  let interval: u16 = get_parsed_param("interval", args).unwrap_or(200); // 200ms default
+  let times: u16 = args.get_parsed_param("times").unwrap_or(10); // 10 default
+  let interval: u16 = args.get_parsed_param("interval").unwrap_or(200); // 200ms default
   blink(device, times, interval)
 }
 
@@ -86,7 +86,7 @@ pub fn blink(device: &mut Device, times: u16, interval: u16) -> Result<()> {
 
   // Non tasklet implementation example:
   //
-  // for n in 1..(times + 1) {
+  // for n in 1..=times {
   //   print!("Blink {} | ", n);
   //   led.set_high().unwrap();
   //   device.timer.delay_ms(interval);
@@ -112,7 +112,7 @@ pub fn build_panic_test_cmd() -> Command {
 
 pub fn panic_test_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
-  if contains_param("help", args) {
+  if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
@@ -140,15 +140,15 @@ pub fn build_servo_cmd() -> Command {
 
 pub fn servo_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
-  if contains_param("help", args) {
+  if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
 
-  let us: u16 = get_parsed_param("us", args).unwrap_or(1500); //  1500 us default
-  let pause: u32 = get_parsed_param("pause", args).unwrap_or(1500); // 2s default
-  let sweep: bool = get_parsed_param("sweep", args).unwrap_or(false); //  false default
-  let max_us: u16 = get_parsed_param("max_us", args).unwrap_or(2000); //  2000 us default
+  let us: u16 = args.get_parsed_param("us").unwrap_or(1500); //  1500 us default
+  let pause: u32 = args.get_parsed_param("pause").unwrap_or(1500); // 2s default
+  let sweep: bool = args.get_parsed_param("sweep").unwrap_or(false); //  false default
+  let max_us: u16 = args.get_parsed_param("max_us").unwrap_or(2000); //  2000 us default
 
   servo(device, us, pause, sweep, max_us)
 }
@@ -221,7 +221,7 @@ pub fn build_test_gpio_cmd() -> Command {
 
 pub fn test_gpio_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
-  if contains_param("help", args) {
+  if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
@@ -260,7 +260,7 @@ pub fn build_test_analog_cmd() -> Command {
 
 pub fn test_analog_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
-  if contains_param("help", args) {
+  if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }

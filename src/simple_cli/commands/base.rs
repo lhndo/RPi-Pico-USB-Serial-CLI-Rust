@@ -18,7 +18,7 @@ pub fn build_reset_cmd() -> Command {
 
 pub fn reset_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
-  if contains_param("help", args) {
+  if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
@@ -44,7 +44,7 @@ pub fn build_flash_cmd() -> Command {
 
 pub fn flash_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
-  if contains_param("help", args) {
+  if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
@@ -70,14 +70,14 @@ pub fn build_set_pin_cmd() -> Command {
 
 pub fn set_pin_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
-  if contains_param("help", args) {
+  if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
 
-  let gpio_id: u8 = get_parsed_param("gpio", args).unwrap_or(1);
-  let high = contains_param("high", args);
-  let low = contains_param("low", args);
+  let gpio_id: u8 = args.get_parsed_param("gpio").unwrap_or(1);
+  let high = args.contains_param("high");
+  let low = args.contains_param("low");
 
   if let Some(pin) = device.outputs.get_by_id(gpio_id) {
     if high {
@@ -120,12 +120,12 @@ pub fn build_read_pin_cmd() -> Command {
 
 pub fn read_pin_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
-  if contains_param("help", args) {
+  if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
 
-  let gpio_id: u8 = get_parsed_param("gpio", args).unwrap_or(1);
+  let gpio_id: u8 = args.get_parsed_param("gpio").unwrap_or(1);
 
   if let Some(pin) = device.outputs.get_by_id(gpio_id) {
     print!("GPIO {gpio_id}: ");
@@ -166,12 +166,12 @@ pub fn build_read_adc_cmd() -> Command {
 
 pub fn read_adc_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
-  if contains_param("help", args) {
+  if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
 
-  let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000);
+  let ref_res: u32 = args.get_parsed_param("ref_res").unwrap_or(10_000);
   read_adc(device, ref_res)
 }
 
@@ -218,17 +218,17 @@ pub fn build_sample_adc_cmd() -> Command {
 
 pub fn sample_adc_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
-  if contains_param("help", args) {
+  if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
 
-  let ref_res: u32 = get_parsed_param("ref_res", args).unwrap_or(10_000);
-  let mut channel: u8 = get_parsed_param("channel", args).unwrap_or(0);
-  let interval: u16 = get_parsed_param("interval", args).unwrap_or(200);
+  let ref_res: u32 = args.get_parsed_param("ref_res").unwrap_or(10_000);
+  let mut channel: u8 = args.get_parsed_param("channel").unwrap_or(0);
+  let interval: u16 = args.get_parsed_param("interval").unwrap_or(200);
 
   // Getting ADC channel based on pin number
-  if let Ok(gpio_) = get_parsed_param("gpio", args) {
+  if let Ok(gpio_) = args.get_parsed_param("gpio") {
     match gpio_ {
       26 => channel = 0,
       27 => channel = 1,
@@ -284,19 +284,19 @@ pub fn build_set_pwm_cmd() -> Command {
 
 pub fn set_pwm_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
   // Print Help
-  if contains_param("help", args) {
+  if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
 
-  let pwm_id: usize = get_parsed_param("pwm_id", args).unwrap_or(3); //  -1 eq not set
-  let channel = get_str_param("channel", args).unwrap_or("a"); // false
-  let us: i32 = get_parsed_param("us", args).unwrap_or(-1); //  -1 eq not set
-  let duty: u8 = get_parsed_param("duty", args).unwrap_or(50); //  50% default
-  let freq: u32 = get_parsed_param("freq", args).unwrap_or(50); // hz
-  let top: i32 = get_parsed_param("top", args).unwrap_or(-1); // 
-  let phase: bool = get_parsed_param("phase", args).unwrap_or(false); // 
-  let disable: bool = get_parsed_param("disable", args).unwrap_or(false); // false
+  let pwm_id: usize = args.get_parsed_param("pwm_id").unwrap_or(3); //  -1 eq not set
+  let channel = args.get_str_param("channel").unwrap_or("a"); // false
+  let us: i32 = args.get_parsed_param("us").unwrap_or(-1); //  -1 eq not set
+  let duty: u8 = args.get_parsed_param("duty").unwrap_or(50); //  50% default
+  let freq: u32 = args.get_parsed_param("freq").unwrap_or(50); // hz
+  let top: i32 = args.get_parsed_param("top").unwrap_or(-1); // 
+  let phase: bool = args.get_parsed_param("phase").unwrap_or(false); // 
+  let disable: bool = args.get_parsed_param("disable").unwrap_or(false); // false
 
   if channel != "a" && channel != "b" {
     println!("Channel can be only a or b");

@@ -279,43 +279,50 @@ fn parse_input(input: &str) -> Result<CommandWithArgs> {
   Ok(split_input)
 }
 
-// —————————————————————————————————————— Get Parsed Param ————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                             Traits
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
-/// Matches a string parameter name and retrives the value from an argument list
-pub fn get_parsed_param<T>(param: &str, arg_list: &[Arguments]) -> Result<T>
-where
-  T: FromStr,
-{
-  // Find argument
-  let arg = arg_list
-    .iter()
-    .find(|s| s.param.eq_ignore_ascii_case(param))
-    .ok_or_else(|| CliError::MissingArg(param.into_truncate()))?;
+// —————————————————————————————————————————— Arg List —————————————————————————————————————————————
 
-  let val_as_str = arg.value.as_str();
+pub trait ArgList {
+  fn get_parsed_param<T>(&self, param: &str) -> Result<T>
+  where
+    T: FromStr;
 
-  let value: T = val_as_str.parse().map_err(|_| CliError::Parse(param.into_truncate()))?;
+  fn get_str_param<'a>(&'a self, param: &str) -> Option<&'a str>;
 
-  Ok(value)
+  fn contains_param(&self, str: &str) -> bool;
 }
 
-// —————————————————————————————————— Get Parsed String Param —————————————————————————————————————
+impl ArgList for &[Arguments] {
+  fn get_parsed_param<T>(&self, param: &str) -> Result<T>
+  where
+    T: FromStr,
+  {
+    let arg = self
+      .iter()
+      .find(|s| s.param.eq_ignore_ascii_case(param))
+      .ok_or_else(|| CliError::MissingArg(param.into_truncate()))?;
 
-/// Matches a string parameter name and retrives the string from an argument list
-pub fn get_str_param<'a>(param: &str, arg_list: &'a [Arguments]) -> Option<&'a str> {
-  arg_list
-    .iter()
-    .find(|arg| arg.param.eq_ignore_ascii_case(param))
-    .map(|arg| arg.value.as_str())
-}
+    let val_as_str = arg.value.as_str();
 
-// —————————————————————————————————————— Contains argument ————————————————————————————————————————
+    let value: T = val_as_str.parse().map_err(|_| CliError::Parse(param.into_truncate()))?;
 
-/// Checks if the argument list contains a certain str param and returns true or false
-pub fn contains_param(str: &str, args: &[Arguments]) -> bool {
-  // Print Help
-  if let Some(arg) = args.iter().find(|arg| arg.param.contains(str)) {
-    return true;
+    Ok(value)
   }
-  false
+
+  fn get_str_param<'a>(&'a self, param: &str) -> Option<&'a str> {
+    self
+      .iter()
+      .find(|arg| arg.param.eq_ignore_ascii_case(param))
+      .map(move |arg| arg.value.as_str())
+  }
+
+  fn contains_param(&self, str: &str) -> bool {
+    if let Some(arg) = self.iter().find(|arg| arg.param.contains(str)) {
+      return true;
+    }
+    false
+  }
 }
