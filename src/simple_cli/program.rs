@@ -113,7 +113,8 @@ impl Program {
           Ok(len) => {
             self.command_buf.advance(len);
             self.command_read = true;
-            println!("\n>> Received Command:");
+            let data = self.command_buf.get_data().as_str().unwrap();
+            println!("\n>> Command Received: {}", data);
           },
           Err(e) => {
             println!("\nErr: {:?} \n", e);
@@ -125,13 +126,17 @@ impl Program {
       // Execute command
       if self.command_read {
         let input = self.command_buf.get_data().as_str().unwrap();
-        println!(">> '{}' ", input);
+        let cmd_name = input.split_ascii_whitespace().next().unwrap_or("help");
 
-        println!("\n======== RUNNING ========= (T: {}) \n", device.timer.print_time());
+        println!("\n========= RUNNING: {cmd_name} =========");
+        println!("(T: {})\n", device.timer.print_time());
+
+        // Time benchmark start
         let exec_time = device.timer.get_counter();
 
         cli.execute(input, device).unwrap_or_else(|e| println!("Err: {}", e));
 
+        // Time benchmark end
         let exec_time = device
           .timer
           .get_counter()
@@ -143,11 +148,8 @@ impl Program {
         self.command_buf.clear();
         self.command_read = false; // Done, accepting new cmds
 
-        print!(
-          "\n===== DONE in {time:.3}ms ===== (T: {}) \n",
-          device.timer.print_time(),
-          time = exec_time as f32 / 1000.0
-        );
+        println!("\n========= DONE in {time:.3}ms =========", time = exec_time as f32 / 1000.0);
+        println!("(T: {})\n", device.timer.print_time());
       }
 
       // Signal End

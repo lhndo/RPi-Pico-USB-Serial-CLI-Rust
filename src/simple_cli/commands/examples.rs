@@ -94,6 +94,7 @@ pub fn blink(device: &mut Device, times: u16, interval: u16) -> Result<()> {
   //   device.timer.delay_ms(interval);
   // }
 
+  println!();
   Ok(())
 }
 
