@@ -301,11 +301,16 @@ impl<T: SetDutyCycle> PwmChannelExt for T {
 /// Calculates pwm int and frac clock dividers based on sys clock, top, and desired hz frequency
 pub fn calculate_pwm_dividers(sys_clk_hz: u32, hz: u32, top: u16, phase_correct: bool) -> (u8, u8) {
   let hz = if phase_correct { hz * 2 } else { hz };
-  let divider = sys_clk_hz as f32 / (hz as f32 * (top as f32 + 1.0));
-  let clamped_divider = divider.clamp(1.0, 255.9375);
+  let denominator = hz * (top as u32 + 1);
+  // Add half denominator before division for proper rounding
+  let divider_x16 = (sys_clk_hz * 16 + denominator / 2) / denominator;
 
-  let div_int = (clamped_divider + 0.5) as u8;
-  let div_frac = ((clamped_divider - div_int as f32) * 16.0 + 0.5) as u8;
+  // Clamp to valid range: 1.0 to 255.9375 (16 to 4095 in fixed-point)
+  let clamped = divider_x16.clamp(16, 4095);
+
+  // These are compile-time optimized to bit shifts
+  let div_int = (clamped >> 4) as u8; // Divide by 16
+  let div_frac = (clamped & 0xF) as u8; // Modulo 16
 
   (div_int, div_frac)
 }
