@@ -1,5 +1,5 @@
 //! Command Parser from an input &str
-/// Run parse(input: &str) to retrieve the command name a list of arguments.
+/// Run parse(input: &str) to retrieve and arguments list.
 /// Use ArgList trait functions available for &[Argument] to retrieve and convert the values.
 pub use core::str::FromStr;
 
@@ -24,16 +24,14 @@ const DEFAULT_CMD: &str = "help";
 
 // ——————————————————————————————————————————— Parse —————————————————————————————————————————————
 
-/// Takes an input str and parses it, returning a tuple of command name, and args.
-pub fn parse(
-  input: &str,
-) -> Result<(String<MAX_CMD_NAME_LENGTH>, Vec<Argument, MAX_NUMBER_PARAMS>)> {
+/// Takes an input str and parses it, returning an arguments list.
+#[inline]
+pub fn parse(input: &str) -> Result<Vec<Argument, MAX_NUMBER_PARAMS>> {
   // Creating command with args Struct. Defaulting to DEFAULT_CMD cmd.
-  let mut command: String<MAX_CMD_NAME_LENGTH> = String::from_str(DEFAULT_CMD).unwrap();
   let mut args: Vec<Argument, MAX_NUMBER_PARAMS> = Vec::new();
 
   if input.is_empty() {
-    return Ok((command, args));
+    return Ok(args);
   }
 
   let mut processed_buf: String<READ_BUFFER_LENGTH> = String::new();
@@ -87,19 +85,9 @@ pub fn parse(
     return Err(CliError::Parse("unmatched quotes".into_truncated()));
   }
 
-  // —————————————————————————————————— Extracting command name ————————————————————————————————————
-
-  let mut processed_buf = processed_buf.split_ascii_whitespace();
-
-  // Extract first element. If empty, we return the default Struct with "help" cmd.
-  let Some(cmd_str) = processed_buf.next()
-  else {
-    return Ok((command, args));
-  };
-
-  command = String::try_from(cmd_str).map_err(|_| CliError::CommandTooLong)?;
-
   // ——————————————————————————————————— Processing arguments ——————————————————————————————————————
+
+  let processed_buf = processed_buf.split_ascii_whitespace();
 
   for word in processed_buf {
     // Sanitizing. Orphan "=" triggers error.
@@ -125,7 +113,7 @@ pub fn parse(
     args.push(Argument { param, value }).map_err(|_| CliError::TooManyArgs)?;
   }
 
-  Ok((command, args))
+  Ok(args)
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
@@ -155,6 +143,7 @@ pub trait ArgList {
 }
 
 impl ArgList for &[Argument] {
+  #[inline]
   fn get_parsed_param<T>(&self, param: &str) -> Result<T>
   where
     T: FromStr,
@@ -171,6 +160,7 @@ impl ArgList for &[Argument] {
     Ok(value)
   }
 
+  #[inline]
   fn get_str_param<'a>(&'a self, param: &str) -> Option<&'a str> {
     self
       .iter()
@@ -178,6 +168,7 @@ impl ArgList for &[Argument] {
       .map(move |arg| arg.value.as_str())
   }
 
+  #[inline]
   fn contains_param(&self, str: &str) -> bool {
     self.iter().any(|arg| arg.param.eq_ignore_ascii_case(str))
   }
