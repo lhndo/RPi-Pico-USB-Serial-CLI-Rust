@@ -308,7 +308,7 @@ pub fn calculate_pwm_dividers(sys_clk_hz: u32, hz: u32, top: u16, phase_correct:
   // Clamp to valid range: 1.0 to 255.9375 (16 to 4095 in fixed-point)
   let clamped = divider_x16.clamp(16, 4095);
 
-  // These are compile-time optimized to bit shifts
+  // Compile-time optimized to bit shifts
   let div_int = (clamped >> 4) as u8; // Divide by 16
   let div_frac = (clamped & 0xF) as u8; // Modulo 16
 
