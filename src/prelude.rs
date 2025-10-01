@@ -5,7 +5,6 @@
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 #![allow(unused_imports)]
-pub use core::fmt::{self, Write};
 pub use core::str::FromStr;
 pub use core::sync::atomic::Ordering;
 

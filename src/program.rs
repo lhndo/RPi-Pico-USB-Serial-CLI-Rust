@@ -4,14 +4,16 @@
 //!
 //! ```no_run
 //! fn main() -> ! {
-//!   let mut program = simple_cli::program::Program::new();
-//!   let command_list = simple_cli::commands::build_commands();
-//!   program.init(&mut device);
+//!   let command_list = simple_cli::commands::build_command_list();
+//!   let mut program = program::Program::new();
 //!   program.run(&mut device, command_list);
 //! }
 //! ```
 
-use super::*;
+use crate::simple_cli::CommandList;
+use crate::simple_cli::SimpleCli;
+
+use crate::prelude::*;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                            Globals
@@ -23,24 +25,19 @@ const CMD_BUFF_SIZE: usize = 192;
 //                                            Program
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-pub struct Program {
-  pub command_buf:  FifoBuffer<CMD_BUFF_SIZE>,
-  pub command_read: bool,
-}
+pub struct Program {}
 
 impl Program {
   pub fn new() -> Self {
-    let command_buf = FifoBuffer::new();
-    let command_read = false;
-
-    Self { command_buf, command_read }
+    Self {}
   }
 
   // —————————————————————————————————————————————————————————————————————————————————————————————————
-  //                                              Init
+  //                                           Get Connection
   // —————————————————————————————————————————————————————————————————————————————————————————————————
 
-  pub fn init(&mut self, device: &mut Device) {
+  /// Blocking function until connection is aqquired
+  fn get_connection(&mut self, device: &mut Device) {
     let led = device.outputs.get_by_id(PinID::LED).unwrap();
 
     // While we don't have a serial monitor connection we keep polling and bliking led for status
@@ -48,9 +45,16 @@ impl Program {
       led.toggle().unwrap();
       device.timer.delay_ms(80);
     }
-
     #[cfg(feature = "defmt")]
     info!("USB Serial Monitor: Connected!");
+  }
+
+  // —————————————————————————————————————————————————————————————————————————————————————————————————
+  //                                              Greet
+  // —————————————————————————————————————————————————————————————————————————————————————————————————
+
+  fn greet(&mut self, device: &mut Device) {
+    let led = device.outputs.get_by_id(PinID::LED).unwrap();
 
     // Blink leds four times to notify connected
     for _ in 0..4 {
@@ -82,23 +86,22 @@ impl Program {
   // —————————————————————————————————————————————————————————————————————————————————————————————————
 
   pub fn run(&mut self, device: &mut Device, commands: CommandList) {
-    let mut cli = Cli::new(commands);
-
-    let led = device.outputs.get_by_id(PinID::LED).unwrap();
-    led.set_high().unwrap();
+    let mut command_buf: FifoBuffer<CMD_BUFF_SIZE> = FifoBuffer::new();
+    let mut command_read = false;
+    let mut cli = SimpleCli::new(commands);
 
     loop {
       // While we don't have a serial monitor connection we keep polling
-      let led = device.outputs.get_by_id(PinID::LED).unwrap();
-      while !SERIAL.is_connected() {
-        led.toggle().unwrap();
-        device.timer.delay_ms(80);
+      if !SERIAL.is_connected() {
+        self.get_connection(device);
+        self.greet(device);
       }
 
+      let led = device.outputs.get_by_id(PinID::LED).unwrap();
       led.set_high().unwrap();
 
       // Read command
-      if !self.command_read {
+      if !command_read {
         // Print Device Status
         let temp_adc_raw: u16 = device.adcs.read_channel(TEMP_SENSE_CHN).unwrap_or(0);
         let vsys_adc_raw: u16 = device.adcs.read_channel(3).unwrap_or(0);
@@ -108,12 +111,12 @@ impl Program {
         print!("Enter Command >>> \n");
 
         // Blocking wait for command
-        self.command_buf.clear();
-        match SERIAL.read_line_blocking(self.command_buf.receive_buffer()) {
+        command_buf.clear();
+        match SERIAL.read_line_blocking(command_buf.receive_buffer()) {
           Ok(len) => {
-            self.command_buf.advance(len);
-            self.command_read = true;
-            let data = self.command_buf.get_data().as_str().unwrap();
+            command_buf.advance(len);
+            command_read = true;
+            let data = command_buf.get_data().as_str().unwrap();
             println!("\n>> Command Received: {}", data);
           },
           Err(e) => {
@@ -124,8 +127,8 @@ impl Program {
       }
 
       // Execute command
-      if self.command_read {
-        let input = self.command_buf.get_data().as_str().unwrap();
+      if command_read {
+        let input = command_buf.get_data().as_str().unwrap();
         let cmd_name = input.split_ascii_whitespace().next().unwrap_or("help");
 
         println!("\n========= RUNNING: {cmd_name} =========");
@@ -145,14 +148,14 @@ impl Program {
           .to_micros();
 
         // Cleanup
-        self.command_buf.clear();
-        self.command_read = false; // Done, accepting new cmds
+        command_buf.clear();
+        command_read = false; // Done, accepting new cmds
 
         println!("\n========= DONE in {time:.3}ms =========", time = exec_time as f32 / 1000.0);
         println!("(T: {})\n", device.timer.print_time());
       }
 
-      // Signal End
+      // Signal Command End
       let led = device.outputs.get_by_id(PinID::LED).unwrap();
       for _ in 0..3 {
         led.set_low().unwrap();

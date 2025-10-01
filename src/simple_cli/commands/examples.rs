@@ -2,6 +2,7 @@
 // Register new commands in commands.rs > Command List Builder
 
 use super::*;
+use crate::prelude::*;
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                             Example
@@ -16,7 +17,7 @@ pub fn build_example_cmd() -> Command {
   }
 }
 
-pub fn example_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn example_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();
@@ -52,7 +53,7 @@ pub fn build_blink_cmd() -> Command {
   }
 }
 
-pub fn blink_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn blink_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();
@@ -111,7 +112,7 @@ pub fn build_panic_test_cmd() -> Command {
   }
 }
 
-pub fn panic_test_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn panic_test_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();
@@ -139,7 +140,7 @@ pub fn build_servo_cmd() -> Command {
   }
 }
 
-pub fn servo_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn servo_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();
@@ -220,7 +221,7 @@ pub fn build_test_gpio_cmd() -> Command {
   }
 }
 
-pub fn test_gpio_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn test_gpio_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();
@@ -259,7 +260,7 @@ pub fn build_test_analog_cmd() -> Command {
   }
 }
 
-pub fn test_analog_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn test_analog_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();

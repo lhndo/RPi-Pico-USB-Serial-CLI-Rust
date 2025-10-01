@@ -318,6 +318,7 @@ impl Write for Serialio {
 macro_rules! print {
     ($($arg:tt)*) => {
         critical_section::with(|cs| {
+            use core::fmt::Write;
             if let Some(s) = $crate::serial_io::SERIAL_CELL.borrow_ref_mut(cs).as_mut() {
                 let _ = s.write_fmt(format_args!($($arg)*));
             }
@@ -332,6 +333,7 @@ macro_rules! println {
     };
     ($($arg:tt)*) => {
         critical_section::with(|cs| {
+            use core::fmt::Write;
             if let Some(s) = $crate::serial_io::SERIAL_CELL.borrow_ref_mut(cs).as_mut() {
                 let _ = writeln!(s, $($arg)*);
             }

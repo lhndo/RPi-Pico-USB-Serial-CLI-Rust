@@ -12,6 +12,7 @@ mod fifo_buffer;
 mod gpios;
 mod macros;
 mod prelude;
+mod program;
 mod pwms;
 mod serial_io;
 mod simple_cli;
@@ -56,9 +57,8 @@ fn main() -> ! {
   let mut device = device::Device::new();
 
   if !RUN_STANDALONE {
-    let mut program = simple_cli::program::Program::new();
-    let command_list = simple_cli::commands::build_commands();
-    program.init(&mut device);
+    let command_list = simple_cli::commands::build_command_list();
+    let mut program = program::Program::new();
     program.run(&mut device, command_list);
   }
 

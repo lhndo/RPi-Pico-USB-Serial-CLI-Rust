@@ -2,6 +2,7 @@
 // Register new commands in commands.rs > Command List Builder
 
 use super::*;
+use crate::prelude::*;
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                              Reset
@@ -16,7 +17,7 @@ pub fn build_reset_cmd() -> Command {
   }
 }
 
-pub fn reset_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn reset_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();
@@ -42,7 +43,7 @@ pub fn build_flash_cmd() -> Command {
   }
 }
 
-pub fn flash_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn flash_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();
@@ -68,7 +69,7 @@ pub fn build_set_pin_cmd() -> Command {
   }
 }
 
-pub fn set_pin_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn set_pin_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();
@@ -100,7 +101,7 @@ pub fn set_pin_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Re
     }
   }
   else {
-    return Err(CliError::CmdExec("GPIO pin not configured".into_truncate()));
+    return Err(CliError::CmdExec("GPIO pin not configured".into_truncated()));
   }
   Ok(())
 }
@@ -118,7 +119,7 @@ pub fn build_read_pin_cmd() -> Command {
   }
 }
 
-pub fn read_pin_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn read_pin_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();
@@ -146,7 +147,7 @@ pub fn read_pin_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> R
     }
   }
   else {
-    return Err(CliError::CmdExec("GPIO pin not configured".into_truncate()));
+    return Err(CliError::CmdExec("GPIO pin not configured".into_truncated()));
   }
   Ok(())
 }
@@ -164,7 +165,7 @@ pub fn build_read_adc_cmd() -> Command {
   }
 }
 
-pub fn read_adc_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn read_adc_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();
@@ -216,7 +217,7 @@ pub fn build_sample_adc_cmd() -> Command {
   }
 }
 
-pub fn sample_adc_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn sample_adc_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();
@@ -235,7 +236,7 @@ pub fn sample_adc_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) ->
       28 => channel = 2,
       29 => channel = 3,
       255 => channel = 4, // default TEMP_SENSE channel
-      _ => return Err(CliError::CmdExec("pin not configured for ADC read".into_truncate())),
+      _ => return Err(CliError::CmdExec("pin not configured for ADC read".into_truncated())),
     }
   }
 
@@ -283,7 +284,7 @@ pub fn build_set_pwm_cmd() -> Command {
   }
 }
 
-pub fn set_pwm_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn set_pwm_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();
