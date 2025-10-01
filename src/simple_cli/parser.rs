@@ -34,14 +34,22 @@ pub struct ParsedCommand {
 impl ParsedCommand {
   // ——————————————————————————————————————————— Parse —————————————————————————————————————————————
 
-  /// Takes an input str and parses it, returning a CommandWithArgs Struct.
+  /// Takes an input str and parses it, returning a ParsedCommand Struct.
   pub fn parse(input: &str) -> Result<Self> {
-    //
+    // Creating command with args Struct. Defaulting to DEFAULT_CMD cmd.
+    let mut command_with_args = ParsedCommand {
+      cmd:  String::from_str(DEFAULT_CMD).unwrap(),
+      args: Vec::new(),
+    };
+
+    if input.is_empty() {
+      return Ok(command_with_args);
+    }
+
     let mut processed_buf: String<READ_BUFFER_LENGTH> = String::new();
     let mut in_quotes = false;
 
     // Replacing spaces in quotes with SEPARATOR
-    // Converting chars to lowercase
     for char in input.chars() {
       match char {
         '"' => {
@@ -50,11 +58,8 @@ impl ParsedCommand {
         ' ' if in_quotes => {
           processed_buf.push(SEPARATOR).map_err(|_| CliError::ParseBuffer)?;
         },
-        c if c.is_ascii_uppercase() => {
-          processed_buf.push(c.to_ascii_lowercase()).map_err(|_| CliError::ParseBuffer)?;
-        },
         c => {
-          processed_buf.push(c).map_err(|_| CliError::ParseBuffer)?;
+          processed_buf.push(c.to_ascii_lowercase()).map_err(|_| CliError::ParseBuffer)?;
         },
       }
     }
@@ -63,12 +68,6 @@ impl ParsedCommand {
     if in_quotes {
       return Err(CliError::Parse("Unmatched Quotes".into_truncated()));
     }
-
-    // Creating command with args Struct. Defaulting to "help" cmd.
-    let mut command_with_args = ParsedCommand {
-      cmd:  String::from_str(DEFAULT_CMD).unwrap(),
-      args: Vec::new(),
-    };
 
     // —————————————————————————————————— Extracting command name ————————————————————————————————————
 
@@ -87,7 +86,7 @@ impl ParsedCommand {
     for word in processed_buf {
       // Sanitizing. Orphan "=" triggers error.
       if word == "=" || word.starts_with('=') {
-        return Err(CliError::Parse("\"=\" delimiter spacing".into_truncated()));
+        return Err(CliError::Parse("\"=\" spacing".into_truncated()));
       }
 
       let mut elements = word.splitn(2, '=');
