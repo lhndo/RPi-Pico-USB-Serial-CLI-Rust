@@ -8,7 +8,7 @@ pub use heapless::String;
 //                                             Globals
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
-pub const ERR_STR_LENGTH: usize = 64;
+pub const ERR_STR_LENGTH: usize = 48;
 
 pub type Result<T> = core::result::Result<T, CliError>;
 
@@ -26,6 +26,9 @@ pub enum CliError {
   MissingArg(String<ERR_STR_LENGTH>),
   CmdExec(String<ERR_STR_LENGTH>),
   CmdNotFound(String<ERR_STR_LENGTH>),
+  CommandTooLong,
+  ArgTooLong,
+  TooManyArgs,
   CriticalFail,
   Other,
   Exit,
@@ -35,7 +38,7 @@ impl fmt::Display for CliError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
       CliError::BufferWrite => {
-        write!(f, "failed to process the buffer into a valid command!")
+        write!(f, "failed to generate buffer!")
       },
       CliError::ParseBuffer => {
         write!(f, "while parsing buffer!")
@@ -50,6 +53,15 @@ impl fmt::Display for CliError {
       CliError::CmdExec(e) => write!(f, "command failed with: {e}"),
       CliError::CmdNotFound(e) => {
         write!(f, "command not found: {e}")
+      },
+      CliError::CommandTooLong => {
+        write!(f, "command too long!")
+      },
+      CliError::ArgTooLong => {
+        write!(f, "argument too long!")
+      },
+      CliError::TooManyArgs => {
+        write!(f, "too many arguments!")
       },
       CliError::CriticalFail => write!(f, "critical failure!"),
       CliError::Exit => write!(f, "exit!"),

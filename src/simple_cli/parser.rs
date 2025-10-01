@@ -19,6 +19,7 @@ const MAX_PARAM_NAME_LENGTH: usize = 16;
 const MAX_VALUE_LENGTH: usize = 64;
 
 const SEPARATOR: char = '\u{001E}';
+const ESCAPE: char = '\u{005C}';
 const DEFAULT_CMD: &str = "help";
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
@@ -48,25 +49,53 @@ impl ParsedCommand {
 
     let mut processed_buf: String<READ_BUFFER_LENGTH> = String::new();
     let mut in_quotes = false;
+    let mut escaped = false;
 
     // Replacing spaces in quotes with SEPARATOR
     for char in input.chars() {
       match char {
         '"' => {
-          in_quotes = !in_quotes;
+          if escaped && in_quotes {
+            processed_buf.push('"').map_err(|_| CliError::CommandTooLong)?;
+          }
+          else {
+            in_quotes = !in_quotes;
+          }
+          escaped = false;
         },
         ' ' if in_quotes => {
-          processed_buf.push(SEPARATOR).map_err(|_| CliError::ParseBuffer)?;
+          escaped = false;
+          processed_buf.push(SEPARATOR).map_err(|_| CliError::CommandTooLong)?;
+        },
+        ESCAPE if in_quotes => {
+          if escaped {
+            processed_buf.push(ESCAPE).map_err(|_| CliError::CommandTooLong)?;
+            escaped = false;
+          }
+          else {
+            escaped = true;
+          }
+        },
+        c if in_quotes => {
+          escaped = false;
+          processed_buf.push(c).map_err(|_| CliError::CommandTooLong)?;
         },
         c => {
-          processed_buf.push(c.to_ascii_lowercase()).map_err(|_| CliError::ParseBuffer)?;
+          processed_buf
+            .push(c.to_ascii_lowercase())
+            .map_err(|_| CliError::CommandTooLong)?;
         },
       }
     }
 
+    // Check for dangling escape character
+    if escaped {
+      return Err(CliError::Parse("dangling escape \"\\\" char".into_truncated()));
+    }
+
     // Check for unmatched quotes
     if in_quotes {
-      return Err(CliError::Parse("Unmatched Quotes".into_truncated()));
+      return Err(CliError::Parse("unmatched quotes".into_truncated()));
     }
 
     // —————————————————————————————————— Extracting command name ————————————————————————————————————
@@ -79,13 +108,13 @@ impl ParsedCommand {
       return Ok(command_with_args);
     };
 
-    command_with_args.cmd = String::try_from(cmd_str).map_err(|_| CliError::ParseBuffer)?;
+    command_with_args.cmd = String::try_from(cmd_str).map_err(|_| CliError::CommandTooLong)?;
 
     // ——————————————————————————————————— Processing arguments ——————————————————————————————————————
 
     for word in processed_buf {
       // Sanitizing. Orphan "=" triggers error.
-      if word == "=" || word.starts_with('=') {
+      if word == "=" || word.starts_with('=') || word.ends_with('=') {
         return Err(CliError::Parse("\"=\" spacing".into_truncated()));
       }
 
@@ -93,21 +122,21 @@ impl ParsedCommand {
       let param_str = elements.next().unwrap();
       let value_str = elements.next();
 
-      let param = String::try_from(param_str).map_err(|_| CliError::ParseBuffer)?;
+      let param = String::try_from(param_str).map_err(|_| CliError::ArgTooLong)?;
       let mut value: String<MAX_VALUE_LENGTH> = String::new();
 
       // If param has value, we restore the space characters
       if let Some(val_) = value_str {
         for char in val_.chars() {
           let c_to_push = if char == SEPARATOR { ' ' } else { char };
-          value.push(c_to_push).map_err(|_| CliError::ParseBuffer)?;
+          value.push(c_to_push).map_err(|_| CliError::ArgTooLong)?;
         }
       }
 
       command_with_args
         .args
         .push(Argument { param, value })
-        .map_err(|_| CliError::ParseBuffer)?;
+        .map_err(|_| CliError::TooManyArgs)?;
     }
 
     Ok(command_with_args)
@@ -165,6 +194,6 @@ impl ArgList for &[Argument] {
   }
 
   fn contains_param(&self, str: &str) -> bool {
-    self.iter().any(|arg| arg.param.contains(str))
+    self.iter().any(|arg| arg.param.eq_ignore_ascii_case(str))
   }
 }
