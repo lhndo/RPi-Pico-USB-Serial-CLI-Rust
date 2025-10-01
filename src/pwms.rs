@@ -191,6 +191,11 @@ where
   pub fn set_freq(&mut self, freq: u32) {
     self.slice.disable();
 
+    if freq == 0 {
+      self.enabled = false;
+      return;
+    }
+
     self.freq = freq;
     let top = self.slice.get_top();
     let (int, frac) = calculate_pwm_dividers(self.sys_clk_hz, freq, top, self.ph_correct);
