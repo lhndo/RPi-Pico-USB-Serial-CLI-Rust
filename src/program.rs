@@ -107,8 +107,13 @@ impl Program {
         let vsys_adc_raw: u16 = device.adcs.read_channel(3).unwrap_or(0);
         let sys_temp = 27.0 - (temp_adc_raw.to_voltage() - 0.706) / 0.001721; // RP2040 internal temp sensor calibration
 
-        print!("\n| Temp: {:.1}C A3: {:.2}V | ", sys_temp, vsys_adc_raw.to_voltage());
-        print!("Enter Command >>> \n");
+        println!(
+          "\n| Temp: {:.1}C | A3: {:.2}V | T: {} |",
+          sys_temp,
+          vsys_adc_raw.to_voltage(),
+          device.timer.print_time()
+        );
+        print!("Enter Command: \n>>> ");
 
         // Blocking wait for command
         command_buf.clear();
@@ -117,7 +122,7 @@ impl Program {
             command_buf.advance(len);
             command_read = true;
             let data = command_buf.get_data().as_str().unwrap();
-            println!("\n>> Command Received: {}", data);
+            println!("{}", data);
           },
           Err(e) => {
             println!("\nErr: {:?} \n", e);
@@ -131,8 +136,7 @@ impl Program {
         let input = command_buf.get_data().as_str().unwrap();
         let cmd_name = input.split_ascii_whitespace().next().unwrap_or("help");
 
-        println!("\n========= RUNNING: {cmd_name} =========");
-        println!("(T: {})\n", device.timer.print_time());
+        println!("\n========= RUNNING: {cmd_name} =========\n");
 
         // Time benchmark start
         let exec_time = device.timer.get_counter();
@@ -151,8 +155,7 @@ impl Program {
         command_buf.clear();
         command_read = false; // Done, accepting new cmds
 
-        println!("\n========= DONE in {time:.3}ms =========", time = exec_time as f32 / 1000.0);
-        println!("(T: {})\n", device.timer.print_time());
+        println!("\n========= DONE in {time:.3}ms =========\n", time = exec_time as f32 / 1000.0);
       }
 
       // Signal Command End
