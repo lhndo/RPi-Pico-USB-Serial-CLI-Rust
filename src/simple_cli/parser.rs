@@ -1,6 +1,6 @@
 //! Command Parser from an input &str
 /// Run parse(input: &str) to retrieve the command name a list of arguments.
-/// Use ArgList trait functions available for &[Argument] to retrieve and convert the vales.
+/// Use ArgList trait functions available for &[Argument] to retrieve and convert the values.
 pub use core::str::FromStr;
 
 use super::errors::*;
@@ -24,7 +24,7 @@ const DEFAULT_CMD: &str = "help";
 
 // ——————————————————————————————————————————— Parse —————————————————————————————————————————————
 
-/// Takes an input str and parses it, returning a touple of command, and args.
+/// Takes an input str and parses it, returning a tuple of command name, and args.
 pub fn parse(
   input: &str,
 ) -> Result<(String<MAX_CMD_NAME_LENGTH>, Vec<Argument, MAX_NUMBER_PARAMS>)> {
