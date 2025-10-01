@@ -28,9 +28,7 @@ impl SimpleCli {
 
   pub fn execute(&mut self, input: &str, context: &mut Context) -> Result<()> {
     // Parsing input str
-    let cmd_with_args = ParsedCommand::parse(input)?;
-    let cmd_name = cmd_with_args.cmd.as_str();
-    let cmd_args = cmd_with_args.args;
+    let (cmd_name, cmd_args) = parser::parse(input)?;
 
     // Check if built-in help was called
     if cmd_name == "help" {
@@ -39,7 +37,7 @@ impl SimpleCli {
     }
 
     // Execute Command
-    let command = self.command_list.get_command(cmd_name)?;
+    let command = self.command_list.get_command(cmd_name.as_str())?;
     command.run(&cmd_args, context)
   }
 
