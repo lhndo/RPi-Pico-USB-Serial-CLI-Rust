@@ -14,7 +14,9 @@ macro_rules! set_function_pins {
         };
 
       (@each ADC, $pins:ident, $obj:ident, $id:ident, $pin:literal, ADC) => {
-        paste!($obj.[<set_ $id:lower>]($pins.[<gpio $pin>]));
+        paste!(
+          $obj.register($pins.[<gpio $pin>].into_dyn_pin().into_function().into_pull_type::<DynPullType>())
+        );
       };
 
       (@each PWM, $pins:ident, $obj:ident, $id:ident, $pin:literal, PWM) => {

@@ -27,6 +27,7 @@ use crate::{build_pin_aliases, set_function_pins};
 
 use critical_section::{Mutex, with};
 use rp2040_hal as hal;
+use rp2040_hal::gpio::{AnyPin, DynPullType};
 //
 use hal::Adc;
 use hal::Clock;
@@ -44,7 +45,9 @@ use usb_device::class_prelude::*;
 use usb_device::prelude::*;
 use usbd_serial::SerialPort;
 
-// Bootloader
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                            Bootloader
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 #[unsafe(link_section = ".boot2")]
 #[used]
 pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
@@ -187,6 +190,8 @@ const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(10_000);
 // GPIO Pin ID Aliases. E.g. PinID::LED = 25 as usize
 pub struct PinID;
 setup_pins!(ALIASES, None, PinID);
+
+pub type DynPinType = gpio::Pin<gpio::DynPinId, gpio::DynFunction, gpio::DynPullType>;
 
 // ———————————————————————————————————————————————————————————————————————————————————————————————
 //                                         Device Struct
@@ -401,6 +406,12 @@ pub fn device_reset_to_usb() {
 /// Reset device
 pub fn device_reset() {
   cortex_m::peripheral::SCB::sys_reset();
+}
+
+/// Converts concrete pin into a fully dynamic pin
+pub fn pin_into_full_dynamic<P: AnyPin>(pin: P) -> DynPinType {
+  let pin: gpio::SpecificPin<P> = pin.into();
+  pin.into_dyn_pin().into_function().into_pull_type::<DynPullType>()
 }
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
