@@ -1,7 +1,6 @@
 //! Pulse Width Modulation (PWM) Wrapper for the RP2040 microcontroller
 
 use core::convert::Infallible;
-use core::stringify;
 
 use embedded_hal::pwm::SetDutyCycle;
 
@@ -10,9 +9,7 @@ use rp2040_hal as hal;
 use hal::gpio;
 use hal::pwm;
 
-use duplicate::duplicate_item;
 use heapless::Vec;
-use pastey::paste;
 
 const MAX_PWM_PINS: usize = 16;
 
@@ -35,7 +32,7 @@ pub struct Pwms {
 }
 
 struct PwmAlias {
-  gpio:     u8,
+  gpio_id:  u8,
   slice_id: u8,
   channel:  Channel,
 }
@@ -49,50 +46,6 @@ pub enum Channel {
 // ————————————————————————————————————————— Pwms Impl ————————————————————————————————————————————
 
 impl Pwms {
-  // Generating pub fn set_pwm0_a(pin) ..
-  #[duplicate_item(
-    pwm_slice pwm_chan;
-    [0]       [A];
-    [1]       [A];
-    [2]       [A];
-    [3]       [A];
-    [4]       [A];
-    [5]       [A];
-    [6]       [A];
-    [7]       [A];
-    [0]       [B];
-    [1]       [B];
-    [2]       [B];
-    [3]       [B];
-    [4]       [B];
-    [5]       [B];
-    [6]       [B];
-    [7]       [B];
-    )]
-  paste! {
-  /// Assign GPIO pin to corresponding PWM slice
-  pub fn [<set_pwm pwm_slice _ pwm_chan:lower>]<P: gpio::AnyPin>(&mut self, pin: P)
-  where
-    P::Id: pwm::ValidPwmOutputPin<pwm::[<Pwm pwm_slice>], pwm::[<pwm_chan>]>
-   {
-      // Setting pwm slice output to gpio pin
-      let pin = self.[<pwm pwm_slice>].[<get_channel _ pwm_chan:lower>]().output_to(pin);
-
-      // Registering Pin alias and storing gpio ID, PWM Slice ID and Channel
-      // Used for later retrieval
-      let gpio = pin.id().num;
-      let chan_str = stringify!(pwm_chan);
-      let channel = if chan_str == "A" {Channel::A} else {Channel::B};
-
-      // Creating Pin Alias used for slice and channel retrival by gpio id
-      let _ = self.pwm_aliases.push(
-        PwmAlias{
-          gpio,
-          slice_id: pwm_slice,
-          channel
-        });
-  }}
-
   pub fn new(slices: pwm::Slices, sys_clk_hz: u32, default_freq: u32) -> Self {
     Pwms {
       pwm0:        PwmSlice::new(slices.pwm0, default_freq, false, sys_clk_hz),
@@ -107,19 +60,56 @@ impl Pwms {
     }
   }
 
+  // Direct PWM pin output registration bypassing type safe HAL limitation
+  pub fn register(&mut self, gpio_id: u8) {
+    // Calculate slice and channel from GPIO number
+    let slice_id = (gpio_id >> 1) & 0x7;
+    let channel = if gpio_id & 1 == 0 { Channel::A } else { Channel::B };
+
+    // Creating pins directly due to HAL type restrictions
+    unsafe {
+      let io_bank0 = &(*hal::pac::IO_BANK0::ptr());
+      let current_func = io_bank0.gpio(gpio_id as usize).gpio_ctrl().read().funcsel().bits();
+
+      // Function codes on RP2040:
+      // 0 = XIP (flash)
+      // 1 = SPI
+      // 2 = UART
+      // 3 = I2C
+      // 4 = PWM
+      // 5 = SIO (regular GPIO)
+      // 6-8 = PIO0-2
+      // 9 = CLOCK
+      // 31 = NULL (reset/unused)
+
+      match current_func {
+        31 => {},
+        _ => {
+          unreachable!("PWM in use by other");
+        },
+      }
+
+      io_bank0.gpio(gpio_id as usize).gpio_ctrl().write(|w| w.funcsel().pwm());
+    }
+
+    // Creating Pin Alias used for slice and channel retrival by gpio id
+    let _ = self.pwm_aliases.push(PwmAlias {
+      gpio_id,
+      slice_id,
+      channel,
+    });
+  }
+
   /// Returns Slice ID AND Channel associated with the gpio pin
-  pub fn get_slice_id_by_gpio(&self, gpio: u8) -> Option<(u8, Channel)> {
-    let alias = self.pwm_aliases.iter().find(|alias| alias.gpio == gpio)?;
+  pub fn get_pwm_id_by_gpio(&self, gpio: u8) -> Option<(u8, Channel)> {
+    let alias = self.pwm_aliases.iter().find(|alias| alias.gpio_id == gpio)?;
     Some((alias.slice_id, alias.channel))
   }
 
   /// Get PWM Slice Channel from GPIO id
-  pub fn get_channel_by_gpio(
-    &mut self,
-    gpio: u8,
-  ) -> Option<&mut dyn SetDutyCycle<Error = Infallible>> {
+  pub fn get_by_gpio_id(&mut self, gpio: u8) -> Option<&mut dyn SetDutyCycle<Error = Infallible>> {
     //
-    let (slice_id, channel) = self.get_slice_id_by_gpio(gpio)?;
+    let (slice_id, channel) = self.get_pwm_id_by_gpio(gpio)?;
 
     Some(match (slice_id, channel) {
       (0, Channel::A) => self.pwm0.get_channel_a(),
@@ -242,7 +232,7 @@ where
 
   /// Only use for functions not covered by this wrapper.
   /// Don't set enable, freq, ph_correct, top directly
-  pub fn get_slice(&mut self) -> &mut pwm::Slice<I, <I as pwm::SliceId>::Reset> {
+  pub fn get_pwm_slice(&mut self) -> &mut pwm::Slice<I, <I as pwm::SliceId>::Reset> {
     &mut self.slice
   }
 

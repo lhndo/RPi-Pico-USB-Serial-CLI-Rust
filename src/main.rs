@@ -6,11 +6,11 @@
 #![no_main]
 
 mod adcs;
+mod config;
 mod delay;
 mod device;
 mod fifo_buffer;
 mod gpios;
-mod macros;
 mod prelude;
 mod program;
 mod pwms;
@@ -20,11 +20,8 @@ mod state;
 mod tasklet;
 
 // ———————————————————————————————————— Debug dfmt features ——————————————————————————————————————
-#[cfg(all(feature = "defmt", not(feature = "defmt-bypass")))]
+#[cfg(feature = "defmt")]
 use defmt_rtt as _;
-
-#[cfg(all(feature = "defmt", feature = "defmt-bypass"))]
-mod defmt_bypass;
 
 #[allow(unused_imports)]
 #[cfg(feature = "defmt")]

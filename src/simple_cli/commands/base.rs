@@ -80,7 +80,7 @@ pub fn set_pin_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Res
   let high = args.contains_param("high");
   let low = args.contains_param("low");
 
-  if let Some(pin) = device.outputs.get_by_id(gpio_id) {
+  if let Some(pin) = device.outputs.get_by_gpio_id(gpio_id) {
     if high {
       println!("GPIO {gpio_id}: Set HIGH");
       pin.set_high().unwrap();
@@ -128,7 +128,7 @@ pub fn read_pin_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Re
 
   let gpio_id: u8 = args.get_parsed_param("gpio").unwrap_or(1);
 
-  if let Some(pin) = device.outputs.get_by_id(gpio_id) {
+  if let Some(pin) = device.outputs.get_by_gpio_id(gpio_id) {
     print!("GPIO {gpio_id}: ");
     if pin.is_set_high().unwrap() {
       println!("HIGH");
@@ -137,7 +137,7 @@ pub fn read_pin_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Re
       println!("LOW");
     }
   }
-  else if let Some(pin) = device.outputs.get_by_id(gpio_id) {
+  else if let Some(pin) = device.outputs.get_by_gpio_id(gpio_id) {
     print!("GPIO {gpio_id}: ");
     if pin.is_set_high().unwrap() {
       println!("HIGH");

@@ -21,7 +21,7 @@ nb          = "1.1.0"
 heapless    = "0.9.1"
 pastey      = "0.1.1"
 duplicate   = "2.0.0"
-
+once_cell   = { version = "1.21.3", default-features = false, features = ["critical-section"] }
 
 # Optional Dependencies
 defmt     = { version = "1.0.1", optional = true }
@@ -40,8 +40,6 @@ default-dev = ["defmt"]
 # Custom panic and logging strategies
 # E.g. cargo build --no-default-features --features "defmt"
 defmt = ["dep:defmt", "dep:defmt-rtt", "rp2040-hal/defmt", "panic-probe"]
-
-defmt-bypass = [] # include this into defmt feature set to bypass defmt and reduce release memory size
 
 # Panic Strategies
 panic-usb     = ["dep:rp2040-panic-usb-boot"]
