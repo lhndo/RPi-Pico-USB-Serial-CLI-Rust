@@ -137,15 +137,6 @@ pub fn read_pin_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Re
       println!("LOW");
     }
   }
-  else if let Some(pin) = device.outputs.get(gpio_id) {
-    print!("GPIO {gpio_id}: ");
-    if pin.is_set_high().unwrap() {
-      println!("HIGH");
-    }
-    else {
-      println!("LOW");
-    }
-  }
   else {
     return Err(CliError::CmdExec("GPIO pin not configured".into_truncated()));
   }
