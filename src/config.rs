@@ -134,7 +134,7 @@ static PIN_DEFINITION: &[Def] = {
 
 pub static CONFIG: Lazy<Config> = Lazy::new(|| Config::new(PIN_DEFINITION));
 
-const PINOUT_CAPACITY: usize = 40;
+const PINOUT_CAPACITY: usize = 30;
 
 pub type Result<T> = core::result::Result<T, ConfigError>;
 pub type FullDynPinType = gpio::Pin<gpio::DynPinId, gpio::DynFunction, gpio::DynPullType>;
@@ -227,7 +227,7 @@ impl Config {
     self.pins.iter().find(|pin| pin.id == id).map(|def| def.group)
   }
 
-  /// Takes a pin from the global config, outputing a DynPinId of the requested function and pull type
+  /// Creates a DynPinId of the requested function and pull type, and marks the pin taken
   pub fn take_pin<F, P>(&self, id: u8) -> Result<gpio::Pin<DynPinId, F, P>>
   where
     F: gpio::Function,
@@ -246,7 +246,7 @@ impl Config {
     Ok(pin)
   }
 
-  /// Takes a pin from the global config outputing, a DynPinId of the requested function and pull type
+  /// Creates a DynPinId of the requested function and pull type, and marks the pin taken
   pub fn take_pin_by_alias<F, P>(&self, alias: &str) -> Result<gpio::Pin<DynPinId, F, P>>
   where
     F: gpio::Function,
@@ -261,7 +261,7 @@ impl Config {
 //                                       Internal Pin Definition
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
-// Pin configuration layout.
+/// Pin configuration layout.
 pub struct PinDef {
   pub alias: &'static str,
   pub id:    u8,
@@ -293,7 +293,7 @@ pub struct Def {
   pub group: Group,
 }
 
-// Pin id def state.
+// Pin gpio id definition
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum PinId {
   Gpio(u8),

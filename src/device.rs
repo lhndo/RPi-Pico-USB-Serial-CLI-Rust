@@ -25,7 +25,6 @@ use crate::serial_io;
 use crate::serial_io::SERIAL;
 use crate::state::State;
 
-use critical_section::{Mutex, with};
 use rp2040_hal as hal;
 //
 use hal::Adc;
@@ -37,7 +36,7 @@ use hal::timer::{Alarm, Timer};
 use hal::{clocks, gpio, pac, pwm, sio, timer, usb, watchdog};
 
 use cortex_m::delay::Delay;
-
+use critical_section::{Mutex, with};
 use heapless::String;
 use usb_device::class_prelude::*;
 use usb_device::prelude::*;
