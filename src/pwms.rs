@@ -17,7 +17,7 @@ const MAX_PWM_PINS: usize = 16;
 //                                              Pwms
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-pub type RawPin<T> = gpio::Pin<T, gpio::FunctionNull, gpio::PullDown>;
+pub type PwmPinType = gpio::Pin<gpio::DynPinId, gpio::FunctionPwm, gpio::PullNone>;
 
 pub struct Pwms {
   pub pwm0:    PwmSlice<pwm::Pwm0>,
@@ -61,7 +61,10 @@ impl Pwms {
   }
 
   // Direct PWM pin output registration bypassing type safe HAL limitation
-  pub fn register(&mut self, gpio_id: u8) {
+  pub fn register(&mut self, pin: PwmPinType) {
+    // Getting gpio id
+    let gpio_id = pin.id().num;
+
     // Calculate slice and channel from GPIO number
     let slice_id = (gpio_id >> 1) & 0x7;
     let channel = if gpio_id & 1 == 0 { Channel::A } else { Channel::B };
@@ -83,9 +86,9 @@ impl Pwms {
       // 31 = NULL (reset/unused)
 
       match current_func {
-        31 => {},
+        4 => {},
         _ => {
-          unreachable!("PWM in use by other");
+          unreachable!("PWM pin in use");
         },
       }
 
@@ -107,7 +110,10 @@ impl Pwms {
   }
 
   /// Get PWM Slice Channel from GPIO id
-  pub fn get_by_gpio_id(&mut self, gpio: u8) -> Option<&mut dyn SetDutyCycle<Error = Infallible>> {
+  pub fn get_channel_by_gpio_id(
+    &mut self,
+    gpio: u8,
+  ) -> Option<&mut dyn SetDutyCycle<Error = Infallible>> {
     //
     let (slice_id, channel) = self.get_pwm_id_by_gpio(gpio)?;
 

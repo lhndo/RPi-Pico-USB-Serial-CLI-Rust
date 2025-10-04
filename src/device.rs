@@ -16,7 +16,7 @@ use core::fmt::Write;
 use core::sync::atomic::{AtomicU32, Ordering};
 
 use crate::adcs::Adcs;
-use crate::config::{self, CONFIG, RawDynPinType};
+use crate::config::{self, CONFIG};
 use crate::delay;
 use crate::delay::DELAY;
 use crate::gpios::{InputType, IoPins, OutputType};
@@ -171,8 +171,8 @@ impl Device {
 
     for id in CONFIG.get_group_iter(config::Group::Pwm) {
       // Consuming the pin since PWM sets the pin function internally
-      let _: RawDynPinType = CONFIG.take_pin(id).unwrap();
-      pwms.register(id);
+      let pin = CONFIG.take_pin(id).unwrap();
+      pwms.register(pin);
     }
 
     // ———————————————————————————————————— Extra Function Pins ———————————————————————————————————
@@ -186,12 +186,12 @@ impl Device {
 
     for id in CONFIG.get_group_iter(config::Group::Inputs) {
       let pin = CONFIG.take_pin(id).unwrap();
-      inputs.add_pin(pin, id);
+      inputs.register(pin);
     }
 
     for id in CONFIG.get_group_iter(config::Group::Outputs) {
       let pin = CONFIG.take_pin(id).unwrap();
-      outputs.add_pin(pin, id);
+      outputs.register(pin);
     }
 
     // ————————————————————————————————————————— Interrupts ———————————————————————————————————————

@@ -286,7 +286,7 @@ pub fn test_analog_cmd(cmd: &Command, args: &[Argument], device: &mut Device) ->
   SERIAL.clear_interrupt_cmd();
   while !SERIAL.interrupt_cmd_triggered() {
     // Analog Read
-    if let Some(r) = device.adcs.read_channel(adc_channel) {
+    if let Some(r) = device.adcs.read(adc_channel) {
       let adc_v = r.to_voltage().clamp(0.0, MAX_V);
 
       // PWM

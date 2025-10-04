@@ -29,35 +29,13 @@ impl<F: Function, P: PullType> IoPins<Pin<gpio::DynPinId, F, P>> {
     Self { pins }
   }
 
-  pub fn add_pin(&mut self, pin: Pin<gpio::DynPinId, F, P>, id: u8) {
+  /// Register pin
+  pub fn register(&mut self, pin: Pin<gpio::DynPinId, F, P>) {
+    let id = pin.id().num;
     if id >= NUM_MCU_PINS as u8 {
       panic!("ID > NUM_MCU_PINS")
     }
     self.pins[id as usize] = Some(pin);
-  }
-
-  /// Add a pin by GPIO ID
-  ///
-  /// # Safety
-  /// The caller must ensure that no other instance of this pin exists
-  pub fn register_pin_by_gpio_id(&mut self, gpio_id: u8) {
-    if gpio_id >= NUM_MCU_PINS as u8 {
-      panic!("ID > NUM_MCU_PINS")
-    }
-
-    let pin = unsafe {
-      gpio::new_pin(gpio::DynPinId {
-        bank: gpio::DynBankId::Bank0,
-        num:  gpio_id,
-      })
-    };
-
-    let pin = pin
-      .try_into_function::<F>()
-      .map(|p| p.into_pull_type::<P>())
-      .expect("gpio pin config error");
-
-    self.pins[gpio_id as usize] = Some(pin);
   }
 }
 

@@ -55,13 +55,13 @@ impl Adcs {
   }
 
   /// Returns the main HAL ADC object
-  pub fn get_hal_adc(&mut self) -> &mut Adc {
+  pub fn get_adc(&mut self) -> &mut Adc {
     &mut self.hal_adc
   }
 
   /// One shot read of the ADC channel 0-3, and 4 as TEMP_SENSE channel
   /// Returns Some or None
-  pub fn read_channel(&mut self, id: u8) -> Option<u16> {
+  pub fn read(&mut self, id: u8) -> Option<u16> {
     match id {
       0 => self.adc0.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
       1 => self.adc1.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
@@ -73,13 +73,13 @@ impl Adcs {
   }
 
   /// One shot read based on the Pin ID (4 as TEMP_SENSE ID)
-  pub fn read_channel_by_gpio_id(&mut self, gpio: u8) -> Option<u16> {
+  pub fn read_by_gpio_id(&mut self, gpio: u8) -> Option<u16> {
     match gpio {
-      26 => self.read_channel(0),
-      27 => self.read_channel(1),
-      28 => self.read_channel(2),
-      29 => self.read_channel(3),
-      TEMP_SENSE_CHN => self.read_channel(TEMP_SENSE_CHN),
+      26 => self.read(0),
+      27 => self.read(1),
+      28 => self.read(2),
+      29 => self.read(3),
+      TEMP_SENSE_CHN => self.read(TEMP_SENSE_CHN),
       _ => None,
     }
   }
