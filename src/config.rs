@@ -56,7 +56,7 @@ use hal::gpio::{AnyPin, DynPinId, DynPullType};
 // | A4      | Temperature           | Read onboard temperature sensor                                                        |
 
 #[rustfmt::skip]
-static PIN_DEFINITION: &[Def] = {
+const PIN_DEFINITION: &[Def] = {
   use Group::*;
   use PinId::*;
 
