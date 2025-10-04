@@ -18,7 +18,7 @@ target = "thumbv6m-none-eabi"
 
 
 [env]
-DEFMT_LOG = "debug"
+DEFMT_LOG = "trace"
 
 
 [alias]
