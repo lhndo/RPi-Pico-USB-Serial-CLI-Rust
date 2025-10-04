@@ -42,7 +42,7 @@ impl<F: Function, P: PullType> IoPins<Pin<gpio::DynPinId, F, P>> {
 impl<T> IoPins<T> {
   /// Get a mutable reference to a pin by its GPIO number.
   #[inline]
-  pub fn get_by_gpio_id(&mut self, id: u8) -> Option<&mut T> {
+  pub fn get(&mut self, id: u8) -> Option<&mut T> {
     if id >= NUM_MCU_PINS as u8 {
       return None;
     }

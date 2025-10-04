@@ -68,7 +68,7 @@ pub fn blink_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Resul
 // Separating functions from commands for stand alone use
 pub fn blink(device: &mut Device, times: u16, interval: u16) -> Result<()> {
   println!("---- Blinking Led! ----");
-  let led = device.outputs.get_by_gpio_id(gpio!(LED)).unwrap();
+  let led = device.outputs.get(gpio!(LED)).unwrap();
   let mut blink = 1;
 
   // Non blocking timer based task
@@ -230,8 +230,8 @@ pub fn test_gpio_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> R
   println!("---- Testing GPIO ----");
   println!("Send '~' to exit\n");
 
-  let input = device.inputs.get_by_gpio_id(gpio!(IN_A)).unwrap();
-  let output = device.outputs.get_by_gpio_id(gpio!(OUT_A)).unwrap();
+  let input = device.inputs.get(gpio!(IN_A)).unwrap();
+  let output = device.outputs.get(gpio!(OUT_A)).unwrap();
 
   SERIAL.clear_interrupt_cmd();
   while !SERIAL.interrupt_cmd_triggered() {
