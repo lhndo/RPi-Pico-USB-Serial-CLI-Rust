@@ -59,7 +59,6 @@ pub fn blink_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Resu
 pub fn blink(device: &mut Device, times: u16, interval: u16) -> Result<()> {
   println!("---- Blinking Led! ----");
   let led = device.outputs.get_by_gpio_id(gpio!(LED)).unwrap();
-  let blink = 1;
 
   for n in 1..=times {
     print!("Blink {} | ", n);
