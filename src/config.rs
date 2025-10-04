@@ -13,9 +13,6 @@ use rp2040_hal::gpio::{FunctionNull, PullDown};
 use hal::gpio;
 use hal::gpio::{AnyPin, DynPinId, DynPullType};
 
-use Group::*;
-use PinId::*;
-
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                        Pin Configuration
 // —————————————————————————————————————————————————————————————————————————————————————————————————
@@ -60,6 +57,9 @@ use PinId::*;
 
 #[rustfmt::skip]
 static PIN_DEFINITION: &[Def] = {
+  use Group::*;
+  use PinId::*;
+
     &[
         //           Alias       GPIO            Group           Valid Pins
         // ADC
@@ -372,4 +372,11 @@ impl fmt::Display for ConfigError {
       _ => write!(f, "config err!"),
     }
   }
+}
+
+#[macro_export]
+macro_rules! gpio {
+  ($alias:ident) => {
+    $crate::config::CONFIG.get_id(stringify!($alias)).unwrap()
+  };
 }

@@ -62,7 +62,7 @@ pub static SYS_CLK_HZ: AtomicU32 = AtomicU32::new(0);
 
 // Interrupts
 static ALARM_0: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(None));
-const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(10_000); // 10ms - 100hz
+const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(100_000); // 100ms - 10hz
 
 // ———————————————————————————————————————————————————————————————————————————————————————————————
 //                                         Device Struct
@@ -118,7 +118,7 @@ impl Device {
 
     // ———————————————————————————————————————— USB Bus ———————————————————————————————————————————
 
-    // UsbBus used for creation of Serial and UsbDevice
+    // UsbBus used for the creation of the Serial and UsbDevice
     let usb_bus_alloc = UsbBusAllocator::new(usb::UsbBus::new(
       pac.USBCTRL_REGS,
       pac.USBCTRL_DPRAM,
@@ -133,7 +133,7 @@ impl Device {
 
     // ————————————————————————————————————— Serial Port ————————————————————————————————————————
 
-    // SerialPort needs to be created before UsbDev and requires a reference to the UsbBus
+    // SerialPort has to be created before UsbDev and requires a reference to UsbBus
     let serial_port = SerialPort::new(usb_bus);
 
     // ——————————————————————————————————————— Usb Device —————————————————————————————————————————
@@ -155,7 +155,7 @@ impl Device {
 
     // —————————————————————————————————————————— ADC —————————————————————————————————————————————
 
-    // The hal_adc (device.adcs.hal_adc) is the main interface for interracting with the ADC
+    // Creating and initializing the hal ADC
     let mut hal_adc = Adc::new(pac.ADC, &mut pac.RESETS); // Needs to be set after clocks
     let temp_sense = hal_adc.take_temp_sensor().unwrap();
     let mut adcs = Adcs::new(hal_adc, temp_sense);
@@ -313,7 +313,6 @@ fn USBCTRL_IRQ() {
   SERIAL.poll_usb();
 
   // We search the rx buffer for an interrupt character and flush the rest
-  // This is ok since all explicit reads are done in CS blocks in the main program loop
-  // If we don't read the data, the interrupt will keep firing freezing the device
+  // If we don't read the data, the interrupt will cause an interrupt storm freezing the device.
   SERIAL.poll_for_interrupt_cmd();
 }

@@ -18,7 +18,7 @@ pub use crate::gpios::IoPins;
 pub use crate::pwms::PwmChannelExt;
 pub use crate::serial_io::SERIAL;
 pub use crate::tasklet::Tasklet;
-pub use crate::{print, println, with_pwm_slice};
+pub use crate::{gpio, print, println, with_pwm_slice};
 
 pub use embedded_hal::digital::{InputPin, OutputPin, StatefulOutputPin};
 pub use embedded_hal::pwm::SetDutyCycle;

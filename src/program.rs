@@ -38,8 +38,7 @@ impl Program {
 
   /// Blocking function until connection is aqquired
   fn get_connection(&mut self, device: &mut Device) {
-    let led_id = CONFIG.get_id("LED").unwrap();
-    let led = device.outputs.get_by_gpio_id(led_id).unwrap();
+    let led = device.outputs.get_by_gpio_id(gpio!(LED)).unwrap();
 
     // While we don't have a serial monitor connection we keep polling and bliking led for status
     while !SERIAL.is_connected() {
@@ -55,8 +54,7 @@ impl Program {
   // —————————————————————————————————————————————————————————————————————————————————————————————————
 
   fn greet(&mut self, device: &mut Device) {
-    let led_id = CONFIG.get_id("LED").unwrap();
-    let led = device.outputs.get_by_gpio_id(led_id).unwrap();
+    let led = device.outputs.get_by_gpio_id(gpio!(LED)).unwrap();
 
     // Blink leds four times to notify connected
     for _ in 0..4 {
@@ -91,7 +89,6 @@ impl Program {
     let mut command_buf: FifoBuffer<CMD_BUFF_SIZE> = FifoBuffer::new();
     let mut command_read = false;
     let mut cli = SimpleCli::new(commands);
-    let led_id = CONFIG.get_id("LED").unwrap();
 
     loop {
       // While we don't have a serial monitor connection we keep polling
@@ -100,7 +97,7 @@ impl Program {
         self.greet(device);
       }
 
-      let led = device.outputs.get_by_gpio_id(led_id).unwrap();
+      let led = device.outputs.get_by_gpio_id(gpio!(LED)).unwrap();
       led.set_high().unwrap();
 
       // Read command
@@ -162,7 +159,7 @@ impl Program {
       }
 
       // Signal Command End
-      let led = device.outputs.get_by_gpio_id(led_id).unwrap();
+      let led = device.outputs.get_by_gpio_id(gpio!(LED)).unwrap();
       for _ in 0..3 {
         led.set_low().unwrap();
         device.timer.delay_ms(50);

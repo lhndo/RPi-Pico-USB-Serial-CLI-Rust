@@ -58,8 +58,7 @@ pub fn blink_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Resu
 // Separating functions from commands for stand alone use
 pub fn blink(device: &mut Device, times: u16, interval: u16) -> Result<()> {
   println!("---- Blinking Led! ----");
-  let led_id = CONFIG.get_id("LED").unwrap();
-  let led = device.outputs.get_by_gpio_id(led_id).unwrap();
+  let led = device.outputs.get_by_gpio_id(gpio!(LED)).unwrap();
   let blink = 1;
 
   for n in 1..=times {
