@@ -1,13 +1,11 @@
-## Note:
+
+![RPI-PICO-USB-SERIAL-CLI-RUST](.github/serial.gif)  
+
+
+## Notes:
 
 * The intent is to develop an easy prototyping framework by using the **Raspberry Pi Pico** over **Serial USB** though a **CLI**
 * This project is in an early WIP stage and I'm using it for learning and experimenting with Rust/Embedded development
-
-
-
-
-
-
 
 ## Setup:
 
