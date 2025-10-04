@@ -31,6 +31,7 @@ pub fn build_command_list() -> CommandList {
   command_list.register_command(build_read_adc_cmd());
   command_list.register_command(build_sample_adc_cmd());
   command_list.register_command(build_set_pwm_cmd());
+  command_list.register_command(build_log_cmd());
 
   // Examples
   command_list.register_command(build_example_cmd());
@@ -39,6 +40,7 @@ pub fn build_command_list() -> CommandList {
   command_list.register_command(build_servo_cmd());
   command_list.register_command(build_test_gpio_cmd());
   command_list.register_command(build_test_analog_cmd());
+  command_list.register_command(build_test_log_cmd());
 
   command_list
 }

@@ -11,6 +11,7 @@ mod delay;
 mod device;
 mod fifo_buffer;
 mod gpios;
+mod log;
 mod prelude;
 mod program;
 mod pwms;
@@ -48,7 +49,7 @@ const RUN_STANDALONE: bool = false;
 #[rp2040_hal::entry]
 fn main() -> ! {
   //
-  #[cfg(feature = "defmt")]
+
   info!("Alive! {} : v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
 
   let mut device = device::Device::new();

@@ -304,3 +304,58 @@ pub fn test_analog_cmd(cmd: &Command, args: &[Argument], device: &mut Device) ->
   println!("Done!");
   Ok(())
 }
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                            Test Log
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
+pub fn build_test_log_cmd() -> Command {
+  Command {
+    name: "test_log",
+    desc: "Test the logging system",
+    help: "test_log [level=\"\"(string)] [help] ",
+    func: test_log_cmd,
+  }
+}
+
+pub fn test_log_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
+  // Print Help
+  if args.contains_param("help") {
+    cmd.print_help();
+    return Ok(());
+  }
+  let level: &str = args.get_str_param("level").unwrap_or("");
+
+  // Need if else for ignore case
+  if level.eq_ignore_ascii_case("off") {
+    LOG.set(LogLevel::Off)
+  }
+  else if level.eq_ignore_ascii_case("error") {
+    LOG.set(LogLevel::Error)
+  }
+  else if level.eq_ignore_ascii_case("warn") {
+    LOG.set(LogLevel::Warn)
+  }
+  else if level.eq_ignore_ascii_case("info") {
+    LOG.set(LogLevel::Info)
+  }
+  else if level.eq_ignore_ascii_case("debug") {
+    LOG.set(LogLevel::Debug)
+  }
+  else if level.eq_ignore_ascii_case("trace") {
+    LOG.set(LogLevel::Trace)
+  }
+  else if !level.is_empty() {
+    println!("Unknown level!\n Levels: off, error, warn, info, debug, trace\n")
+  }
+
+  println!("Log Level: {}\n", LOG.get());
+
+  error!("Error");
+  warn!("Warn");
+  info!("Info");
+  debug!("Debug");
+  trace!("Trace");
+
+  Ok(())
+}
