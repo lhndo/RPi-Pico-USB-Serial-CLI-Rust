@@ -82,7 +82,7 @@ pub fn blink(device: &mut Device, times: u16, interval: u16) -> Result<()> {
 ### Configuration Example
 
 ```rust
-static PIN_DEFINITION: &[Def] = {
+const PIN_DEFINITION: &[Def] = {
     &[
         //           Alias       GPIO            Group           Valid Pins
         // ADC
