@@ -45,7 +45,6 @@ impl Program {
       led.toggle().unwrap();
       device.timer.delay_ms(80);
     }
-    #[cfg(feature = "defmt")]
     info!("USB Serial Monitor: Connected!");
   }
 
@@ -105,7 +104,7 @@ impl Program {
         // Print Device Status
         let temp_adc_raw: u16 = device.adcs.read(TEMP_SENSE_CHN).unwrap_or(0);
         let vsys_adc_raw: u16 = device.adcs.read(3).unwrap_or(0);
-        let sys_temp = 27.0 - (temp_adc_raw.to_voltage() - 0.706) / 0.001721; // RP2040 internal temp sensor calibration
+        let sys_temp = 27.0 - (temp_adc_raw.to_voltage() - 0.706) / 0.001721; // RP2040 temp sensor calibration
 
         println!(
           "\n| Temp: {:.1}C | A3: {:.2}V | T: {} |",

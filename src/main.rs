@@ -26,7 +26,7 @@ use defmt_rtt as _;
 
 #[allow(unused_imports)]
 #[cfg(feature = "defmt")]
-use defmt::{debug, error, info, warn};
+use defmt::{debug, error, info, trace, warn};
 
 // ——————————————————————————————— Panic handler select features ——————————————————————————————————
 #[cfg(feature = "panic-probe")]
