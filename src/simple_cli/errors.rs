@@ -36,37 +36,21 @@ pub enum CliError {
 
 impl fmt::Display for CliError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    match self {
-      CliError::BufferWrite => {
-        write!(f, "failed to generate buffer!")
-      },
-      CliError::ParseBuffer => {
-        write!(f, "while parsing buffer!")
-      },
-      CliError::IoInput => write!(f, "IO Input!"),
-      CliError::Parse(e) => {
-        write!(f, "argument parse: {e}")
-      },
-      CliError::MissingArg(e) => {
-        write!(f, "missing argument <{e}>")
-      },
-      CliError::CmdExec(e) => write!(f, "command failed with: {e}"),
-      CliError::CmdNotFound(e) => {
-        write!(f, "command not found: {e}")
-      },
-      CliError::CommandTooLong => {
-        write!(f, "command too long!")
-      },
-      CliError::ArgTooLong => {
-        write!(f, "argument too long!")
-      },
-      CliError::TooManyArgs => {
-        write!(f, "too many arguments!")
-      },
-      CliError::CriticalFail => write!(f, "critical failure!"),
-      CliError::Exit => write!(f, "exit!"),
-      CliError::Other => write!(f, "internal error!"),
-    }
+    write!(f, "{}", match self {
+      CliError::BufferWrite => "failed to generate buffer!",
+      CliError::ParseBuffer => "while parsing buffer!",
+      CliError::IoInput => "IO Input!",
+      CliError::Parse(e) => return write!(f, "argument parse: {e}"),
+      CliError::MissingArg(e) => return write!(f, "missing argument <{e}>"),
+      CliError::CmdExec(e) => return write!(f, "command failed with: {e}"),
+      CliError::CmdNotFound(e) => return write!(f, "command not found: {e}"),
+      CliError::CommandTooLong => "command too long!",
+      CliError::ArgTooLong => "argument too long!",
+      CliError::TooManyArgs => "too many arguments!",
+      CliError::CriticalFail => "critical failure!",
+      CliError::Exit => "exit!",
+      CliError::Other => "internal error!",
+    })
   }
 }
 
