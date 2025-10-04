@@ -5,17 +5,12 @@
 //!
 //! Example - Non blocking timer based task:
 //! ```no_run
-//!   
-//! let mut ledtask = Tasklet::new(interval as u32, times * 2, &device.timer);
+//! 
+//! let mut ledtask = Tasklet::new(200, 10, &device.timer);
 //!
 //! while !ledtask.is_exhausted() {
 //!   if ledtask.is_ready() {
 //!     led.toggle().unwrap();
-//!
-//!     if led.is_set_high().unwrap() {
-//!       print!("Blink {} | ", blink);
-//!       blink += 1;
-//!     }
 //!   }
 //! ```
 
