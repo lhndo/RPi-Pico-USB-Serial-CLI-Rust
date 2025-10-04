@@ -5,7 +5,7 @@
 //! and system resources. It handles the low-level HAL boilerplate and presents
 //! an organized interface for application code.
 //!
-//! The main Pin Configuration is done thought the setup_pins macro data structure
+//! The main Pin Configuration is done thought config.rs
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                           Device
