@@ -29,7 +29,8 @@ pub struct Adcs {
 }
 
 impl Adcs {
-  pub fn new(hal_adc: Adc, temp_sense: TempSense) -> Self {
+  pub fn new(mut hal_adc: Adc) -> Self {
+    let temp_sense = hal_adc.take_temp_sensor().unwrap();
     Self {
       hal_adc,
       temp_sense,

@@ -155,9 +155,8 @@ impl Device {
     // —————————————————————————————————————————— ADC —————————————————————————————————————————————
 
     // Creating and initializing the hal ADC
-    let mut hal_adc = Adc::new(pac.ADC, &mut pac.RESETS); // Needs to be set after clocks
-    let temp_sense = hal_adc.take_temp_sensor().unwrap();
-    let mut adcs = Adcs::new(hal_adc, temp_sense);
+    let hal_adc = Adc::new(pac.ADC, &mut pac.RESETS); // Needs to be set after clocks
+    let mut adcs = Adcs::new(hal_adc);
 
     for id in CONFIG.get_group_iter(config::Group::Adc) {
       let pin = CONFIG.take_pin(id).unwrap();
