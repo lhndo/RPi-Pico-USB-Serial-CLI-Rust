@@ -104,18 +104,18 @@ impl Pwms {
   }
 
   /// Returns Slice ID AND Channel associated with the gpio pin
-  pub fn get_pwm_id_by_gpio(&self, gpio: u8) -> Option<(u8, Channel)> {
+  pub fn get_pwm_slice_id_by_gpio(&self, gpio: u8) -> Option<(u8, Channel)> {
     let alias = self.pwm_aliases.iter().find(|alias| alias.gpio_id == gpio)?;
     Some((alias.slice_id, alias.channel))
   }
 
   /// Get PWM Slice Channel from GPIO id
-  pub fn get_channel_by_gpio_id(
+  pub fn get_channel_by_gpio(
     &mut self,
     gpio: u8,
   ) -> Option<&mut dyn SetDutyCycle<Error = Infallible>> {
     //
-    let (slice_id, channel) = self.get_pwm_id_by_gpio(gpio)?;
+    let (slice_id, channel) = self.get_pwm_slice_id_by_gpio(gpio)?;
 
     Some(match (slice_id, channel) {
       (0, Channel::A) => self.pwm0.get_channel_a(),
@@ -253,6 +253,14 @@ where
   ) -> &mut pwm::Channel<pwm::Slice<I, <I as pwm::SliceId>::Reset>, pwm::B> {
     &mut self.slice.channel_b
   }
+
+  /// Get PWM Slice Channel as SetDutyCycle trait
+  pub fn get_channel(&mut self, channel: Channel) -> &mut dyn SetDutyCycle<Error = Infallible> {
+    match channel {
+      Channel::A => self.get_channel_a(),
+      Channel::B => self.get_channel_b(),
+    }
+  }
 }
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
@@ -265,39 +273,47 @@ pub trait PwmChannelExt {
   fn set_duty_cycle_us(&mut self, us: u16, freq_hz: u32);
 }
 
-impl<T: SetDutyCycle> PwmChannelExt for T {
+impl<C: SetDutyCycle> PwmChannelExt for C {
   fn set_duty_cycle_us(&mut self, duty_us: u16, freq_hz: u32) {
-    let freq_us = if freq_hz > 0 { 1_000_000 / freq_hz } else { 0 };
-
-    if freq_us == 0 && duty_us == 0 {
-      let _ = self.set_duty_cycle(0);
-      return;
-    }
-
-    if duty_us as u32 >= freq_us {
-      let _ = self.set_duty_cycle(self.max_duty_cycle());
-      return;
-    }
-
-    const MAX_U16: u32 = u16::MAX as u32;
-
-    let (num, den) = if freq_us > MAX_U16 {
-      // Period is too large for a u16; scale both values down.
-      let scaler = freq_us / MAX_U16 + 1;
-      ((duty_us as u32 / scaler) as u16, (freq_us / scaler) as u16)
-    }
-    else {
-      // Period fits, no scaling needed.
-      (duty_us, freq_us as u16)
-    };
-
-    let _ = self.set_duty_cycle_fraction(num, den);
+    let duty = calculate_duty_from_us(duty_us, freq_hz, self.max_duty_cycle());
+    let _ = self.set_duty_cycle(duty);
   }
 }
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                         Free Functions
 // ————————————————————————————————————————————————————————————————————————————————————————————————
+
+/// Calculate duty cycle from us and frequency
+pub fn calculate_duty_from_us(duty_us: u16, freq_hz: u32, max_duty: u16) -> u16 {
+  const MAX_U16: u32 = u16::MAX as u32;
+  let freq_us = if freq_hz > 0 { 1_000_000 / freq_hz } else { 0 };
+
+  if freq_us == 0 || duty_us == 0 {
+    return 0;
+  }
+
+  if duty_us as u32 >= freq_us {
+    return max_duty;
+  }
+
+  let (num, den) = if freq_us > MAX_U16 {
+    // Period is too large for a u16; scale both values down.
+    let scaler = freq_us / MAX_U16 + 1;
+    ((duty_us as u32 / scaler) as u16, (freq_us / scaler) as u16)
+  }
+  else {
+    // Period fits, no scaling needed.
+    (duty_us, freq_us as u16)
+  };
+
+  debug_assert!(num <= den);
+  debug_assert!(den != 0);
+
+  let duty = u32::from(num) * u32::from(max_duty) / u32::from(den);
+
+  duty as u16
+}
 
 /// Calculates pwm int and frac clock dividers based on sys clock, top, and desired hz frequency
 pub fn calculate_pwm_dividers(sys_clk_hz: u32, hz: u32, top: u16, phase_correct: bool) -> (u8, u8) {
@@ -361,5 +377,3 @@ macro_rules! with_pwm_slice {
     }
   };
 }
-
-// TODO slice migrate functions to trait to be able to access it by id

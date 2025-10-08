@@ -199,7 +199,7 @@ impl Config {
   }
 
   /// Gets the pin GPIO number associated with a given string alias.
-  pub fn get_id(&self, alias: &str) -> Option<u8> {
+  pub fn get_gpio(&self, alias: &str) -> Option<u8> {
     self
       .pins
       .iter()
@@ -207,8 +207,13 @@ impl Config {
       .map(|pin| pin.id)
   }
 
+  /// Gets the string alias associated with a given pin GPIO number (`u8`).
+  pub fn get_alias(&self, id: u8) -> Option<&'static str> {
+    self.pins.iter().find(|def| def.id == id).map(|def| def.alias)
+  }
+
   /// Get the pin definition struct stored in the config
-  pub fn get_pin_def_by_gpio_id(&self, id: u8) -> Option<&PinDef> {
+  pub fn get_pin_def_by_gpio(&self, id: u8) -> Option<&PinDef> {
     self.pins.iter().find(|pin| pin.id == id)
   }
 
@@ -217,14 +222,28 @@ impl Config {
     self.pins.iter().find(|pin| pin.alias.eq_ignore_ascii_case(alias))
   }
 
-  /// Gets the string alias associated with a given pin GPIO number (`u8`).
-  pub fn get_alias_name(&self, id: u8) -> Option<&'static str> {
-    self.pins.iter().find(|def| def.id == id).map(|def| def.alias)
-  }
-
   /// Gets the `Group` associated with a given pin GPIO number (`u8`).
   pub fn get_group_type(&self, id: u8) -> Option<Group> {
     self.pins.iter().find(|pin| pin.id == id).map(|def| def.group)
+  }
+
+  /// Getting gpio and alias as a pair based on the inputs provided
+  /// GPIO input has first choice if both are present
+  pub fn get_gpio_alias_pair(&self, gpio: Option<u8>, alias: Option<&str>) -> Result<(u8, &str)> {
+    if let Some(gpio_) = gpio {
+      //  Getting alias from gpio
+      let alias_ = self.get_alias(gpio_).ok_or(ConfigError::Error)?;
+      Ok((gpio_, alias_))
+    }
+    // Getting gpio from alias
+    else if let Some(alias_) = alias {
+      let pin = self.get_pin_def_by_alias(alias_).ok_or(ConfigError::Error)?;
+      Ok((pin.id, pin.alias))
+    }
+    else {
+      // No Option was given
+      Err(ConfigError::Error)
+    }
   }
 
   /// Creates a DynPinId of the requested function and pull type, and marks the pin taken
@@ -381,6 +400,6 @@ impl fmt::Display for ConfigError {
 #[macro_export]
 macro_rules! gpio {
   ($alias:ident) => {
-    $crate::config::CONFIG.get_id(stringify!($alias)).unwrap()
+    $crate::config::CONFIG.get_gpio(stringify!($alias)).unwrap()
   };
 }

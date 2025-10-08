@@ -92,20 +92,20 @@ impl Adcs {
 
 // ——————————————————————————————————————— Adc Conversions —————————————————————————————————————————
 pub trait AdcConversion {
-  /// Convert raw u16 ADC reading to volts.
+  /// Convert raw ADC reading to volts. Assuming 12-bit ADC (0..=4095) and 3.3 V reference.
   fn to_voltage(&self) -> f32;
-  fn to_resistance(&self, ref_res: u32) -> f32;
+  /// Convert raw ADC reading to resistance. Assuming a voltage divider with a pull up resistor of the specified resistance.
+  fn to_resistance(&self, ref_res_ohm: u32) -> f32;
 }
 
-// Impl for u16, assuming 12-bit ADC (0..=4095) and 3.3 V reference.
 impl AdcConversion for u16 {
   fn to_voltage(&self) -> f32 {
     (*self as f32) * ADC_VREF / ADC_MAX
   }
 
-  fn to_resistance(&self, ref_res: u32) -> f32 {
+  fn to_resistance(&self, ref_res_ohm: u32) -> f32 {
     let x: f32 = (ADC_MAX / *self as f32) - 1.0;
     // "ref_res / x" // If you ref resistor to Gnd instead of V+
-    ref_res as f32 * x
+    ref_res_ohm as f32 * x
   }
 }

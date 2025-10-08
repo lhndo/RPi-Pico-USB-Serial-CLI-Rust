@@ -26,11 +26,10 @@ pub fn build_command_list() -> CommandList {
   // Base
   command_list.register_command(build_reset_cmd());
   command_list.register_command(build_flash_cmd());
-  command_list.register_command(build_set_pin_cmd());
-  command_list.register_command(build_read_pin_cmd());
+  command_list.register_command(build_pin_cmd());
   command_list.register_command(build_read_adc_cmd());
   command_list.register_command(build_sample_adc_cmd());
-  command_list.register_command(build_set_pwm_cmd());
+  command_list.register_command(build_pwm_cmd());
   command_list.register_command(build_log_cmd());
 
   // Examples

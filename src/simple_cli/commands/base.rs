@@ -3,6 +3,7 @@
 
 use super::*;
 use crate::prelude::*;
+use rp2040_hal::pwm;
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                              Reset
@@ -60,37 +61,53 @@ pub fn flash_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Resul
 //                                             Set Pin
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
-pub fn build_set_pin_cmd() -> Command {
+pub fn build_pin_cmd() -> Command {
   Command {
-    name: "set_pin",
-    desc: "Set GPIO Pin State",
-    help: "set_pin [gpio=1(u8)] [toggle] [high] [low] [help]",
-    func: set_pin_cmd,
+    name: "pin",
+    desc: "Read or Set the GPIO Pin State",
+    help: "pin [alias=OUT_A(str)] / [gpio=..(u8)] [read(default)] [toggle] [high] [low] [help]",
+    func: pin_cmd,
   }
 }
 
-pub fn set_pin_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
-  // Print Help
+pub fn pin_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
 
-  let gpio_id: u8 = args.get_parsed_param("gpio").unwrap_or(1);
+  // Getting Alias or GPIO input -----------
+  let alias = args.get_str_param("alias").unwrap_or("OUT_A");
+  let gpio = args.get_parsed_param::<u8>("gpio").ok();
+
+  let (gpio, alias) = CONFIG
+    .get_gpio_alias_pair(gpio, Some(alias))
+    .map_err(|_| CliError::CmdExec("pin not found".into_truncated()))?;
+
+  // -------------------------------------
+
+  let toggle = args.contains_param("toggle");
   let high = args.contains_param("high");
   let low = args.contains_param("low");
 
-  if let Some(pin) = device.outputs.get(gpio_id) {
+  // Setting pin Mode
+  if high || low || toggle {
+    let pin = device
+      .outputs
+      .get(gpio)
+      .ok_or_else(|| CliError::CmdExec("GPIO pin not configured".into_truncated()))?;
+
+    // Set mode
     if high {
-      println!("GPIO {gpio_id}: Set HIGH");
+      println!("> Output Pin: GPIO {gpio} - {alias}: set HIGH");
       pin.set_high().unwrap();
     }
     else if low {
-      println!("GPIO {gpio_id}: Set LOW");
+      println!("> Output Pin: GPIO {gpio}: set LOW");
       pin.set_low().unwrap();
     }
-    else {
-      print!("GPIO {gpio_id}: Toggled ");
+    else if toggle {
+      print!("> Output Pin: GPIO {gpio}: Toggled ");
       pin.toggle().unwrap();
       if pin.is_set_high().unwrap() {
         println!("HIGH")
@@ -100,46 +117,25 @@ pub fn set_pin_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Res
       }
     }
   }
-  else {
-    return Err(CliError::CmdExec("GPIO pin not configured".into_truncated()));
+  // Reading Pin Mode
+  // Input Pin Check
+  else if let Some(pin) = device.inputs.get(gpio) {
+    println!(
+      "> Input Pin: GPIO {gpio} - {alias}: {}",
+      if pin.is_high().unwrap() { "HIGH" } else { "LOW" }
+    )
   }
-  Ok(())
-}
-
-// —————————————————————————————————————————————————————————————————————————————————————————————————
-//                                             Read Pin
-// —————————————————————————————————————————————————————————————————————————————————————————————————
-
-pub fn build_read_pin_cmd() -> Command {
-  Command {
-    name: "read_pin",
-    desc: "Set GPIO Pin State",
-    help: "read_pin [gpio=1(u8)]",
-    func: read_pin_cmd,
-  }
-}
-
-pub fn read_pin_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
-  // Print Help
-  if args.contains_param("help") {
-    cmd.print_help();
-    return Ok(());
-  }
-
-  let gpio_id: u8 = args.get_parsed_param("gpio").unwrap_or(1);
-
-  if let Some(pin) = device.outputs.get(gpio_id) {
-    print!("GPIO {gpio_id}: ");
-    if pin.is_set_high().unwrap() {
-      println!("HIGH");
-    }
-    else {
-      println!("LOW");
-    }
+  // Output Pin Check
+  else if let Some(pin) = device.outputs.get(gpio) {
+    println!(
+      "> Output Pin: GPIO {gpio} - {alias}: {}",
+      if pin.is_set_high().unwrap() { "HIGH" } else { "LOW" }
+    )
   }
   else {
     return Err(CliError::CmdExec("GPIO pin not configured".into_truncated()));
   }
+
   Ok(())
 }
 
@@ -201,7 +197,7 @@ pub fn build_sample_adc_cmd() -> Command {
   Command {
     name: "sample_adc",
     desc: "Continuous sampling of an ADC channel",
-    help: "sample_adc [gpio(u8)] or [channel=0(u8)]  [ref_res=10000(ohm)] [interval=200(ms)] \
+    help: "sample_adc [alias=ADC0(str)] / [gpio=..(u8)] [ref_res=10000(ohm)] [interval=200(ms)] \
            [help]\n
     Interrupt with char \"~\"",
     func: sample_adc_cmd,
@@ -215,30 +211,33 @@ pub fn sample_adc_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> 
     return Ok(());
   }
 
+  // Getting Alias or GPIO input ---------
+  let alias = args.get_str_param("alias").unwrap_or("ADC0");
+  let gpio = args.get_parsed_param::<u8>("gpio").ok();
+
+  let (gpio, alias) = CONFIG
+    .get_gpio_alias_pair(gpio, Some(alias))
+    .map_err(|_| CliError::CmdExec("pin not found".into_truncated()))?;
+
+  // -------------------------------------
+
   let ref_res: u32 = args.get_parsed_param("ref_res").unwrap_or(10_000);
-  let mut channel: u8 = args.get_parsed_param("channel").unwrap_or(0);
   let interval: u16 = args.get_parsed_param("interval").unwrap_or(200);
 
   // Getting ADC channel based on pin number
-  if let Ok(gpio_) = args.get_parsed_param("gpio") {
-    match gpio_ {
-      26 => channel = 0,
-      27 => channel = 1,
-      28 => channel = 2,
-      29 => channel = 3,
-      255 => channel = 4, // default TEMP_SENSE channel
-      _ => return Err(CliError::CmdExec("pin not configured for ADC read".into_truncated())),
-    }
-  }
+  let channel = match gpio {
+    26 => 0,
+    27 => 1,
+    28 => 2,
+    29 => 3,
+    255 => 4, // default TEMP_SENSE channel
+    _ => return Err(CliError::CmdExec("pin not configured for ADC read".into_truncated())),
+  };
 
-  sample_adc(device, channel, ref_res, interval)
-}
-
-pub fn sample_adc(device: &mut Device, channel: u8, ref_res: u32, interval: u16) -> Result<()> {
   println!("---- Sample ADC ----");
+  println!("ADC Pin: GPIO {gpio} - {alias} | adc channel: {channel} |\n");
   println!("Reference Pullup Resistor: {}ohm", ref_res);
-  println!("ADC Channel: {} \n", { channel });
-  println!("Send '~' to exit\n");
+  println!("\nSend '~' to exit\n");
 
   SERIAL.clear_interrupt_cmd();
   while !SERIAL.interrupt_cmd_triggered() {
@@ -264,54 +263,66 @@ pub fn sample_adc(device: &mut Device, channel: u8, ref_res: u32, interval: u16)
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 // GPIO 6 pwm3A
 
-pub fn build_set_pwm_cmd() -> Command {
+pub fn build_pwm_cmd() -> Command {
   Command {
-    name: "set_pwm",
+    name: "pwm",
     desc: "Sets PWM  (defaults on GPIO 6 - PWM3A)",
     help:
-      "set_pwm [pwm_id=3(id)] [channel=a(a/b)] [freq=50(hz)] [us=-1(us)] [duty=50(%)]\n        \
+      "pwm [alias=PWM2_B(str)] / [gpio=..(u8)] [freq=50(hz)] [duty=50(%)] [duty_us=..(us)] \n        \
        [top=-1(u16)] [phase=false(bool)] [disable=false(bool)] [help]",
-    func: set_pwm_cmd,
+    func: pwm_cmd,
   }
 }
 
-pub fn set_pwm_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
+pub fn pwm_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();
     return Ok(());
   }
 
-  let pwm_id: usize = args.get_parsed_param("pwm_id").unwrap_or(3); //  -1 eq not set
-  let channel = args.get_str_param("channel").unwrap_or("a"); // false
-  let us: i32 = args.get_parsed_param("us").unwrap_or(-1); //  -1 eq not set
+  // Getting Alias or GPIO input ---------
+  let alias = args.get_str_param("alias").unwrap_or("PWM2_B");
+  let gpio = args.get_parsed_param::<u8>("gpio").ok();
+
+  let (gpio, alias) = CONFIG
+    .get_gpio_alias_pair(gpio, Some(alias))
+    .map_err(|_| CliError::CmdExec("pin not found".into_truncated()))?;
+
+  // -------------------------------------
+
+  let us: i32 = args.get_parsed_param("duty_us").unwrap_or(-1); //  -1 eq not set
   let duty: u8 = args.get_parsed_param("duty").unwrap_or(50); //  50% default
   let freq: u32 = args.get_parsed_param("freq").unwrap_or(50); // hz
   let top: i32 = args.get_parsed_param("top").unwrap_or(-1); // 
   let phase: bool = args.get_parsed_param("phase").unwrap_or(false); // 
   let disable: bool = args.get_parsed_param("disable").unwrap_or(false); // false
 
-  if channel != "a" && channel != "b" {
-    println!("Channel can be only a or b");
-    return Err(CliError::Exit);
-  }
+  // Getting pwm information associated with the gpio pin
+  let (slice_id, channel_type) = device
+    .pwms
+    .get_pwm_slice_id_by_gpio(gpio)
+    .ok_or_else(|| CliError::CmdExec("PWM not found".into_truncated()))?;
 
-  println!("---- PWM ----");
-  println!("PWM: {pwm_id}, channel: {channel}");
+  use crate::pwms::Channel;
+
+  // Print Pin information
+  println!(
+    "Pwm Pin: GPIO {gpio} - {alias} | pwm: {slice_id}, channel: {chan} |\n",
+    chan = if channel_type == Channel::A { "A" } else { "B" }
+  );
 
   // Using a 'with' macro to be able to select the PWM slice
-  // In a regular program you would use the pwm slice directly
-  with_pwm_slice!(&mut device.pwms, pwm_id, |pwm_slice| {
-    set_pwm(pwm_slice, channel, us, duty, freq, top, phase, disable)
+  // In regular usage you would call the pwm slice directly
+  with_pwm_slice!(&mut device.pwms, slice_id, |pwm_slice| {
+    pwm(pwm_slice, channel_type, us, duty, freq, top, phase, disable)
   })
 }
 
-use rp2040_hal::pwm;
-
 #[allow(clippy::too_many_arguments)]
-pub fn set_pwm<I>(
+pub fn pwm<I>(
   pwm: &mut crate::pwms::PwmSlice<I>,
-  channel: &str,
+  channel: crate::pwms::Channel,
   us: i32,
   duty: u8,
   freq: u32,
@@ -323,10 +334,12 @@ where
   I: pwm::SliceId,
   <I as pwm::SliceId>::Reset: pwm::ValidSliceMode<I>,
 {
+  print!("> Seting PWM : ");
+
   //
   if disable {
     pwm.disable();
-    println!("PWM Pin disabled");
+    print!("Disabled |");
     return Ok(());
   }
 
@@ -346,30 +359,31 @@ where
     pwm.set_freq(freq);
   }
 
-  print!("Seting PWM | freq: {}hz, top: {}, phase: {} ", freq, top, phase);
+  // Getting pwm channel
+  let mut channel = pwm.get_channel(channel);
+
+  // Duty values for printing;
+  let duty_us;
+  let duty_p;
 
   // Set Duty
   if us > 0 {
-    if channel == "a" {
-      pwm.get_channel_a().set_duty_cycle_us(us as u16, freq);
-    }
-    else {
-      pwm.get_channel_b().set_duty_cycle_us(us as u16, freq);
-    }
-
-    println!("duty: {}µs", us);
+    channel.set_duty_cycle_us(us as u16, freq);
+    duty_us = us as u32;
+    duty_p = (duty_us * freq + 5_000) / 10_000;
   }
   else {
     let duty = duty.clamp(0, 100) as u16;
-    if channel == "a" {
-      pwm.get_channel_a().set_duty_cycle_fraction(duty, 100).unwrap();
-    }
-    else {
-      pwm.get_channel_b().set_duty_cycle_fraction(duty, 100).unwrap();
-    }
-
-    println!("duty: {}%", duty);
+    channel.set_duty_cycle_fraction(duty, 100).unwrap();
+    duty_us = (duty as u32 * 10_000) / freq;
+    duty_p = duty as u32;
   }
+
+  let period_us: u32 = 1_000_000 / freq;
+
+  println!(
+    "freq: {freq}hz {period_us}us | duty: {duty_p}% {duty_us}µs | top: {top} | phase: {phase} |"
+  );
 
   // End
   pwm.enable();
@@ -421,7 +435,7 @@ pub fn log_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<
     println!("Unknown level!\n Levels: off, error, warn, info, debug, trace\n")
   }
 
-  println!("Log Level: {}\n", LOG.get());
+  println!("Log Level: {}", LOG.get());
 
   Ok(())
 }
