@@ -129,7 +129,7 @@ pub fn pin_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<
     )
   }
   else {
-    return Err(Error::Configuration(ConfigError::InvalidPin));
+    return Err(Error::Configuration(ConfigError::GpioNotFound));
   }
 
   Ok(())
@@ -225,7 +225,7 @@ pub fn sample_adc_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> 
     28 => 2,
     29 => 3,
     255 => 4, // default TEMP_SENSE channel
-    _ => return Err(Error::Configuration(ConfigError::InvalidPin)),
+    _ => return Err(Error::Configuration(ConfigError::OutOfBounds)),
   };
 
   println!("---- Sample ADC ----");

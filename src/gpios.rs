@@ -47,7 +47,7 @@ impl<T> IoPins<T> {
   #[inline]
   pub fn get(&mut self, id: u8) -> Result<&mut T> {
     if id >= NUM_MCU_PINS as u8 {
-      return Err(Error::InvalidPin);
+      return Err(Error::OutOfBounds);
     }
 
     self.pins[id as usize].as_mut().ok_or(Error::GpioNotFound)

@@ -342,7 +342,7 @@ pub enum Error {
   #[error("pin already configured")]
   PinAlreadyConfigured,
   #[error("pin out of bounds")]
-  InvalidPin,
+  OutOfBounds,
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
