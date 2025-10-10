@@ -34,11 +34,13 @@ pub fn build_command_list() -> CommandList {
 
   // Examples
   command_list.register_command(build_example_cmd());
-  command_list.register_command(build_panic_test_cmd());
   command_list.register_command(build_blink_cmd());
   command_list.register_command(build_servo_cmd());
+
+  // Test
   command_list.register_command(build_test_gpio_cmd());
   command_list.register_command(build_test_analog_cmd());
+  command_list.register_command(build_test_panic_cmd());
   command_list.register_command(build_test_log_cmd());
 
   command_list

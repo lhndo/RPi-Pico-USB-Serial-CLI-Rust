@@ -1,8 +1,7 @@
 //! Error implementation
 
-pub use core::fmt;
-
 pub use heapless::String;
+use thiserror::Error;
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                             Globals
@@ -17,41 +16,36 @@ pub type Result<T> = core::result::Result<T, CliError>;
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 #[non_exhaustive]
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Error, Debug, Clone, Eq, PartialEq)]
 pub enum CliError {
+  #[error("failed to generate buffer!")]
   BufferWrite,
+  #[error("while parsing buffer!")]
   ParseBuffer,
+  #[error("IO Input!")]
   IoInput,
+  #[error("parsing arg: {0}")]
   Parse(String<ERR_STR_LENGTH>),
+  #[error("missing arg <{0}>")]
   MissingArg(String<ERR_STR_LENGTH>),
+  #[error("command failed with: {0}")]
   CmdExec(String<ERR_STR_LENGTH>),
+  #[error("command not found: {0}")]
   CmdNotFound(String<ERR_STR_LENGTH>),
+  #[error("command too long!")]
   CommandTooLong,
+  #[error("pin not configured!")]
+  ConfigPin,
+  #[error("argument too long!")]
   ArgTooLong,
+  #[error("too many arguments!")]
   TooManyArgs,
+  #[error("critical failure!")]
   CriticalFail,
-  Other,
+  #[error("exited!")]
   Exit,
-}
-
-impl fmt::Display for CliError {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{}", match self {
-      CliError::BufferWrite => "failed to generate buffer!",
-      CliError::ParseBuffer => "while parsing buffer!",
-      CliError::IoInput => "IO Input!",
-      CliError::Parse(e) => return write!(f, "argument parse: {e}"),
-      CliError::MissingArg(e) => return write!(f, "missing argument <{e}>"),
-      CliError::CmdExec(e) => return write!(f, "command failed with: {e}"),
-      CliError::CmdNotFound(e) => return write!(f, "command not found: {e}"),
-      CliError::CommandTooLong => "command too long!",
-      CliError::ArgTooLong => "argument too long!",
-      CliError::TooManyArgs => "too many arguments!",
-      CliError::CriticalFail => "critical failure!",
-      CliError::Exit => "exit!",
-      CliError::Other => "internal error!",
-    })
-  }
+  #[error("internal error!")]
+  Other,
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————

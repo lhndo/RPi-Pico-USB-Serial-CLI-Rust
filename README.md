@@ -17,7 +17,7 @@
 
 ### Probe-rs
 
-* For **probe-rs** with a **swd** interface you can flash/debug by running: `cargo embed-d` or `cargo embed default -- --no-default-features --features defmt`
+* For **probe-rs** with a **swd** interface you can flash/debug by running: `cargo embed-d` or `cargo embed --no-default-features --features defmt`
 
 * VS Code debug/tasks are also available
 

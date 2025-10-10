@@ -169,7 +169,6 @@ impl Device {
     let mut pwms = Pwms::new(pwm_slices, sys_clk_hz, DEFAULT_PWM_FREQUENCY);
 
     for id in CONFIG.get_group_iter(config::Group::Pwm) {
-      // Consuming the pin since PWM sets the pin function internally
       let pin = CONFIG.take_pin(id).unwrap();
       pwms.register(pin);
     }

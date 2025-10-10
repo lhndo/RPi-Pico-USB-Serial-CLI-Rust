@@ -173,7 +173,10 @@ impl<const BUF_SIZE: usize> FifoBuffer<BUF_SIZE> {
 
 impl<const BUF_SIZE: usize> Default for FifoBuffer<BUF_SIZE> {
   fn default() -> Self {
-    Self::new()
+    Self {
+      buffer: [0; BUF_SIZE],
+      used:   0,
+    }
   }
 }
 

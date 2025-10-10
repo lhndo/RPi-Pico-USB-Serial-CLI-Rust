@@ -1,6 +1,7 @@
 //! Pulse Width Modulation (PWM) Wrapper for the RP2040 microcontroller
 
 use core::convert::Infallible;
+use core::fmt;
 
 use embedded_hal::pwm::SetDutyCycle;
 
@@ -41,6 +42,15 @@ struct PwmAlias {
 pub enum Channel {
   A,
   B,
+}
+
+impl fmt::Display for Channel {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::result::Result<(), core::fmt::Error> {
+    match self {
+      Channel::A => write!(f, "A"),
+      Channel::B => write!(f, "B"),
+    }
+  }
 }
 
 // ————————————————————————————————————————— Pwms Impl ————————————————————————————————————————————

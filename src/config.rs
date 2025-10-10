@@ -136,7 +136,6 @@ pub static CONFIG: Lazy<Config> = Lazy::new(|| Config::new(PIN_DEFINITION));
 
 const PINOUT_CAPACITY: usize = 30;
 
-pub type Result<T> = core::result::Result<T, ConfigError>;
 pub type FullDynPinType = gpio::Pin<gpio::DynPinId, gpio::DynFunction, gpio::DynPullType>;
 pub type RawDynPinType = gpio::Pin<DynPinId, FunctionNull, PullDown>;
 
@@ -227,51 +226,51 @@ impl Config {
     self.pins.iter().find(|pin| pin.id == id).map(|def| def.group)
   }
 
-  /// Getting gpio and alias as a pair based on the inputs provided
-  /// GPIO input has first choice if both are present
-  pub fn get_gpio_alias_pair(&self, gpio: Option<u8>, alias: Option<&str>) -> Result<(u8, &str)> {
+  /// Getting gpio and alias as a pair based on the inputs provided.
+  /// GPIO input has first choice if both are not None.
+  pub fn get_gpio_alias_pair(&self, gpio: Option<u8>, alias: Option<&str>) -> Option<(u8, &str)> {
     if let Some(gpio_) = gpio {
       //  Getting alias from gpio
-      let alias_ = self.get_alias(gpio_).ok_or(ConfigError::Error)?;
-      Ok((gpio_, alias_))
+      let alias_ = self.get_alias(gpio_)?;
+      Some((gpio_, alias_))
     }
     // Getting gpio from alias
     else if let Some(alias_) = alias {
-      let pin = self.get_pin_def_by_alias(alias_).ok_or(ConfigError::Error)?;
-      Ok((pin.id, pin.alias))
+      let pin = self.get_pin_def_by_alias(alias_)?;
+      Some((pin.id, pin.alias))
     }
     else {
       // No Option was given
-      Err(ConfigError::Error)
+      None
     }
   }
 
   /// Creates a DynPinId of the requested function and pull type, and marks the pin taken
-  pub fn take_pin<F, P>(&self, id: u8) -> Result<gpio::Pin<DynPinId, F, P>>
+  pub fn take_pin<F, P>(&self, id: u8) -> Option<gpio::Pin<DynPinId, F, P>>
   where
     F: gpio::Function,
     P: gpio::PullType,
   {
-    let def = self.pins.iter().find(|pin| pin.id == id).ok_or(ConfigError::Error)?;
+    let def = self.pins.iter().find(|pin| pin.id == id)?;
 
     if def.taken.load(Ordering::Relaxed) {
-      return Err(ConfigError::Error); // already taken
+      return None; // already taken
     }
 
     let id = def.id;
     let pin: gpio::Pin<DynPinId, F, P> = new_pin_by_gpio_id(id)?;
 
-    def.taken.store(true, Ordering::SeqCst);
-    Ok(pin)
+    def.taken.store(true, Ordering::Relaxed);
+    Some(pin)
   }
 
   /// Creates a DynPinId of the requested function and pull type, and marks the pin taken
-  pub fn take_pin_by_alias<F, P>(&self, alias: &str) -> Result<gpio::Pin<DynPinId, F, P>>
+  pub fn take_pin_by_alias<F, P>(&self, alias: &str) -> Option<gpio::Pin<DynPinId, F, P>>
   where
     F: gpio::Function,
     P: gpio::PullType,
   {
-    let id = self.get_pin_def_by_alias(alias).ok_or(ConfigError::Error)?.id;
+    let id = self.get_pin_def_by_alias(alias)?.id;
     self.take_pin(id)
   }
 }
@@ -349,7 +348,7 @@ pub fn pin_into_full_dynamic<P: AnyPin>(pin: P) -> FullDynPinType {
 
 /// Creates a dynamic pin with concrete functions based on gpio id
 /// User must make sure no other that pin exists at the same time.
-fn new_pin_by_gpio_id<F, P>(gpio_id: u8) -> Result<gpio::Pin<DynPinId, F, P>>
+fn new_pin_by_gpio_id<F, P>(gpio_id: u8) -> Option<gpio::Pin<DynPinId, F, P>>
 where
   F: gpio::Function,
   P: gpio::PullType,
@@ -367,30 +366,7 @@ where
     })
   };
 
-  pin
-    .try_into_function::<F>()
-    .map(|p| p.into_pull_type::<P>())
-    .map_err(|e| ConfigError::Error)
-}
-
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-//                                             Errors
-// ————————————————————————————————————————————————————————————————————————————————————————————————
-
-#[non_exhaustive]
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum ConfigError {
-  PinError,
-  Error,
-}
-
-impl fmt::Display for ConfigError {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    match self {
-      ConfigError::PinError => write!(f, "pin config err!"),
-      _ => write!(f, "config err!"),
-    }
-  }
+  pin.try_into_function::<F>().ok().map(|p| p.into_pull_type::<P>())
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
