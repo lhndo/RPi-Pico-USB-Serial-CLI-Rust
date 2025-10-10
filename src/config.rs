@@ -205,7 +205,7 @@ impl Config {
       .iter()
       .find(|pin| pin.alias.eq_ignore_ascii_case(alias))
       .map(|pin| pin.id)
-      .ok_or(Error::GpioNotFound)
+      .ok_or(Error::AliasNotFound)
   }
 
   /// Gets the string alias associated with a given pin GPIO number (`u8`).
@@ -215,7 +215,7 @@ impl Config {
       .iter()
       .find(|def| def.id == id)
       .map(|def| def.alias)
-      .ok_or(Error::AliasNotFound)
+      .ok_or(Error::GpioNotFound)
   }
 
   /// Get the pin definition struct stored in the config
