@@ -65,7 +65,7 @@ impl CommandList {
       Ok(cmd)
     }
     else {
-      Err(CliError::CmdNotFound(name.into_truncated()))
+      Err(Error::CmdNotFound(name.into_truncated()))
     }
   }
 

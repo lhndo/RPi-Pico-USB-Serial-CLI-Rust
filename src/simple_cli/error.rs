@@ -9,15 +9,14 @@ use thiserror::Error;
 
 pub const ERR_STR_LENGTH: usize = 48;
 
-pub type Result<T> = core::result::Result<T, CliError>;
+pub type Result<T> = core::result::Result<T, Error>;
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 //                                             Errors
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
-#[non_exhaustive]
 #[derive(Error, Debug, Clone, Eq, PartialEq)]
-pub enum CliError {
+pub enum Error {
   #[error("failed to generate buffer!")]
   BufferWrite,
   #[error("while parsing buffer!")]
@@ -34,8 +33,6 @@ pub enum CliError {
   CmdNotFound(String<ERR_STR_LENGTH>),
   #[error("command too long!")]
   CommandTooLong,
-  #[error("pin not configured!")]
-  ConfigPin,
   #[error("argument too long!")]
   ArgTooLong,
   #[error("too many arguments!")]
@@ -44,8 +41,8 @@ pub enum CliError {
   CriticalFail,
   #[error("exited!")]
   Exit,
-  #[error("internal error!")]
-  Other,
+  #[error(transparent)]
+  Configuration(#[from] crate::config::Error),
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————

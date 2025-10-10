@@ -10,6 +10,7 @@ pub use core::sync::atomic::Ordering;
 
 pub use crate::adcs::{AdcConversion, TEMP_SENSE_CHN};
 pub use crate::config::CONFIG;
+pub use crate::config::Error as ConfigError;
 pub use crate::delay::DELAY;
 pub use crate::device::*;
 pub use crate::device::{Device, TimerExt};

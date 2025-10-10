@@ -128,7 +128,7 @@ pub fn servo_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Resul
   let alias = args.get_str_param("alias").unwrap_or(DEFAULT_PIN);
   let gpio = args.get_parsed_param::<u8>("gpio").ok();
 
-  let (gpio, alias) = CONFIG.get_gpio_alias_pair(gpio, Some(alias)).ok_or(CliError::ConfigPin)?;
+  let (gpio, alias) = CONFIG.get_gpio_alias_pair(gpio, Some(alias))?;
   // -------------------------------------
 
   let us: u16 = args.get_parsed_param("us").unwrap_or(1500); //  1500 us default
@@ -137,7 +137,7 @@ pub fn servo_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Resul
   let sweep: bool = args.contains_param("sweep");
 
   // Validating pwm pin
-  let (pwm_id, channel) = device.pwms.get_pwm_slice_id_by_gpio(gpio).ok_or(CliError::ConfigPin)?;
+  let (pwm_id, channel) = device.pwms.get_pwm_slice_id_by_gpio(gpio)?;
 
   println!("---- Servo ----");
   println!("Servo: GPIO {gpio} - {alias} | pwm: {pwm_id}, channel: {channel}");
@@ -218,8 +218,8 @@ pub fn test_gpio_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> R
   let input = args.get_str_param("input").unwrap_or(DEFAULT_INPUT);
   let output = args.get_str_param("output").unwrap_or(DEFAULT_OUTPUT);
 
-  let gpio_input = CONFIG.get_gpio(input).ok_or(CliError::ConfigPin)?;
-  let gpio_output = CONFIG.get_gpio(input).ok_or(CliError::ConfigPin)?;
+  let gpio_input = CONFIG.get_gpio(input)?;
+  let gpio_output = CONFIG.get_gpio(input)?;
 
   println!("---- Testing GPIO ----");
   println!("Input: GPIO {gpio_input} - {input} >> Output: GPIO {gpio_output} {output}");
@@ -247,6 +247,7 @@ pub fn test_gpio_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> R
 //                                           Test Analog
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 // Control the PWM duty cycle of the output pin using an ADC input pin (potentiometer)
+// Can be used to control a servo with a potentiometer using the min max us limits (try 500-2500)
 
 pub fn build_test_analog_cmd() -> Command {
   Command {
@@ -272,8 +273,8 @@ pub fn test_analog_cmd(cmd: &Command, args: &[Argument], device: &mut Device) ->
   let input = args.get_str_param("input").unwrap_or(DEFAULT_INPUT);
   let output = args.get_str_param("output").unwrap_or(DEFAULT_OUTPUT);
 
-  let gpio_input = CONFIG.get_gpio(input).ok_or(CliError::ConfigPin)?;
-  let gpio_output = CONFIG.get_gpio(output).ok_or(CliError::ConfigPin)?;
+  let gpio_input = CONFIG.get_gpio(input)?;
+  let gpio_output = CONFIG.get_gpio(output)?;
 
   let min_us = args.get_parsed_param("min_us").unwrap_or(0);
   let max_us = args.get_parsed_param("max_us").unwrap_or(0);
@@ -286,8 +287,7 @@ pub fn test_analog_cmd(cmd: &Command, args: &[Argument], device: &mut Device) ->
   const MAX_V: f32 = 3.3;
 
   // Validating pwm pin
-  let (pwm_id, channel) =
-    device.pwms.get_pwm_slice_id_by_gpio(gpio_output).ok_or(CliError::ConfigPin)?;
+  let (pwm_id, channel) = device.pwms.get_pwm_slice_id_by_gpio(gpio_output)?;
 
   // Initializing PWM slice
   with_pwm_slice!(&mut device.pwms, pwm_id, |pwm_slice| {

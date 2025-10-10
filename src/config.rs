@@ -2,16 +2,16 @@
 use core::fmt;
 use core::sync::atomic::AtomicBool;
 use core::sync::atomic::Ordering;
-// use core::ops::Deref;
-
-use heapless::Vec;
-use once_cell::sync::Lazy;
 
 use rp2040_hal as hal;
-use rp2040_hal::gpio::{FunctionNull, PullDown};
 //
 use hal::gpio;
 use hal::gpio::{AnyPin, DynPinId, DynPullType};
+use hal::gpio::{FunctionNull, PullDown};
+
+use heapless::Vec;
+use once_cell::sync::Lazy;
+use thiserror::Error;
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                        Pin Configuration
@@ -138,6 +138,7 @@ const PINOUT_CAPACITY: usize = 30;
 
 pub type FullDynPinType = gpio::Pin<gpio::DynPinId, gpio::DynFunction, gpio::DynPullType>;
 pub type RawDynPinType = gpio::Pin<DynPinId, FunctionNull, PullDown>;
+pub type Result<T> = core::result::Result<T, Error>;
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                         Config Structs
@@ -198,27 +199,37 @@ impl Config {
   }
 
   /// Gets the pin GPIO number associated with a given string alias.
-  pub fn get_gpio(&self, alias: &str) -> Option<u8> {
+  pub fn get_gpio(&self, alias: &str) -> Result<u8> {
     self
       .pins
       .iter()
       .find(|pin| pin.alias.eq_ignore_ascii_case(alias))
       .map(|pin| pin.id)
+      .ok_or(Error::GpioNotFound)
   }
 
   /// Gets the string alias associated with a given pin GPIO number (`u8`).
-  pub fn get_alias(&self, id: u8) -> Option<&'static str> {
-    self.pins.iter().find(|def| def.id == id).map(|def| def.alias)
+  pub fn get_alias(&self, id: u8) -> Result<&'static str> {
+    self
+      .pins
+      .iter()
+      .find(|def| def.id == id)
+      .map(|def| def.alias)
+      .ok_or(Error::AliasNotFound)
   }
 
   /// Get the pin definition struct stored in the config
-  pub fn get_pin_def_by_gpio(&self, id: u8) -> Option<&PinDef> {
-    self.pins.iter().find(|pin| pin.id == id)
+  pub fn get_pin_def_by_gpio(&self, id: u8) -> Result<&PinDef> {
+    self.pins.iter().find(|pin| pin.id == id).ok_or(Error::GpioNotFound)
   }
 
   /// Get the pin definition struct stored in the config
-  pub fn get_pin_def_by_alias(&self, alias: &str) -> Option<&PinDef> {
-    self.pins.iter().find(|pin| pin.alias.eq_ignore_ascii_case(alias))
+  pub fn get_pin_def_by_alias(&self, alias: &str) -> Result<&PinDef> {
+    self
+      .pins
+      .iter()
+      .find(|pin| pin.alias.eq_ignore_ascii_case(alias))
+      .ok_or(Error::AliasNotFound)
   }
 
   /// Gets the `Group` associated with a given pin GPIO number (`u8`).
@@ -228,20 +239,20 @@ impl Config {
 
   /// Getting gpio and alias as a pair based on the inputs provided.
   /// GPIO input has first choice if both are not None.
-  pub fn get_gpio_alias_pair(&self, gpio: Option<u8>, alias: Option<&str>) -> Option<(u8, &str)> {
+  pub fn get_gpio_alias_pair(&self, gpio: Option<u8>, alias: Option<&str>) -> Result<(u8, &str)> {
     if let Some(gpio_) = gpio {
       //  Getting alias from gpio
       let alias_ = self.get_alias(gpio_)?;
-      Some((gpio_, alias_))
+      Ok((gpio_, alias_))
     }
     // Getting gpio from alias
     else if let Some(alias_) = alias {
       let pin = self.get_pin_def_by_alias(alias_)?;
-      Some((pin.id, pin.alias))
+      Ok((pin.id, pin.alias))
     }
     else {
       // No Option was given
-      None
+      Err(Error::GpioNotFound)
     }
   }
 
@@ -265,13 +276,13 @@ impl Config {
   }
 
   /// Creates a DynPinId of the requested function and pull type, and marks the pin taken
-  pub fn take_pin_by_alias<F, P>(&self, alias: &str) -> Option<gpio::Pin<DynPinId, F, P>>
+  pub fn take_pin_by_alias<F, P>(&self, alias: &str) -> Result<gpio::Pin<DynPinId, F, P>>
   where
     F: gpio::Function,
     P: gpio::PullType,
   {
     let id = self.get_pin_def_by_alias(alias)?.id;
-    self.take_pin(id)
+    self.take_pin(id).ok_or(Error::PinAlreadyConfigured)
   }
 }
 
@@ -319,6 +330,22 @@ pub enum PinId {
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                              Error
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
+#[derive(Error, Debug, Clone, Eq, PartialEq)]
+pub enum Error {
+  #[error("gpio not found")]
+  GpioNotFound,
+  #[error("alias not found")]
+  AliasNotFound,
+  #[error("pin already configured")]
+  PinAlreadyConfigured,
+  #[error("pin out of bounds")]
+  InvalidPin,
+}
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                             Traits
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
@@ -354,7 +381,7 @@ where
   P: gpio::PullType,
 {
   if gpio_id > 29 {
-    panic!("ID > 29")
+    panic!("GPIO > 29")
   }
 
   // TODO: check for function

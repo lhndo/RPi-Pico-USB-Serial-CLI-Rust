@@ -3,7 +3,7 @@
 /// Use ArgList trait functions available for &[Argument] to retrieve and convert the values.
 pub use core::str::FromStr;
 
-use super::errors::*;
+use super::error::*;
 
 pub use heapless::{String, Vec};
 
@@ -43,7 +43,7 @@ pub fn parse(input: &str) -> Result<Vec<Argument, MAX_NUMBER_PARAMS>> {
     match char {
       '"' => {
         if escaped && in_quotes {
-          processed_buf.push('"').map_err(|_| CliError::CommandTooLong)?;
+          processed_buf.push('"').map_err(|_| Error::CommandTooLong)?;
         }
         else {
           in_quotes = !in_quotes;
@@ -52,11 +52,11 @@ pub fn parse(input: &str) -> Result<Vec<Argument, MAX_NUMBER_PARAMS>> {
       },
       ' ' if in_quotes => {
         escaped = false;
-        processed_buf.push(SEPARATOR).map_err(|_| CliError::CommandTooLong)?;
+        processed_buf.push(SEPARATOR).map_err(|_| Error::CommandTooLong)?;
       },
       ESCAPE if in_quotes => {
         if escaped {
-          processed_buf.push(ESCAPE).map_err(|_| CliError::CommandTooLong)?;
+          processed_buf.push(ESCAPE).map_err(|_| Error::CommandTooLong)?;
           escaped = false;
         }
         else {
@@ -65,24 +65,22 @@ pub fn parse(input: &str) -> Result<Vec<Argument, MAX_NUMBER_PARAMS>> {
       },
       c if in_quotes => {
         escaped = false;
-        processed_buf.push(c).map_err(|_| CliError::CommandTooLong)?;
+        processed_buf.push(c).map_err(|_| Error::CommandTooLong)?;
       },
       c => {
-        processed_buf
-          .push(c.to_ascii_lowercase())
-          .map_err(|_| CliError::CommandTooLong)?;
+        processed_buf.push(c.to_ascii_lowercase()).map_err(|_| Error::CommandTooLong)?;
       },
     }
   }
 
   // Check for dangling escape character
   if escaped {
-    return Err(CliError::Parse("dangling escape \"\\\" char".into_truncated()));
+    return Err(Error::Parse("dangling escape \"\\\" char".into_truncated()));
   }
 
   // Check for unmatched quotes
   if in_quotes {
-    return Err(CliError::Parse("unmatched quotes".into_truncated()));
+    return Err(Error::Parse("unmatched quotes".into_truncated()));
   }
 
   // ——————————————————————————————————— Processing arguments ——————————————————————————————————————
@@ -92,25 +90,25 @@ pub fn parse(input: &str) -> Result<Vec<Argument, MAX_NUMBER_PARAMS>> {
   for word in processed_buf {
     // Sanitizing. Orphan "=" triggers error.
     if word == "=" || word.starts_with('=') || word.ends_with('=') {
-      return Err(CliError::Parse("\"=\" spacing".into_truncated()));
+      return Err(Error::Parse("\"=\" spacing".into_truncated()));
     }
 
     let mut elements = word.splitn(2, '=');
     let param_str = elements.next().unwrap();
     let value_str = elements.next();
 
-    let param = String::try_from(param_str).map_err(|_| CliError::ArgTooLong)?;
+    let param = String::try_from(param_str).map_err(|_| Error::ArgTooLong)?;
     let mut value: String<MAX_VALUE_LENGTH> = String::new();
 
     // If param has value, we restore the space characters
     if let Some(val_) = value_str {
       for char in val_.chars() {
         let c_to_push = if char == SEPARATOR { ' ' } else { char };
-        value.push(c_to_push).map_err(|_| CliError::ArgTooLong)?;
+        value.push(c_to_push).map_err(|_| Error::ArgTooLong)?;
       }
     }
 
-    args.push(Argument { param, value }).map_err(|_| CliError::TooManyArgs)?;
+    args.push(Argument { param, value }).map_err(|_| Error::TooManyArgs)?;
   }
 
   Ok(args)
@@ -151,11 +149,11 @@ impl ArgList for &[Argument] {
     let arg = self
       .iter()
       .find(|s| s.param.eq_ignore_ascii_case(param))
-      .ok_or_else(|| CliError::MissingArg(param.into_truncated()))?;
+      .ok_or_else(|| Error::MissingArg(param.into_truncated()))?;
 
     let val_as_str = arg.value.as_str();
 
-    let value: T = val_as_str.parse().map_err(|_| CliError::Parse(param.into_truncated()))?;
+    let value: T = val_as_str.parse().map_err(|_| Error::Parse(param.into_truncated()))?;
 
     Ok(value)
   }

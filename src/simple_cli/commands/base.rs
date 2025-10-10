@@ -82,7 +82,7 @@ pub fn pin_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<
   let alias = args.get_str_param("alias").unwrap_or(DEFAULT_PIN);
   let gpio = args.get_parsed_param::<u8>("gpio").ok();
 
-  let (gpio, alias) = CONFIG.get_gpio_alias_pair(gpio, Some(alias)).ok_or(CliError::ConfigPin)?;
+  let (gpio, alias) = CONFIG.get_gpio_alias_pair(gpio, Some(alias))?;
   // -------------------------------------
 
   let toggle = args.contains_param("toggle");
@@ -91,7 +91,7 @@ pub fn pin_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<
 
   // Setting pin Mode
   if high || low || toggle {
-    let pin = device.outputs.get(gpio).ok_or(CliError::ConfigPin)?;
+    let pin = device.outputs.get(gpio)?;
 
     // Set mode
     if high {
@@ -115,21 +115,21 @@ pub fn pin_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<
   }
   // Reading Pin Mode
   // Input Pin Check
-  else if let Some(pin) = device.inputs.get(gpio) {
+  else if let Ok(pin) = device.inputs.get(gpio) {
     println!(
       "> Input Pin: GPIO {gpio} - {alias}: {}",
       if pin.is_high().unwrap() { "HIGH" } else { "LOW" }
     )
   }
   // Output Pin Check
-  else if let Some(pin) = device.outputs.get(gpio) {
+  else if let Ok(pin) = device.outputs.get(gpio) {
     println!(
       "> Output Pin: GPIO {gpio} - {alias}: {}",
       if pin.is_set_high().unwrap() { "HIGH" } else { "LOW" }
     )
   }
   else {
-    return Err(CliError::ConfigPin);
+    return Err(Error::Configuration(ConfigError::InvalidPin));
   }
 
   Ok(())
@@ -212,7 +212,7 @@ pub fn sample_adc_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> 
   let alias = args.get_str_param("alias").unwrap_or(DEFAULT_PIN);
   let gpio = args.get_parsed_param::<u8>("gpio").ok();
 
-  let (gpio, alias) = CONFIG.get_gpio_alias_pair(gpio, Some(alias)).ok_or(CliError::ConfigPin)?;
+  let (gpio, alias) = CONFIG.get_gpio_alias_pair(gpio, Some(alias))?;
   // -------------------------------------
 
   let ref_res: u32 = args.get_parsed_param("ref_res").unwrap_or(10_000);
@@ -225,7 +225,7 @@ pub fn sample_adc_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> 
     28 => 2,
     29 => 3,
     255 => 4, // default TEMP_SENSE channel
-    _ => return Err(CliError::ConfigPin),
+    _ => return Err(Error::Configuration(ConfigError::InvalidPin)),
   };
 
   println!("---- Sample ADC ----");
@@ -280,7 +280,7 @@ pub fn pwm_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<
   let alias = args.get_str_param("alias").unwrap_or(DEFAULT_PIN);
   let gpio = args.get_parsed_param::<u8>("gpio").ok();
 
-  let (gpio, alias) = CONFIG.get_gpio_alias_pair(gpio, Some(alias)).ok_or(CliError::ConfigPin)?;
+  let (gpio, alias) = CONFIG.get_gpio_alias_pair(gpio, Some(alias))?;
   // -------------------------------------
 
   let us: i32 = args.get_parsed_param("duty_us").unwrap_or(-1); //  -1 eq not set
@@ -291,8 +291,7 @@ pub fn pwm_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<
   let disable: bool = args.get_parsed_param("disable").unwrap_or(false); // false
 
   // Getting pwm information associated with the gpio pin
-  let (slice_id, channel_type) =
-    device.pwms.get_pwm_slice_id_by_gpio(gpio).ok_or(CliError::ConfigPin)?;
+  let (slice_id, channel_type) = device.pwms.get_pwm_slice_id_by_gpio(gpio)?;
 
   // Print Pin information
   println!("Pwm Pin: GPIO {gpio} - {alias} | pwm: {slice_id}, channel: {channel_type} |\n");

@@ -3,6 +3,9 @@
 use core::convert::Infallible;
 use core::fmt;
 
+use crate::config::Error;
+use crate::config::Result;
+
 use embedded_hal::pwm::SetDutyCycle;
 
 use rp2040_hal as hal;
@@ -114,20 +117,24 @@ impl Pwms {
   }
 
   /// Returns Slice ID AND Channel associated with the gpio pin
-  pub fn get_pwm_slice_id_by_gpio(&self, gpio: u8) -> Option<(u8, Channel)> {
-    let alias = self.pwm_aliases.iter().find(|alias| alias.gpio_id == gpio)?;
-    Some((alias.slice_id, alias.channel))
+  pub fn get_pwm_slice_id_by_gpio(&self, gpio: u8) -> Result<(u8, Channel)> {
+    let alias = self
+      .pwm_aliases
+      .iter()
+      .find(|alias| alias.gpio_id == gpio)
+      .ok_or(Error::GpioNotFound)?;
+    Ok((alias.slice_id, alias.channel))
   }
 
   /// Get PWM Slice Channel from GPIO id
   pub fn get_channel_by_gpio(
     &mut self,
     gpio: u8,
-  ) -> Option<&mut dyn SetDutyCycle<Error = Infallible>> {
+  ) -> Result<&mut dyn SetDutyCycle<Error = Infallible>> {
     //
     let (slice_id, channel) = self.get_pwm_slice_id_by_gpio(gpio)?;
 
-    Some(match (slice_id, channel) {
+    Ok(match (slice_id, channel) {
       (0, Channel::A) => self.pwm0.get_channel_a(),
       (0, Channel::B) => self.pwm0.get_channel_b(),
       (1, Channel::A) => self.pwm1.get_channel_a(),
@@ -144,7 +151,7 @@ impl Pwms {
       (6, Channel::B) => self.pwm6.get_channel_b(),
       (7, Channel::A) => self.pwm7.get_channel_a(),
       (7, Channel::B) => self.pwm7.get_channel_b(),
-      _ => return None, // Invalid slice_id
+      _ => return Err(Error::GpioNotFound), // Invalid slice_id
     })
   }
 }

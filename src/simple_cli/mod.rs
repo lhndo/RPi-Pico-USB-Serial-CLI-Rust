@@ -1,11 +1,11 @@
 //! A Simple CLI Module
 
 pub mod commands;
-pub mod errors;
+pub mod error;
 pub mod parser;
 
 pub use commands::CommandList;
-pub use errors::{CliError, IntoTruncate, Result};
+pub use error::{Error, IntoTruncate, Result};
 pub use parser::*;
 
 use crate::device::Device as Context;
