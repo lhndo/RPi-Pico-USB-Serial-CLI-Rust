@@ -1,8 +1,6 @@
 //! Example Commands
 // Register new commands in commands.rs > Command List Builder
 
-use rp2040_hal::pac::pads_bank0::voltage_select;
-
 use super::*;
 use crate::prelude::*;
 
@@ -303,7 +301,7 @@ pub fn test_analog_cmd(cmd: &Command, args: &[Argument], device: &mut Device) ->
   SERIAL.clear_interrupt_cmd();
   while !SERIAL.interrupt_cmd_triggered() {
     if let Some(raw) = device.adcs.read_by_gpio_id(gpio_input) {
-      // Analog Read
+      // Analog Read - Clamping 0.3V deadzone from both ends
       let factor = (raw.to_voltage() - 0.3).clamp(0.0, MAX_V - 0.6) / (MAX_V - 0.6);
 
       // Defined us range
