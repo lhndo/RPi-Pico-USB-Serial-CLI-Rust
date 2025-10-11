@@ -299,7 +299,7 @@ pub struct PinDef {
 }
 
 /// The functional group a pin belongs to.
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Group {
   Adc,
   Pwm,
@@ -337,10 +337,13 @@ pub enum PinId {
 pub enum Error {
   #[error("gpio not found")]
   GpioNotFound,
+
   #[error("alias not found")]
   AliasNotFound,
+
   #[error("pin already configured")]
   PinAlreadyConfigured,
+
   #[error("pin out of bounds")]
   OutOfBounds,
 }
@@ -351,15 +354,7 @@ pub enum Error {
 
 impl fmt::Display for Group {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    match self {
-      Group::Adc => write!(f, "ADC"),
-      Group::Pwm => write!(f, "PWM"),
-      Group::I2c => write!(f, "I2C"),
-      Group::Spi => write!(f, "SPI"),
-      Group::Uart => write!(f, "UART"),
-      Group::Inputs => write!(f, "Input"),
-      Group::Outputs => write!(f, "Output"),
-    }
+    write!(f, "{:#?}", self)
   }
 }
 

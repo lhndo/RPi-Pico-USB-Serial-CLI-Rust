@@ -19,26 +19,37 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
   #[error("failed to generate buffer")]
   BufferWrite,
+
   #[error("while parsing buffer")]
   ParseBuffer,
+
   #[error("IO Input")]
   IoInput,
+
   #[error("parsing arg: {0}")]
   Parse(String<ERR_STR_LENGTH>),
+
   #[error("missing arg <{0}>")]
   MissingArg(String<ERR_STR_LENGTH>),
+
   #[error("command failed with: {0}")]
   CmdExec(String<ERR_STR_LENGTH>),
+
   #[error("command not found: {0}")]
   CmdNotFound(String<ERR_STR_LENGTH>),
+
   #[error("command too long")]
   CommandTooLong,
+
   #[error("argument too long")]
   ArgTooLong,
+
   #[error("too many arguments")]
   TooManyArgs,
+
   #[error("critical failure")]
   CriticalFail,
+
   #[error("exited")]
   Exit,
 

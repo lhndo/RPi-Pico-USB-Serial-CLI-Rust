@@ -41,7 +41,7 @@ struct PwmAlias {
   channel:  Channel,
 }
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Channel {
   A,
   B,
@@ -49,10 +49,7 @@ pub enum Channel {
 
 impl fmt::Display for Channel {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::result::Result<(), core::fmt::Error> {
-    match self {
-      Channel::A => write!(f, "A"),
-      Channel::B => write!(f, "B"),
-    }
+    write!(f, "{:#?}", self)
   }
 }
 
