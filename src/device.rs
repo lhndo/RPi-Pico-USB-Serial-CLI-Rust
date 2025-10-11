@@ -33,6 +33,7 @@ use hal::fugit::{Duration, MicrosDurationU32};
 use hal::pac::interrupt;
 use hal::sio::SioFifo;
 use hal::timer::{Alarm, Timer};
+use hal::watchdog::Watchdog;
 use hal::{clocks, gpio, pac, pwm, sio, timer, usb, watchdog};
 
 use cortex_m::delay::Delay;
@@ -70,7 +71,7 @@ const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(100_000)
 pub struct Device {
   pub sio_fifo: SioFifo,
   pub timer:    Timer,
-  pub watchdog: watchdog::Watchdog,
+  pub watchdog: Watchdog,
   pub pwms:     Pwms,
   pub adcs:     Adcs,
   pub inputs:   IoPins<InputType>,

@@ -1,4 +1,5 @@
 {
+  // "rust-analyzer.cargo.noDefaultFeatures": true,
   // "rust-analyzer.cargo.features": ["default-dev"],
   "rust-analyzer.cargo.target": "thumbv6m-none-eabi",
   "editor.formatOnSave": true,
