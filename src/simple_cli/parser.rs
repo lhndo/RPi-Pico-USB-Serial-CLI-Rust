@@ -75,12 +75,12 @@ pub fn parse(input: &str) -> Result<Vec<Argument, MAX_NUMBER_PARAMS>> {
 
   // Check for dangling escape character
   if escaped {
-    return Err(Error::Parse("dangling escape \"\\\" char".into_truncated()));
+    return Err(Error::Parse("dangling escape \"\\\" char".into_truncate()));
   }
 
   // Check for unmatched quotes
   if in_quotes {
-    return Err(Error::Parse("unmatched quotes".into_truncated()));
+    return Err(Error::Parse("unmatched quotes".into_truncate()));
   }
 
   // ——————————————————————————————————— Processing arguments ——————————————————————————————————————
@@ -90,7 +90,7 @@ pub fn parse(input: &str) -> Result<Vec<Argument, MAX_NUMBER_PARAMS>> {
   for word in processed_buf {
     // Sanitizing. Orphan "=" triggers error.
     if word == "=" || word.starts_with('=') || word.ends_with('=') {
-      return Err(Error::Parse("\"=\" spacing".into_truncated()));
+      return Err(Error::Parse("\"=\" spacing".into_truncate()));
     }
 
     let mut elements = word.splitn(2, '=');
@@ -149,11 +149,11 @@ impl ArgList for &[Argument] {
     let arg = self
       .iter()
       .find(|s| s.param.eq_ignore_ascii_case(param))
-      .ok_or_else(|| Error::MissingArg(param.into_truncated()))?;
+      .ok_or_else(|| Error::MissingArg(param.into_truncate()))?;
 
     let val_as_str = arg.value.as_str();
 
-    let value: T = val_as_str.parse().map_err(|_| Error::Parse(param.into_truncated()))?;
+    let value: T = val_as_str.parse().map_err(|_| Error::Parse(param.into_truncate()))?;
 
     Ok(value)
   }

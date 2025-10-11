@@ -17,11 +17,11 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Error, Debug, Clone, Eq, PartialEq)]
 pub enum Error {
-  #[error("failed to generate buffer!")]
+  #[error("failed to generate buffer")]
   BufferWrite,
-  #[error("while parsing buffer!")]
+  #[error("while parsing buffer")]
   ParseBuffer,
-  #[error("IO Input!")]
+  #[error("IO Input")]
   IoInput,
   #[error("parsing arg: {0}")]
   Parse(String<ERR_STR_LENGTH>),
@@ -31,16 +31,22 @@ pub enum Error {
   CmdExec(String<ERR_STR_LENGTH>),
   #[error("command not found: {0}")]
   CmdNotFound(String<ERR_STR_LENGTH>),
-  #[error("command too long!")]
+  #[error("command too long")]
   CommandTooLong,
-  #[error("argument too long!")]
+  #[error("argument too long")]
   ArgTooLong,
-  #[error("too many arguments!")]
+  #[error("too many arguments")]
   TooManyArgs,
-  #[error("critical failure!")]
+  #[error("critical failure")]
   CriticalFail,
-  #[error("exited!")]
+  #[error("exited")]
   Exit,
+
+  // --- Custom
+  #[error("{0}")]
+  Custom(String<ERR_STR_LENGTH>),
+
+  // --- From
   #[error(transparent)]
   Configuration(#[from] crate::config::Error),
 }
@@ -49,15 +55,23 @@ pub enum Error {
 //                                             Traits
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
+// —————————————————————————————————————————— From str —————————————————————————————————————————————
+
+impl From<&str> for Error {
+  fn from(value: &str) -> Self {
+    Error::Custom(value.into_truncate())
+  }
+}
+
 // ———————————————————————————————————————— Into Truncate ——————————————————————————————————————————
 
 /// Converts from &str to heapless String<N> truncating the length to N
 pub trait IntoTruncate {
-  fn into_truncated<const N: usize>(self) -> String<N>;
+  fn into_truncate<const N: usize>(self) -> String<N>;
 }
 
 impl IntoTruncate for &str {
-  fn into_truncated<const N: usize>(self) -> String<N> {
+  fn into_truncate<const N: usize>(self) -> String<N> {
     let mut s = String::<N>::new();
 
     let end = if self.len() <= N {
