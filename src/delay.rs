@@ -2,7 +2,7 @@
 //!
 //! Single-threaded only: must not be called from interrupts.
 //! Unsafe `Sync` implementation is used to avoid a critical-section Mutex, which would block interrupts.  
-//! For most use cases, prefer `device.timer.delay_ms()` directly.
+//! Alternatively use `device.timer.delay_ms()` .
 
 use core::cell::RefCell;
 use cortex_m::delay::Delay as CortexmDelay;
