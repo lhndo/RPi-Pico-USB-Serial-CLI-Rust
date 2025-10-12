@@ -219,7 +219,7 @@ pub fn test_gpio_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> R
   let output = args.get_str_param("output").unwrap_or(DEFAULT_OUTPUT);
 
   let gpio_input = CONFIG.get_gpio(input)?;
-  let gpio_output = CONFIG.get_gpio(input)?;
+  let gpio_output = CONFIG.get_gpio(output)?;
 
   println!("---- Testing GPIO ----");
   println!("Input: GPIO {gpio_input} - {input} >> Output: GPIO {gpio_output} {output}");
