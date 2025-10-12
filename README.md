@@ -7,10 +7,20 @@
 * The intent is to develop an easy prototyping framework by using the **Raspberry Pi Pico** over **Serial USB** though a **CLI**
 * This project is in an early WIP stage and I'm using it for learning and experimenting with Rust/Embedded development
 
+<br>
+
 ## Setup:
 
-* Clone this repository
-* Connect the Pico in `BOOTSEL` mode and execute `cargo run` (*assuming you have the rust toolchain installed*)
+* Clone this repository: `git clone https://github.com/lhndo/RPi-Pico-USB-Serial-CLI-Rust`
+
+* Install Rust https://rust-lang.org/tools/install/
+
+* Install elf2uf2-rs : `cargo install elf2uf2-rs` 
+
+* Hold down the RPi Pico's `BOOTSEL` button, and connect it via USB (drive mode).
+
+* Run `cargo run --release` to flash the firmware 
+ 
 * Connect to the Pico though a COM port using a **Serial Monitor tool** and follow the instructions
 
 <br>
@@ -22,11 +32,14 @@
 * VS Code debug/tasks are also available
 
 
-
+<br>
 
 ## Commands
 
 * **CLI commands** are implemented in **simple_cli/commands/**
+
+
+
 
 ### Blink Example
 
