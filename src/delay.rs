@@ -36,6 +36,12 @@ impl DelayHandle {
   where
     F: FnOnce(&mut CortexmDelay),
   {
+    #[cfg(debug_assertions)]
+    if cortex_m::peripheral::SCB::vect_active() != cortex_m::peripheral::scb::VectActive::ThreadMode
+    {
+      panic!("DELAY called from interrupt context!");
+    }
+
     let mut cell = self.inner.borrow_mut();
     let delay = cell.as_mut().expect("DELAY not initialized");
     f(delay);
