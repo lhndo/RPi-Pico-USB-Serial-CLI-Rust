@@ -54,7 +54,7 @@ pub fn build_blink_cmd() -> Command {
   }
 }
 
-pub fn blink_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Result<()> {
+pub fn blink_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
   // Print Help
   if args.contains_param("help") {
     cmd.print_help();
@@ -63,13 +63,9 @@ pub fn blink_cmd(cmd: &Command, args: &[Arguments], device: &mut Device) -> Resu
 
   let times: u16 = args.get_parsed_param("times").unwrap_or(10); // 10 default
   let interval: u16 = args.get_parsed_param("interval").unwrap_or(200); // 200ms default
-  blink(device, times, interval)
-}
 
-// Separating functions from commands for stand alone use
-pub fn blink(device: &mut Device, times: u16, interval: u16) -> Result<()> {
   println!("---- Blinking Led! ----");
-  let led = device.outputs.get_by_gpio_id(gpio!(LED)).unwrap();
+  let led = device.outputs.get(gpio!(LED)).unwrap();
 
   for n in 1..=times {
     print!("Blink {} | ", n);
