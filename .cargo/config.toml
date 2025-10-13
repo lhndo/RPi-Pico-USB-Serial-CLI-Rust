@@ -22,7 +22,22 @@ DEFMT_LOG = "trace"
 
 
 [alias]
-build-d = 'build --no-default-features --features default-dev'
-run-d   = 'run --no-default-features --features default-dev'
-embed-d = 'embed --no-default-features --features default-dev'
-size-d  = 'size --no-default-features --features default-dev'
+# base
+b = "build"
+r = "run"
+s = "size"
+
+# release
+br = "build --release"
+rr = "run --release"
+sr = "size --release"
+
+
+# default_dev
+bd = "build --no-default-features --features default-dev"
+rd = "run --no-default-features --features default-dev"
+sd = "size --no-default-features --features default-dev"
+
+brd = "br --no-default-features --features default-dev"
+rrd = "rr --no-default-features --features default-dev"
+srd = "sr --no-default-features --features default-dev"

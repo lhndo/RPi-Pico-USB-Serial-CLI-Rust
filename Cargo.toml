@@ -65,7 +65,7 @@ codegen-units    = 1
 debug            = true
 debug-assertions = false
 incremental      = false
-lto              = 'fat'
+lto              = "fat"
 opt-level        = "z"
 overflow-checks  = false
 
