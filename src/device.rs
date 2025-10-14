@@ -31,7 +31,7 @@ use rp2040_hal as hal;
 use hal::Adc;
 use hal::Clock;
 use hal::fugit::{Duration, MicrosDurationU32};
-use hal::multicore::{Multicore, Stack};
+use hal::multicore::Multicore;
 use hal::pac::interrupt;
 use hal::sio::SioFifo;
 use hal::timer::{Alarm, Timer};
@@ -65,9 +65,6 @@ pub static SYS_CLK_HZ: AtomicU32 = AtomicU32::new(0);
 // Interrupts
 static ALARM_0: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(None));
 const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(100_000); // 100ms - 10hz
-
-// Memory Stack for core 1
-static CORE1_STACK: Stack<2048> = Stack::new();
 
 // ———————————————————————————————————————————————————————————————————————————————————————————————
 //                                         Device Struct
@@ -127,7 +124,8 @@ impl Device {
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio_fifo);
     let cores = mc.cores();
     let core1 = &mut cores[1];
-    let _task = core1.spawn(CORE1_STACK.take().unwrap(), move || core1::core1_main(timer.clone()));
+    let _task =
+      core1.spawn(core1::CORE1_STACK.take().unwrap(), move || core1::core1_main(timer.clone()));
 
     // ———————————————————————————————————————— USB Bus ———————————————————————————————————————————
 

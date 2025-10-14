@@ -3,7 +3,9 @@
 //! Spawned by Device
 
 #![allow(unused_mut)]
+
 use crate::prelude::*;
+use hal::multicore::Stack;
 
 use rp2040_hal as hal;
 //
@@ -14,6 +16,9 @@ use heapless::mpmc::Queue;
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                             Globals
 // —————————————————————————————————————————————————————————————————————————————————————————————————
+
+// Memory Stack for core 1
+pub static CORE1_STACK: Stack<2048> = Stack::new();
 
 // Multicore MPMC Queue
 pub static CORE1_QUEUE: Queue<Event, 8> = Queue::new();
