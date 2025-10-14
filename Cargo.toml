@@ -15,16 +15,18 @@ rp2040-boot2 = "0.3.0"
 
 embedded-hal     = "1.0.0"
 embedded_hal_0_2 = { package = "embedded-hal", version = "0.2.7", features = ["unproven"] }
+portable-atomic  = { version = "1.11.1", default-features = false, features = ["critical-section"] }
 critical-section = "1.2.0"
 
 usb-device  = "0.3.2"
 usbd-serial = "0.2.2"
 nb          = "1.1.0"
-heapless    = "0.9.1"
 pastey      = "0.1.1"
 duplicate   = "2.0.0"
+heapless    = { version = "0.9.1", features = ["portable-atomic"] }
 once_cell   = { version = "1.21.3", default-features = false, features = ["critical-section"] }
 thiserror   = { version = "2.0.17", default-features = false }
+
 
 # Optional Dependencies
 defmt     = { version = "1.0.1", optional = true }

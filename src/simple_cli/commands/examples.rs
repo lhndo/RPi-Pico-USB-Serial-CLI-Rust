@@ -99,6 +99,49 @@ pub fn blink_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Resul
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                              Blink
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
+// Blink example
+// ex: blink times=4
+
+pub fn build_blink_multicore_cmd() -> Command {
+  Command {
+    name: "blink_multicore",
+    desc: "Blinks Onboard Led using by passing an event to Core1",
+    help: "blink [times=10] [interval=200(ms)] [help]",
+    func: blink_multicore_cmd,
+  }
+}
+
+pub fn blink_multicore_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
+  // Print Help
+  if args.contains_param("help") {
+    cmd.print_help();
+    return Ok(());
+  }
+
+  let times: u16 = args.get_parsed_param("times").unwrap_or(10); // 10 default
+  let interval: u16 = args.get_parsed_param("interval").unwrap_or(200); // 200ms default
+
+  println!("---- Blinking Led using Core1! ----");
+
+  CORE1_QUEUE
+    .enqueue(Event::Blink {
+      times:    times,
+      interval: interval,
+    })
+    .ok();
+
+  println!("...");
+
+  device.timer.delay_ms(times * 2 * interval);
+
+  println!("Done");
+  Ok(())
+}
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                              Servo
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 // Angle Controlled RC Servo

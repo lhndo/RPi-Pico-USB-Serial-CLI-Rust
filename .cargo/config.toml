@@ -32,7 +32,6 @@ br = "build --release"
 rr = "run --release"
 sr = "size --release"
 
-
 # default_dev
 bd = "build --no-default-features --features default-dev"
 rd = "run --no-default-features --features default-dev"
@@ -41,3 +40,8 @@ sd = "size --no-default-features --features default-dev"
 brd = "br --no-default-features --features default-dev"
 rrd = "rr --no-default-features --features default-dev"
 srd = "sr --no-default-features --features default-dev"
+
+# embed
+e  = "embed"
+er = "embed --release"
+ed = "embed --no-default-features --features default-dev"

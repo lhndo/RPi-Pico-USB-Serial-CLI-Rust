@@ -1,4 +1,4 @@
-//! Configuration
+//! Core 0 Pin Configuration
 use core::fmt;
 use core::sync::atomic::AtomicBool;
 use core::sync::atomic::Ordering;

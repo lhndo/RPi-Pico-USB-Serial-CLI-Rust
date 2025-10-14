@@ -17,6 +17,7 @@ use core::sync::atomic::{AtomicU32, Ordering};
 
 use crate::adcs::Adcs;
 use crate::config::{self, CONFIG};
+use crate::core1;
 use crate::delay;
 use crate::delay::DELAY;
 use crate::gpios::{InputType, IoPins, OutputType};
@@ -30,6 +31,7 @@ use rp2040_hal as hal;
 use hal::Adc;
 use hal::Clock;
 use hal::fugit::{Duration, MicrosDurationU32};
+use hal::multicore::{Multicore, Stack};
 use hal::pac::interrupt;
 use hal::sio::SioFifo;
 use hal::timer::{Alarm, Timer};
@@ -64,6 +66,9 @@ pub static SYS_CLK_HZ: AtomicU32 = AtomicU32::new(0);
 static ALARM_0: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(None));
 const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(100_000); // 100ms - 10hz
 
+// Memory Stack for core 1
+static CORE1_STACK: Stack<2048> = Stack::new();
+
 // ———————————————————————————————————————————————————————————————————————————————————————————————
 //                                         Device Struct
 // ———————————————————————————————————————————————————————————————————————————————————————————————
@@ -88,7 +93,7 @@ impl Device {
     let mut watchdog = watchdog::Watchdog::new(pac.WATCHDOG);
     let sio = sio::Sio::new(pac.SIO);
     let pins = gpio::Pins::new(pac.IO_BANK0, pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
-    let sio_fifo = sio.fifo;
+    let mut sio_fifo = sio.fifo;
 
     // ————————————————————————————————————————— Clocks ———————————————————————————————————————————
 
@@ -106,6 +111,7 @@ impl Device {
 
     let sys_clk_hz: u32 = sys_clocks.system_clock.freq().to_Hz();
     SYS_CLK_HZ.store(sys_clk_hz, Ordering::Relaxed);
+    sio_fifo.drain();
 
     // ————————————————————————————————————————— Timer ————————————————————————————————————————————
 
@@ -115,6 +121,13 @@ impl Device {
 
     let delay = Delay::new(core.SYST, sys_clk_hz);
     delay::init(delay); // Init DELAY Global
+
+    // ————————————————————————————————————————— Core 1 ————————————————————————————————————————————
+
+    let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio_fifo);
+    let cores = mc.cores();
+    let core1 = &mut cores[1];
+    let _task = core1.spawn(CORE1_STACK.take().unwrap(), move || core1::core1_main(timer.clone()));
 
     // ———————————————————————————————————————— USB Bus ———————————————————————————————————————————
 

@@ -11,6 +11,7 @@ pub use core::sync::atomic::Ordering;
 pub use crate::adcs::{AdcConversion, TEMP_SENSE_CHN};
 pub use crate::config::CONFIG;
 pub use crate::config::Error as ConfigError;
+pub use crate::core1::{CORE1_QUEUE, Event};
 pub use crate::delay::DELAY;
 pub use crate::device::*;
 pub use crate::device::{Device, TimerExt};
@@ -34,3 +35,11 @@ pub use defmt::{debug, error, info, trace, warn};
 
 #[cfg(not(feature = "defmt"))]
 pub use crate::{debug, error, info, trace, warn};
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                             Globals
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
+// sio fifo events for multi-core
+pub const E_WAKE_UP: u32 = 1;
+pub const E_DONE: u32 = 0;

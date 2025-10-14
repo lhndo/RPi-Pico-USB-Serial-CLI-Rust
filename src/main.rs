@@ -7,6 +7,7 @@
 
 mod adcs;
 mod config;
+mod core1;
 mod delay;
 mod device;
 mod fifo_buffer;

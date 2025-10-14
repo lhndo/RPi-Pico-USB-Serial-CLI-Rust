@@ -35,6 +35,7 @@ pub fn build_command_list() -> CommandList {
   // Examples
   command_list.register_command(build_example_cmd());
   command_list.register_command(build_blink_cmd());
+  command_list.register_command(build_blink_multicore_cmd());
   command_list.register_command(build_servo_cmd());
 
   // Test
