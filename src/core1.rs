@@ -39,11 +39,8 @@ pub fn core1_main(timer: timer::Timer) -> ! {
 
   // ——————————————————————————————————————————— Pins ——————————————————————————————————————————————
 
-  // Safety check if pin already defined in main core 0 configuration
-  if CONFIG.get_alias(10).is_ok() {
-    panic!("Pin already taken")
-  }
-  let mut test_pin = pins.gpio10.into_push_pull_output();
+  let mut test_input_pin: InputType = CONFIG.take_pin_by_alias("C1_IN_A").unwrap();
+  let mut test_output_pin: OutputType = CONFIG.take_pin_by_alias("C1_OUT_A").unwrap();
 
   // Unsafe practice since we know that core0 also uses gpio25(LED)
   let mut led = pins.gpio25.into_push_pull_output();

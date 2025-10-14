@@ -62,6 +62,8 @@ const PIN_DEFINITION: &[Def] = {
 
     &[
         //           Alias       GPIO            Group           Valid Pins
+        // Core0 ————————————————————————————————————————————————————————————
+        
         // ADC
         Def { alias: "ADC0",     id: Gpio(26), group: Adc    }, // GP26
         Def { alias: "ADC1",     id: Gpio(27), group: Adc    }, // GP27
@@ -125,6 +127,16 @@ const PIN_DEFINITION: &[Def] = {
         Def { alias: "OUT_B",    id: Gpio(1),  group: Outputs },
         Def { alias: "OUT_C",    id: Gpio(3),  group: Outputs },
         Def { alias: "LED",      id: Gpio(25), group: Outputs },
+
+        //           Alias       GPIO            Group           Valid Pins
+        // Core1 ————————————————————————————————————————————————————————————
+
+        // Inputs
+        Def { alias: "C1_IN_A",    id: Gpio(10),  group: C1_Inputs  },
+
+        // Ouputs 
+        Def { alias: "C1_OUT_A",   id: Gpio(11),  group: C1_Outputs },
+        
     ]
 };
 
@@ -298,7 +310,8 @@ pub struct PinDef {
   pub taken: AtomicBool,
 }
 
-/// The functional group a pin belongs to.
+/// The functional group a pin belongs to
+#[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Group {
   Adc,
@@ -308,6 +321,13 @@ pub enum Group {
   Uart,
   Inputs,
   Outputs,
+  C1_Adc,
+  C1_Pwm,
+  C1_I2c,
+  C1_Spi,
+  C1_Uart,
+  C1_Inputs,
+  C1_Outputs,
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————

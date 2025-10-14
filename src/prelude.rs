@@ -16,7 +16,7 @@ pub use crate::delay::DELAY;
 pub use crate::device::*;
 pub use crate::device::{Device, TimerExt};
 pub use crate::fifo_buffer::{AsStr, FifoBuffer};
-pub use crate::gpios::IoPins;
+pub use crate::gpios::{InputType, IoPins, OutputType};
 pub use crate::log::{LOG, LogLevel};
 pub use crate::pwms::PwmChannelExt;
 pub use crate::serial_io::SERIAL;
