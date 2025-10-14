@@ -76,7 +76,7 @@ impl From<&str> for Error {
 
 // ———————————————————————————————————————— Into Truncate ——————————————————————————————————————————
 
-/// Converts from &str to heapless String<N> truncating the length to N
+/// Converts from &str to heapless `String<N>` truncating the length to N
 pub trait IntoTruncate {
   fn into_truncate<const N: usize>(self) -> String<N>;
 }

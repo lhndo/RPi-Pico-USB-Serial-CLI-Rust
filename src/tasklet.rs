@@ -4,14 +4,14 @@
 //!
 //!
 //! Example - Non blocking timer based task:
-//! ```no_run
-//! 
+//! ```rust
 //! let mut ledtask = Tasklet::new(200, 10, &device.timer);
 //!
 //! while !ledtask.is_exhausted() {
 //!   if ledtask.is_ready() {
 //!     led.toggle().unwrap();
 //!   }
+//! }
 //! ```
 
 use embedded_hal_0_2::timer::{Cancel, CountDown as CountDownT};
