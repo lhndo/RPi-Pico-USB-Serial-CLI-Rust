@@ -6,7 +6,7 @@
 
 * The intent is to develop an easy prototyping framework by using the **Raspberry Pi Pico** over **Serial USB** though a **CLI**
 * Built on top of the [rp2040-hal](https://github.com/rp-rs/rp-hal) with multicore support 
-* Uses an easy to use global pin configuration system
+* Easy to use global pin configuration system
 * This project is fast changing and I'm using it for learning and experimenting with Rust/Embedded development
 
 <br>
