@@ -29,7 +29,7 @@
 
 ### Probe-rs
 
-* For **probe-rs** with a **swd** interface you can flash/debug by running: `cargo embed-d` or `cargo embed --no-default-features --features defmt`
+* For **probe-rs** with a **swd** interface you can flash/debug by running: `cargo embed --no-default-features --features defmt`, or `cargo ed`
 
 * VS Code debug/tasks are also available
 
@@ -38,7 +38,7 @@
 
 ## Commands
 
-* **CLI commands** are implemented in **simple_cli/commands/**
+* The **CLI commands** are implemented in **cli/commands/..** and then included in the **commands.rs** **build()** function.
 
 
 
@@ -84,7 +84,7 @@ pub fn blink_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Resul
 
 ## Configuration 
 
-* The pin definition is set in **config.rs**
+* The pin configuration is defined in **pin_config.rs**
 
 * The pins are dynamically built and assigned for the GPIO, PWM, ADC functions though **device.rs**.
 
@@ -93,9 +93,11 @@ pub fn blink_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Resul
 ### Configuration Example
 
 ```rust
-const PIN_DEFINITION: &[Def] = {
+pub const PIN_DEFINITION: &[Def] = {
     &[
         //           Alias       GPIO            Group           Valid Pins
+        // Core0 ————————————————————————————————————————————————————————————
+        
         // ADC
         Def { alias: "ADC0",     id: Gpio(26), group: Adc    }, // GP26
         Def { alias: "ADC1",     id: Gpio(27), group: Adc    }, // GP27
@@ -159,6 +161,24 @@ const PIN_DEFINITION: &[Def] = {
         Def { alias: "OUT_B",    id: Gpio(1),  group: Outputs },
         Def { alias: "OUT_C",    id: Gpio(3),  group: Outputs },
         Def { alias: "LED",      id: Gpio(25), group: Outputs },
+
+        //           Alias       GPIO            Group           Valid Pins
+        // Core1 ————————————————————————————————————————————————————————————
+        // Try defining Core1 Aliases with a C1 prefix and define them as C1 groups
+
+        // Inputs
+        Def { alias: "C1_IN_A",    id: Gpio(10),  group: C1_Inputs  },
+
+        // Ouputs 
+        Def { alias: "C1_OUT_A",   id: Gpio(11),  group: C1_Outputs },
+        
     ]
 };
 ```
+
+
+## Multicore
+
+* Core1 is automatically spawned by the device.rs
+* Core1's main function can be found in **main_core1.rs**
+* A **blink_multicore_cmd** example can be found in **commands/examples.rs**. 
