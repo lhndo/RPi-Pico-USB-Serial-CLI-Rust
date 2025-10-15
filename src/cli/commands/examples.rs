@@ -109,7 +109,7 @@ pub fn build_blink_multicore_cmd() -> Command {
   Command {
     name: "blink_multicore",
     desc: "Blinks Onboard Led using by passing an event to Core1",
-    help: "blink [times=10] [interval=200(ms)] [help]",
+    help: "blink_multicore [times=10] [interval=200(ms)] [help]",
     func: blink_multicore_cmd,
   }
 }
@@ -140,6 +140,50 @@ pub fn blink_multicore_cmd(cmd: &Command, args: &[Argument], device: &mut Device
   }
 
   println!();
+  Ok(())
+}
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                           Sleep Multicore
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
+// Blink example
+// ex: blink times=4
+
+pub fn build_sleep_multicore_cmd() -> Command {
+  Command {
+    name: "sleep_multicore",
+    desc: "Toggles Core1 between Sleep and Awake",
+    help: "sleep_multicore [help]",
+    func: sleep_multicore_cmd,
+  }
+}
+
+pub fn sleep_multicore_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
+  // Print Help
+  if args.contains_param("help") {
+    cmd.print_help();
+    return Ok(());
+  }
+
+  static mut ASLEEP: bool = false;
+
+  // Modifying static mut is safe in this context
+  unsafe {
+    if !ASLEEP {
+      println!("Setting Core1 to Sleep!");
+      CORE1_QUEUE.enqueue(Event::Sleep).ok();
+      ASLEEP = true;
+    }
+    else {
+      println!("Waking up Core1!");
+      cortex_m::asm::sev();
+      ASLEEP = false;
+    }
+  }
+
+  device.timer.delay_ms(10); // Waiting for core1 to print the info message
+
   Ok(())
 }
 

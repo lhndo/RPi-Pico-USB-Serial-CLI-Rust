@@ -58,7 +58,7 @@ pub fn main_core1(timer: timer::Timer) -> ! {
           blink_led(&mut led, &mut delay, times, interval);
         }
         Event::Sleep => {
-          cortex_m::asm::wfi();
+          sleep();
         }
       }
     }
@@ -78,6 +78,19 @@ fn blink_led(led: &mut impl OutputPin, delay: &mut impl DelayMs<u32>, times: u16
     led.set_low().ok();
     delay.delay_ms(interval);
   }
+}
+
+fn sleep() {
+  // Clearing event flags
+  cortex_m::asm::sev();
+  cortex_m::asm::wfe();
+
+  // Going to Sleep
+  info!("Core 1 >> Asleep");
+  cortex_m::asm::wfe();
+
+  // Waking up
+  info!("Core 1 >> Awake");
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
