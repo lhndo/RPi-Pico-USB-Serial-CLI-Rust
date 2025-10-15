@@ -86,7 +86,7 @@ pub fn blink_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Resul
 
 * The pin configuration is defined in **pin_config.rs**
 
-* The pins are dynamically built and assigned for the GPIO, PWM, ADC functions though **device.rs**.
+* On **Core0** the pins are dynamically built and assigned for the **GPIO, PWM, ADC** functions though **device.rs**.
 
 * The "**device**" is set up in **device.rs** and encapsulated in a **Device** struct which is then borrowed to various **CLI** **commands**/**programs** 
 
