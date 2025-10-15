@@ -59,7 +59,7 @@ pub enum Error {
 
   // --- From
   #[error(transparent)]
-  Configuration(#[from] crate::config::Error),
+  Configuration(#[from] crate::system::config::Error),
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————

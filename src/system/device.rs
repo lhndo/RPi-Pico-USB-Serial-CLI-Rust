@@ -15,15 +15,14 @@ use core::cell::RefCell;
 use core::fmt::Write;
 use core::sync::atomic::{AtomicU32, Ordering};
 
-use crate::adcs::Adcs;
-use crate::config::{self, CONFIG};
-use crate::core1;
-use crate::delay;
-use crate::delay::DELAY;
-use crate::gpios::{InputType, IoPins, OutputType};
-use crate::pwms::Pwms;
-use crate::serial_io;
-use crate::serial_io::SERIAL;
+use super::adcs::Adcs;
+use super::config::{self, CONFIG};
+use super::delay;
+use super::delay::DELAY;
+use super::gpios::{InputType, IoPins, OutputType};
+use super::pwms::Pwms;
+use super::serial_io::{self, SERIAL};
+use crate::main_core1;
 use crate::state::State;
 
 use rp2040_hal as hal;
@@ -124,8 +123,9 @@ impl Device {
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio_fifo);
     let cores = mc.cores();
     let core1 = &mut cores[1];
-    let _task =
-      core1.spawn(core1::CORE1_STACK.take().unwrap(), move || core1::core1_main(timer.clone()));
+    let _task = core1.spawn(main_core1::CORE1_STACK.take().unwrap(), move || {
+      main_core1::main_core1(timer.clone())
+    });
 
     // ———————————————————————————————————————— USB Bus ———————————————————————————————————————————
 

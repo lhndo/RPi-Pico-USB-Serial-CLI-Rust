@@ -49,11 +49,11 @@ pub fn parse(input: &str) -> Result<Vec<Argument, MAX_NUMBER_PARAMS>> {
           in_quotes = !in_quotes;
         }
         escaped = false;
-      },
+      }
       ' ' if in_quotes => {
         escaped = false;
         processed_buf.push(SEPARATOR).map_err(|_| Error::CommandTooLong)?;
-      },
+      }
       ESCAPE if in_quotes => {
         if escaped {
           processed_buf.push(ESCAPE).map_err(|_| Error::CommandTooLong)?;
@@ -62,14 +62,14 @@ pub fn parse(input: &str) -> Result<Vec<Argument, MAX_NUMBER_PARAMS>> {
         else {
           escaped = true;
         }
-      },
+      }
       c if in_quotes => {
         escaped = false;
         processed_buf.push(c).map_err(|_| Error::CommandTooLong)?;
-      },
+      }
       c => {
         processed_buf.push(c.to_ascii_lowercase()).map_err(|_| Error::CommandTooLong)?;
-      },
+      }
     }
   }
 

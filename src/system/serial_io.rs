@@ -151,11 +151,11 @@ impl Serialio {
     // Keep reading until buffer is empty
     loop {
       match self.serial.read(&mut discard_buffer) {
-        Ok(bytes_read) if bytes_read > 0 => {},
+        Ok(bytes_read) if bytes_read > 0 => {}
         _ => {
           // No more data or error, we're done
           break;
-        },
+        }
       }
     }
   }
@@ -188,12 +188,12 @@ impl Serialio {
             return;
           }
           continue;
-        },
+        }
         _ => {
           // No data available
           self.interrupt_cmd_triggered = false;
           return;
-        },
+        }
       }
     }
   }
@@ -208,18 +208,18 @@ impl Serialio {
         Ok(written) => {
           // If we wrote some bytes, advance the slice.
           data = &data[written..];
-        },
+        }
         Err(UsbError::WouldBlock) => {
           // If not connected to serial, we exit
           if !self.serial.dtr() {
             return Err(UsbError::InvalidEndpoint);
           }
           // Otherwise The serial buffer is full and we must keep polling
-        },
+        }
         Err(e) => {
           // A different, real error occurred. We exit.
           return Err(e);
-        },
+        }
       }
 
       // We must poll the USB device to send the serial data
@@ -254,14 +254,14 @@ impl Serialio {
         let mut byte_buffer = [0u8; 1];
         match self.serial.read(&mut byte_buffer) {
           Ok(1) => break byte_buffer[0], // Got a byte, break inner loop.
-          Ok(_) => {},                   // Read 0 bytes, should never happen...
+          Ok(_) => {}                    // Read 0 bytes, should never happen...
           Err(UsbError::WouldBlock) => {
             // No data available, check connection and continue polling.
             if !self.serial.dtr() {
               // No serial connection, we exit.
               return Err(UsbError::InvalidEndpoint);
             }
-          },
+          }
           Err(e) => return Err(e), // Non-recoverable error occurred.
         }
       };
@@ -319,7 +319,7 @@ macro_rules! print {
     ($($arg:tt)*) => {
         critical_section::with(|cs| {
             use core::fmt::Write;
-            if let Some(s) = $crate::serial_io::SERIAL_CELL.borrow_ref_mut(cs).as_mut() {
+            if let Some(s) = $crate::system::serial_io::SERIAL_CELL.borrow_ref_mut(cs).as_mut() {
                 let _ = s.write_fmt(format_args!($($arg)*));
             }
         })
@@ -334,7 +334,7 @@ macro_rules! println {
     ($($arg:tt)*) => {
         critical_section::with(|cs| {
             use core::fmt::Write;
-            if let Some(s) = $crate::serial_io::SERIAL_CELL.borrow_ref_mut(cs).as_mut() {
+            if let Some(s) = $crate::system::serial_io::SERIAL_CELL.borrow_ref_mut(cs).as_mut() {
                 let _ = writeln!(s, $($arg)*);
             }
         })

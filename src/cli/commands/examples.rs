@@ -65,7 +65,7 @@ pub fn blink_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Resul
   let times: u16 = args.get_parsed_param("times").unwrap_or(10); // 10 default
   let interval: u16 = args.get_parsed_param("interval").unwrap_or(200); // 200ms default
 
-  println!("---- Blinking Led! ----");
+  println!("---- Blinking Led! ----\n");
   let led = device.outputs.get(gpio!(LED)).unwrap();
 
   // Non blocking timer based task
@@ -124,7 +124,7 @@ pub fn blink_multicore_cmd(cmd: &Command, args: &[Argument], device: &mut Device
   let times: u16 = args.get_parsed_param("times").unwrap_or(10); // 10 default
   let interval: u16 = args.get_parsed_param("interval").unwrap_or(200); // 200ms default
 
-  println!("---- Blinking Led using Core1! ----");
+  println!("---- Blinking Led using Core1! ----\n");
 
   CORE1_QUEUE
     .enqueue(Event::Blink {
@@ -133,11 +133,13 @@ pub fn blink_multicore_cmd(cmd: &Command, args: &[Argument], device: &mut Device
     })
     .ok();
 
-  println!("...");
+  // We wait since we don't have a done callback implemented
+  for blink in 1..=times {
+    print!("Blink {} | ", blink);
+    device.timer.delay_ms(interval * 2);
+  }
 
-  device.timer.delay_ms(times * 2 * interval);
-
-  println!("Done");
+  println!();
   Ok(())
 }
 

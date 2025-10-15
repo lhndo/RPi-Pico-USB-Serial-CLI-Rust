@@ -3,8 +3,8 @@
 use core::convert::Infallible;
 use core::fmt;
 
-use crate::config::Error;
-use crate::config::Result;
+use super::config::Error;
+use super::config::Result;
 
 use embedded_hal::pwm::SetDutyCycle;
 
@@ -96,10 +96,10 @@ impl Pwms {
       // 31 = NULL (reset/unused)
 
       match current_func {
-        4 => {},
+        4 => {}
         _ => {
           unreachable!("PWM pin in use");
-        },
+        }
       }
 
       io_bank0.gpio(gpio_id as usize).gpio_ctrl().write(|w| w.funcsel().pwm());
@@ -357,35 +357,35 @@ macro_rules! with_pwm_slice {
       0 => {
         let $slice = &mut $self.pwm0;
         $body
-      },
+      }
       1 => {
         let $slice = &mut $self.pwm1;
         $body
-      },
+      }
       2 => {
         let $slice = &mut $self.pwm2;
         $body
-      },
+      }
       3 => {
         let $slice = &mut $self.pwm3;
         $body
-      },
+      }
       4 => {
         let $slice = &mut $self.pwm4;
         $body
-      },
+      }
       5 => {
         let $slice = &mut $self.pwm5;
         $body
-      },
+      }
       6 => {
         let $slice = &mut $self.pwm6;
         $body
-      },
+      }
       7 => {
         let $slice = &mut $self.pwm7;
         $body
-      },
+      }
       // ... other match arms
       _ => panic!("Invalid PWM Slice ID"),
     }

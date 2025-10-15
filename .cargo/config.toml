@@ -42,6 +42,7 @@ rrd = "rr --no-default-features --features default-dev"
 srd = "sr --no-default-features --features default-dev"
 
 # embed
-e  = "embed"
-er = "embed --release"
-ed = "embed --no-default-features --features default-dev"
+e   = "embed"
+er  = "embed --release"
+ed  = "embed --no-default-features --features default-dev"
+edr = "embed --no-default-features --features default-dev --release"

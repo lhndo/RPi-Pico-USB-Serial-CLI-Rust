@@ -8,8 +8,8 @@ pub use commands::CommandList;
 pub use error::{Error, IntoTruncate, Result};
 pub use parser::*;
 
-use crate::device::Device as Context;
 use crate::println;
+use crate::system::device::Device as Context;
 
 pub use heapless::Vec;
 

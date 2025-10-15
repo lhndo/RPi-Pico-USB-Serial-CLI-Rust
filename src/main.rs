@@ -5,21 +5,15 @@
 #![no_std]
 #![no_main]
 
-mod adcs;
-mod config;
-mod core1;
-mod delay;
-mod device;
-mod fifo_buffer;
-mod gpios;
-mod log;
+mod system;
+mod utils;
+
+mod cli;
+mod main_core1;
+mod pin_config;
 mod prelude;
 mod program;
-mod pwms;
-mod serial_io;
-mod simple_cli;
 mod state;
-mod tasklet;
 
 // ———————————————————————————————————— Debug dfmt features ——————————————————————————————————————
 #[cfg(feature = "defmt")]
@@ -39,7 +33,9 @@ extern crate rp2040_panic_usb_boot;
 #[cfg(feature = "panic-persist")]
 extern crate panic_persist;
 
-// —————————————————————————————————————————— Globals —————————————————————————————————————————————
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                             Globals
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
 const RUN_STANDALONE: bool = false;
 
@@ -53,15 +49,15 @@ fn main() -> ! {
 
   info!("Alive! {} : v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
 
-  let mut device = device::Device::new();
+  let mut device = system::device::Device::new();
 
   if !RUN_STANDALONE {
-    let command_list = simple_cli::commands::build_command_list();
+    let command_list = cli::commands::build();
     let mut program = program::Program::new();
     program.run(&mut device, command_list);
   }
 
   loop {
-    device::device_reset_to_usb();
+    system::device::device_reset_to_usb();
   }
 }

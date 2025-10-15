@@ -20,7 +20,7 @@ const MAX_CMDS: usize = 20;
 
 /// Command List builder
 /// Register new commands in the function below.
-pub fn build_command_list() -> CommandList {
+pub fn build() -> CommandList {
   let mut command_list = CommandList::default();
 
   // Base

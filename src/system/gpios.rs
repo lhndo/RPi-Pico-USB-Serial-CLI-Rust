@@ -1,7 +1,7 @@
 //! Input/Output GP Pin Storage for the RP2040 microcontroller
 
-use crate::config::Error;
-use crate::config::Result;
+use super::config::Error;
+use super::config::Result;
 
 use hal::gpio::{self, Function, Pin, PullType};
 use rp2040_hal::{self as hal};

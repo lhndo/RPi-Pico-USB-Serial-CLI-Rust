@@ -27,9 +27,7 @@ pub static CORE1_QUEUE: Queue<Event, 8> = Queue::new();
 //                                            Core1 Main
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
-pub fn core1_main(timer: timer::Timer) -> ! {
-  //
-
+pub fn main_core1(timer: timer::Timer) -> ! {
   // ————————————————————————————————————— Core 1 Boilerplate ————————————————————————————————————————
 
   let core = unsafe { pac::CorePeripherals::steal() };
@@ -52,8 +50,6 @@ pub fn core1_main(timer: timer::Timer) -> ! {
   // ————————————————————————————————————————— Main Loop ———————————————————————————————————————————
 
   loop {
-    //
-
     // ————————————————————————————————————————— Events ————————————————————————————————————————————
 
     while let Some(event) = CORE1_QUEUE.dequeue() {
@@ -66,7 +62,7 @@ pub fn core1_main(timer: timer::Timer) -> ! {
         }
       }
     }
-    delay.delay_ms(10); // avoiding spinning in a tight loop
+    delay.delay_ms(10); // Avoid spinning in a tight loop
   }
 }
 

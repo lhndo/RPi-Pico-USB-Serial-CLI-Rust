@@ -7,12 +7,18 @@
 //! info!("This is an info msg");
 //! ```
 
-use core::sync::atomic::AtomicU8;
-use core::sync::atomic::Ordering;
-
 use core::fmt;
+use core::sync::atomic::{AtomicU8, Ordering};
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                             Globals
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub static LOG: Log = Log { level: AtomicU8::new(5) }; // Defaults to Trace
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                               Log
+// —————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Log {
   level: AtomicU8,
@@ -77,11 +83,15 @@ impl fmt::Display for LogLevel {
   }
 }
 
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                             Macros
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
 #[cfg(not(feature = "defmt"))]
 #[macro_export]
 macro_rules! error {
     ($($arg:tt)*) => {
-      if $crate::log::LOG.get_as_u8() >= 1 {
+      if $crate::utils::log::LOG.get_as_u8() >= 1 {
         $crate::print!("[ERROR] ");
         $crate::println!($($arg)*);
       }
@@ -91,7 +101,7 @@ macro_rules! error {
 #[macro_export]
 macro_rules! warn {
     ($($arg:tt)*) => {
-      if $crate::log::LOG.get_as_u8() >= 2 {
+      if $crate::utils::log::LOG.get_as_u8() >= 2 {
         $crate::print!("[WARN ] ");
         $crate::println!($($arg)*);
       }
@@ -101,7 +111,7 @@ macro_rules! warn {
 #[macro_export]
 macro_rules! info {
     ($($arg:tt)*) => {
-      if $crate::log::LOG.get_as_u8() >= 3 {
+      if $crate::utils::log::LOG.get_as_u8() >= 3 {
         $crate::print!("[INFO ] ");
         $crate::println!($($arg)*);
       }
@@ -111,7 +121,7 @@ macro_rules! info {
 #[macro_export]
 macro_rules! debug {
     ($($arg:tt)*) => {
-      if $crate::log::LOG.get_as_u8() >= 4 {
+      if $crate::utils::log::LOG.get_as_u8() >= 4 {
         $crate::print!("[DEBUG] ");
         $crate::println!($($arg)*);
       }
@@ -121,7 +131,7 @@ macro_rules! debug {
 #[macro_export]
 macro_rules! trace {
     ($($arg:tt)*) => {
-      if $crate::log::LOG.get_as_u8() >= 5 {
+      if $crate::utils::log::LOG.get_as_u8() >= 5 {
         $crate::print!("[TRACE] ");
         $crate::println!($($arg)*);
       }

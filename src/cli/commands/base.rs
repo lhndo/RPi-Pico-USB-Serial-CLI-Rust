@@ -305,8 +305,8 @@ pub fn pwm_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<
 
 #[allow(clippy::too_many_arguments)]
 pub fn pwm<I>(
-  pwm: &mut crate::pwms::PwmSlice<I>,
-  channel: crate::pwms::Channel,
+  pwm: &mut crate::system::pwms::PwmSlice<I>,
+  channel: crate::system::pwms::Channel,
   us: i32,
   duty: u8,
   freq: u32,
