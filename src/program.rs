@@ -129,7 +129,7 @@ impl Program {
   //                                           Get Connection
   // —————————————————————————————————————————————————————————————————————————————————————————————————
 
-  /// Blocking function until connection is aqquired
+  /// Blocking function until connection is acquired
   fn get_connection(&mut self, device: &mut Device) {
     let led = device.outputs.get(gpio!(LED)).unwrap();
 
@@ -166,8 +166,8 @@ impl Program {
     }
 
     // Print greeting msg
-    println!("\n========= HELLO =========== ");
     let time_ticks = device.timer.get_counter().ticks();
+    println!("\n========= HELLO =========== ");
     println!("Current timer ticks: {time_ticks} (T: {})", device.timer.print_time());
     println!("Frequency: {}hz", SYS_CLK_HZ.load(Ordering::Relaxed));
     println!("Type \"help\" for the command lists\n");
