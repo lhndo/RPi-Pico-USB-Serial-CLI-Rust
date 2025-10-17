@@ -21,66 +21,66 @@ pub static LOG: Log = Log { level: AtomicU8::new(5) }; // Defaults to Trace
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Log {
-  level: AtomicU8,
+    level: AtomicU8,
 }
 
 impl Log {
-  pub fn get(&self) -> LogLevel {
-    let level = self.level.load(Ordering::Relaxed);
-    level.into()
-  }
+    pub fn get(&self) -> LogLevel {
+        let level = self.level.load(Ordering::Relaxed);
+        level.into()
+    }
 
-  pub fn set(&self, level: LogLevel) {
-    let level = level.into();
-    self.level.store(level, Ordering::Relaxed);
-  }
+    pub fn set(&self, level: LogLevel) {
+        let level = level.into();
+        self.level.store(level, Ordering::Relaxed);
+    }
 
-  pub fn get_as_u8(&self) -> u8 {
-    self.level.load(Ordering::Relaxed)
-  }
+    pub fn get_as_u8(&self) -> u8 {
+        self.level.load(Ordering::Relaxed)
+    }
 }
 
 #[derive(Debug)]
 #[repr(u8)]
 pub enum LogLevel {
-  Off,   // 0
-  Error, // 1
-  Warn,  // 2
-  Info,  // 3
-  Debug, // 4
-  Trace, // 5
+    Off,   // 0
+    Error, // 1
+    Warn,  // 2
+    Info,  // 3
+    Debug, // 4
+    Trace, // 5
 }
 
 impl From<LogLevel> for u8 {
-  fn from(level: LogLevel) -> Self {
-    level as u8
-  }
+    fn from(level: LogLevel) -> Self {
+        level as u8
+    }
 }
 
 impl From<u8> for LogLevel {
-  fn from(level: u8) -> Self {
-    match level {
-      0 => LogLevel::Off,
-      1 => LogLevel::Error,
-      2 => LogLevel::Warn,
-      3 => LogLevel::Info,
-      4 => LogLevel::Debug,
-      _ => LogLevel::Trace,
+    fn from(level: u8) -> Self {
+        match level {
+            0 => LogLevel::Off,
+            1 => LogLevel::Error,
+            2 => LogLevel::Warn,
+            3 => LogLevel::Info,
+            4 => LogLevel::Debug,
+            _ => LogLevel::Trace,
+        }
     }
-  }
 }
 
 impl fmt::Display for LogLevel {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{}", match self {
-      LogLevel::Off => "[OFF]",
-      LogLevel::Error => "[ERROR]",
-      LogLevel::Warn => "[WARN]",
-      LogLevel::Info => "[INFO]",
-      LogLevel::Debug => "[DEBUG]",
-      LogLevel::Trace => "[TRACE]",
-    })
-  }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", match self {
+            LogLevel::Off => "[OFF]",
+            LogLevel::Error => "[ERROR]",
+            LogLevel::Warn => "[WARN]",
+            LogLevel::Info => "[INFO]",
+            LogLevel::Debug => "[DEBUG]",
+            LogLevel::Trace => "[TRACE]",
+        })
+    }
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————

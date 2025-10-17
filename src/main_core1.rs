@@ -28,42 +28,42 @@ pub static CORE1_QUEUE: Queue<EventCore1, 8> = Queue::new();
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub fn main_core1(timer: timer::Timer) -> ! {
-  // ————————————————————————————————————— Core 1 Boilerplate ————————————————————————————————————————
+    // ————————————————————————————————————— Core 1 Boilerplate ————————————————————————————————————————
 
-  let core = unsafe { pac::CorePeripherals::steal() };
-  let mut pac = unsafe { pac::Peripherals::steal() };
-  let mut sio = sio::Sio::new(pac.SIO);
-  let pins = gpio::Pins::new(pac.IO_BANK0, pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
-  let mut delay = cortex_m::delay::Delay::new(core.SYST, SYS_CLK_HZ.load(Ordering::Relaxed));
-  let mut sio_fifo = sio.fifo;
+    let core = unsafe { pac::CorePeripherals::steal() };
+    let mut pac = unsafe { pac::Peripherals::steal() };
+    let mut sio = sio::Sio::new(pac.SIO);
+    let pins = gpio::Pins::new(pac.IO_BANK0, pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, SYS_CLK_HZ.load(Ordering::Relaxed));
+    let mut sio_fifo = sio.fifo;
 
-  // ——————————————————————————————————————————— Pins ——————————————————————————————————————————————
+    // ——————————————————————————————————————————— Pins ——————————————————————————————————————————————
 
-  let mut test_input_pin: InputType = CONFIG.take_pin_by_alias("C1_IN_A").unwrap();
-  let mut test_output_pin: OutputType = CONFIG.take_pin_by_alias("C1_OUT_A").unwrap();
+    let mut test_input_pin: InputType = CONFIG.take_pin_by_alias("C1_IN_A").unwrap();
+    let mut test_output_pin: OutputType = CONFIG.take_pin_by_alias("C1_OUT_A").unwrap();
 
-  // Unsafe practice since we know that core0 also uses gpio25(LED)
-  let mut led = pins.gpio25.into_push_pull_output();
+    // Unsafe practice since we know that core0 also uses gpio25(LED)
+    let mut led = pins.gpio25.into_push_pull_output();
 
-  info!("Core 1 >> Initialised");
+    info!("Core 1 >> Initialised");
 
-  // ————————————————————————————————————————— Main Loop ———————————————————————————————————————————
+    // ————————————————————————————————————————— Main Loop ———————————————————————————————————————————
 
-  loop {
-    // ————————————————————————————————————————— Events ————————————————————————————————————————————
+    loop {
+        // ————————————————————————————————————————— Events ————————————————————————————————————————————
 
-    while let Some(event) = CORE1_QUEUE.dequeue() {
-      match event {
-        EventCore1::Blink { times, interval } => {
-          blink_led(&mut led, &mut delay, times, interval);
+        while let Some(event) = CORE1_QUEUE.dequeue() {
+            match event {
+                EventCore1::Blink { times, interval } => {
+                    blink_led(&mut led, &mut delay, times, interval);
+                }
+                EventCore1::Sleep => {
+                    sleep();
+                }
+            }
         }
-        EventCore1::Sleep => {
-          sleep();
-        }
-      }
+        delay.delay_ms(10); // Avoid spinning in a tight loop
     }
-    delay.delay_ms(10); // Avoid spinning in a tight loop
-  }
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
@@ -71,26 +71,26 @@ pub fn main_core1(timer: timer::Timer) -> ! {
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
 fn blink_led(led: &mut impl OutputPin, delay: &mut impl DelayMs<u32>, times: u16, interval: u16) {
-  for _ in 0..times {
-    let interval = interval as u32;
-    led.set_high().ok();
-    delay.delay_ms(interval);
-    led.set_low().ok();
-    delay.delay_ms(interval);
-  }
+    for _ in 0..times {
+        let interval = interval as u32;
+        led.set_high().ok();
+        delay.delay_ms(interval);
+        led.set_low().ok();
+        delay.delay_ms(interval);
+    }
 }
 
 fn sleep() {
-  // Clearing event flags
-  cortex_m::asm::sev();
-  cortex_m::asm::wfe();
+    // Clearing event flags
+    cortex_m::asm::sev();
+    cortex_m::asm::wfe();
 
-  // Going to Sleep
-  info!("Core 1 >> Asleep");
-  cortex_m::asm::wfe();
+    // Going to Sleep
+    info!("Core 1 >> Asleep");
+    cortex_m::asm::wfe();
 
-  // Waking up
-  info!("Core 1 >> Awake");
+    // Waking up
+    info!("Core 1 >> Awake");
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
@@ -98,6 +98,6 @@ fn sleep() {
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub enum EventCore1 {
-  Blink { times: u16, interval: u16 },
-  Sleep,
+    Blink { times: u16, interval: u16 },
+    Sleep,
 }

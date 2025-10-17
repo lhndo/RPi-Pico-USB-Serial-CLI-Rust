@@ -45,19 +45,19 @@ const RUN_STANDALONE: bool = false;
 
 #[rp2040_hal::entry]
 fn main() -> ! {
-  //
+    //
 
-  info!("Alive! {} : v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+    info!("Alive! {} : v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
 
-  let mut device = system::device::Device::new();
+    let mut device = system::device::Device::new();
 
-  if !RUN_STANDALONE {
-    let command_list = cli::commands::build();
-    let mut program = program::Program::new();
-    program.run(&mut device, command_list);
-  }
+    if !RUN_STANDALONE {
+        let command_list = cli::commands::build();
+        let mut program = program::Program::new();
+        program.run(&mut device, command_list);
+    }
 
-  loop {
-    system::device::device_reset_to_usb();
-  }
+    loop {
+        system::device::device_reset_to_usb();
+    }
 }

@@ -20,36 +20,37 @@ pub type OutputType = gpio::Pin<gpio::DynPinId, gpio::FunctionSio<gpio::SioOutpu
 // ————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct IoPins<T> {
-  pins: [Option<T>; NUM_MCU_PINS],
+    pins: [Option<T>; NUM_MCU_PINS],
 }
 
 impl<F: Function, P: PullType> IoPins<Pin<gpio::DynPinId, F, P>> {
-  //
-  /// Creates a new `IoPins` collection from a vector of pins.
-  pub fn new() -> Self {
-    let pins: [Option<Pin<gpio::DynPinId, F, P>>; NUM_MCU_PINS] = core::array::from_fn(|_| None);
+    //
+    /// Creates a new `IoPins` collection from a vector of pins.
+    pub fn new() -> Self {
+        let pins: [Option<Pin<gpio::DynPinId, F, P>>; NUM_MCU_PINS] =
+            core::array::from_fn(|_| None);
 
-    Self { pins }
-  }
-
-  /// Register pin
-  pub fn register(&mut self, pin: Pin<gpio::DynPinId, F, P>) {
-    let id = pin.id().num;
-    if id >= NUM_MCU_PINS as u8 {
-      panic!("ID > NUM_MCU_PINS")
+        Self { pins }
     }
-    self.pins[id as usize] = Some(pin);
-  }
+
+    /// Register pin
+    pub fn register(&mut self, pin: Pin<gpio::DynPinId, F, P>) {
+        let id = pin.id().num;
+        if id >= NUM_MCU_PINS as u8 {
+            panic!("ID > NUM_MCU_PINS")
+        }
+        self.pins[id as usize] = Some(pin);
+    }
 }
 
 impl<T> IoPins<T> {
-  /// Get a mutable reference to a pin by its GPIO number.
-  #[inline]
-  pub fn get(&mut self, id: u8) -> Result<&mut T> {
-    if id >= NUM_MCU_PINS as u8 {
-      return Err(Error::OutOfBounds);
-    }
+    /// Get a mutable reference to a pin by its GPIO number.
+    #[inline]
+    pub fn get(&mut self, id: u8) -> Result<&mut T> {
+        if id >= NUM_MCU_PINS as u8 {
+            return Err(Error::OutOfBounds);
+        }
 
-    self.pins[id as usize].as_mut().ok_or(Error::GpioNotFound)
-  }
+        self.pins[id as usize].as_mut().ok_or(Error::GpioNotFound)
+    }
 }

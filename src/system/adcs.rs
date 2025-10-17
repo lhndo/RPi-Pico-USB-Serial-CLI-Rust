@@ -20,70 +20,70 @@ pub const TEMP_SENSE_CHN: u8 = 4;
 pub type DynPinType = gpio::Pin<gpio::DynPinId, gpio::DynFunction, gpio::DynPullType>;
 
 pub struct Adcs {
-  pub hal_adc:    Adc,
-  pub temp_sense: TempSense,
-  pub adc0:       Option<AdcPin<DynPinType>>,
-  pub adc1:       Option<AdcPin<DynPinType>>,
-  pub adc2:       Option<AdcPin<DynPinType>>,
-  pub adc3:       Option<AdcPin<DynPinType>>,
+    pub hal_adc:    Adc,
+    pub temp_sense: TempSense,
+    pub adc0:       Option<AdcPin<DynPinType>>,
+    pub adc1:       Option<AdcPin<DynPinType>>,
+    pub adc2:       Option<AdcPin<DynPinType>>,
+    pub adc3:       Option<AdcPin<DynPinType>>,
 }
 
 impl Adcs {
-  pub fn new(mut hal_adc: Adc) -> Self {
-    let temp_sense = hal_adc.take_temp_sensor().unwrap();
-    Self {
-      hal_adc,
-      temp_sense,
-      adc0: None,
-      adc1: None,
-      adc2: None,
-      adc3: None,
-    }
-  }
-
-  pub fn register(&mut self, pin: DynPinType) {
-    let pin_id = pin.id().num;
-
-    match pin_id {
-      26 => self.adc0 = AdcPin::new(pin).ok(),
-      27 => self.adc1 = AdcPin::new(pin).ok(),
-      28 => self.adc2 = AdcPin::new(pin).ok(),
-      29 => self.adc3 = AdcPin::new(pin).ok(),
-      _ => unreachable!("pin id not adc valid"),
+    pub fn new(mut hal_adc: Adc) -> Self {
+        let temp_sense = hal_adc.take_temp_sensor().unwrap();
+        Self {
+            hal_adc,
+            temp_sense,
+            adc0: None,
+            adc1: None,
+            adc2: None,
+            adc3: None,
+        }
     }
 
-    // Store the AdcPin in the struct
-  }
+    pub fn register(&mut self, pin: DynPinType) {
+        let pin_id = pin.id().num;
 
-  /// Returns the main HAL ADC object
-  pub fn get_adc(&mut self) -> &mut Adc {
-    &mut self.hal_adc
-  }
+        match pin_id {
+            26 => self.adc0 = AdcPin::new(pin).ok(),
+            27 => self.adc1 = AdcPin::new(pin).ok(),
+            28 => self.adc2 = AdcPin::new(pin).ok(),
+            29 => self.adc3 = AdcPin::new(pin).ok(),
+            _ => unreachable!("pin id not adc valid"),
+        }
 
-  /// One shot read of the ADC channel 0-3, and 4 as TEMP_SENSE channel
-  /// Returns Some or None
-  pub fn read(&mut self, id: u8) -> Option<u16> {
-    match id {
-      0 => self.adc0.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
-      1 => self.adc1.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
-      2 => self.adc2.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
-      3 => self.adc3.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
-      TEMP_SENSE_CHN => self.hal_adc.read(&mut self.temp_sense).ok(),
-      _ => None,
+        // Store the AdcPin in the struct
     }
-  }
 
-  /// One shot read based on the Pin ID (4 as TEMP_SENSE ID)
-  pub fn read_by_gpio_id(&mut self, gpio: u8) -> Option<u16> {
-    match gpio {
-      26 => self.read(0),
-      27 => self.read(1),
-      28 => self.read(2),
-      29 => self.read(3),
-      TEMP_SENSE_CHN => self.read(TEMP_SENSE_CHN),
-      _ => None,
+    /// Returns the main HAL ADC object
+    pub fn get_adc(&mut self) -> &mut Adc {
+        &mut self.hal_adc
     }
-  }
+
+    /// One shot read of the ADC channel 0-3, and 4 as TEMP_SENSE channel
+    /// Returns Some or None
+    pub fn read(&mut self, id: u8) -> Option<u16> {
+        match id {
+            0 => self.adc0.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+            1 => self.adc1.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+            2 => self.adc2.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+            3 => self.adc3.as_mut().and_then(|pin| self.hal_adc.read(pin).ok()),
+            TEMP_SENSE_CHN => self.hal_adc.read(&mut self.temp_sense).ok(),
+            _ => None,
+        }
+    }
+
+    /// One shot read based on the Pin ID (4 as TEMP_SENSE ID)
+    pub fn read_by_gpio_id(&mut self, gpio: u8) -> Option<u16> {
+        match gpio {
+            26 => self.read(0),
+            27 => self.read(1),
+            28 => self.read(2),
+            29 => self.read(3),
+            TEMP_SENSE_CHN => self.read(TEMP_SENSE_CHN),
+            _ => None,
+        }
+    }
 }
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
@@ -92,20 +92,20 @@ impl Adcs {
 
 // ——————————————————————————————————————— Adc Conversions —————————————————————————————————————————
 pub trait AdcConversion {
-  /// Convert raw ADC reading to volts. Assuming 12-bit ADC (0..=4095) and 3.3 V reference.
-  fn to_voltage(&self) -> f32;
-  /// Convert raw ADC reading to resistance. Assuming a voltage divider with a pull up resistor of the specified resistance.
-  fn to_resistance(&self, ref_res_ohm: u32) -> f32;
+    /// Convert raw ADC reading to volts. Assuming 12-bit ADC (0..=4095) and 3.3 V reference.
+    fn to_voltage(&self) -> f32;
+    /// Convert raw ADC reading to resistance. Assuming a voltage divider with a pull up resistor of the specified resistance.
+    fn to_resistance(&self, ref_res_ohm: u32) -> f32;
 }
 
 impl AdcConversion for u16 {
-  fn to_voltage(&self) -> f32 {
-    (*self as f32) * ADC_VREF / ADC_MAX
-  }
+    fn to_voltage(&self) -> f32 {
+        (*self as f32) * ADC_VREF / ADC_MAX
+    }
 
-  fn to_resistance(&self, ref_res_ohm: u32) -> f32 {
-    let x: f32 = (ADC_MAX / *self as f32) - 1.0;
-    // "ref_res / x" // If you ref resistor to Gnd instead of V+
-    ref_res_ohm as f32 * x
-  }
+    fn to_resistance(&self, ref_res_ohm: u32) -> f32 {
+        let x: f32 = (ADC_MAX / *self as f32) - 1.0;
+        // "ref_res / x" // If you ref resistor to Gnd instead of V+
+        ref_res_ohm as f32 * x
+    }
 }
