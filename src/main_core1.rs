@@ -28,7 +28,7 @@ pub static CORE1_QUEUE: Queue<EventCore1, 8> = Queue::new();
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
 pub fn main_core1(timer: timer::Timer) -> ! {
-    // ————————————————————————————————————— Core 1 Boilerplate ————————————————————————————————————————
+    // ——————————————————————————————————— Core 1 Boilerplate ——————————————————————————————————————
 
     let core = unsafe { pac::CorePeripherals::steal() };
     let mut pac = unsafe { pac::Peripherals::steal() };
@@ -37,7 +37,7 @@ pub fn main_core1(timer: timer::Timer) -> ! {
     let mut delay = cortex_m::delay::Delay::new(core.SYST, SYS_CLK_HZ.load(Ordering::Relaxed));
     let mut sio_fifo = sio.fifo;
 
-    // ——————————————————————————————————————————— Pins ——————————————————————————————————————————————
+    // ——————————————————————————————————————————— Pins ————————————————————————————————————————————
 
     let mut test_input_pin: InputType = CONFIG.take_pin_by_alias("C1_IN_A").unwrap();
     let mut test_output_pin: OutputType = CONFIG.take_pin_by_alias("C1_OUT_A").unwrap();
@@ -47,10 +47,10 @@ pub fn main_core1(timer: timer::Timer) -> ! {
 
     info!("Core 1 >> Initialised");
 
-    // ————————————————————————————————————————— Main Loop ———————————————————————————————————————————
+    // ————————————————————————————————————————— Main Loop —————————————————————————————————————————
 
     loop {
-        // ————————————————————————————————————————— Events ————————————————————————————————————————————
+        // ————————————————————————————————————————— Events ————————————————————————————————————————
 
         while let Some(event) = CORE1_QUEUE.dequeue() {
             match event {
