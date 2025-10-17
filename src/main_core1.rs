@@ -21,7 +21,7 @@ use heapless::mpmc::Queue;
 pub static CORE1_STACK: Stack<2048> = Stack::new();
 
 // Multicore MPMC Queue
-pub static CORE1_QUEUE: Queue<Event, 8> = Queue::new();
+pub static CORE1_QUEUE: Queue<EventCore1, 8> = Queue::new();
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                            Core1 Main
@@ -54,10 +54,10 @@ pub fn main_core1(timer: timer::Timer) -> ! {
 
     while let Some(event) = CORE1_QUEUE.dequeue() {
       match event {
-        Event::Blink { times, interval } => {
+        EventCore1::Blink { times, interval } => {
           blink_led(&mut led, &mut delay, times, interval);
         }
-        Event::Sleep => {
+        EventCore1::Sleep => {
           sleep();
         }
       }
@@ -97,7 +97,7 @@ fn sleep() {
 //                                             Events
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 
-pub enum Event {
+pub enum EventCore1 {
   Blink { times: u16, interval: u16 },
   Sleep,
 }

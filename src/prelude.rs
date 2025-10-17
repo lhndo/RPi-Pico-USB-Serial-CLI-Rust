@@ -17,7 +17,7 @@ pub const E_DONE: u32 = 0;
 pub use core::str::FromStr;
 pub use core::sync::atomic::Ordering;
 
-pub use crate::main_core1::{CORE1_QUEUE, Event};
+pub use crate::main_core1::{CORE1_QUEUE, EventCore1};
 pub use crate::system::adcs::{AdcConversion, TEMP_SENSE_CHN};
 pub use crate::system::config::CONFIG;
 pub use crate::system::config::Error as ConfigError;

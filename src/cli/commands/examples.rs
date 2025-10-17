@@ -127,7 +127,7 @@ pub fn blink_multicore_cmd(cmd: &Command, args: &[Argument], device: &mut Device
   println!("---- Blinking Led using Core1! ----\n");
 
   CORE1_QUEUE
-    .enqueue(Event::Blink {
+    .enqueue(EventCore1::Blink {
       times:    times,
       interval: interval,
     })
@@ -172,7 +172,7 @@ pub fn sleep_multicore_cmd(cmd: &Command, args: &[Argument], device: &mut Device
   unsafe {
     if !ASLEEP {
       println!("Setting Core1 to Sleep!");
-      CORE1_QUEUE.enqueue(Event::Sleep).ok();
+      CORE1_QUEUE.enqueue(EventCore1::Sleep).ok();
       ASLEEP = true;
     }
     else {

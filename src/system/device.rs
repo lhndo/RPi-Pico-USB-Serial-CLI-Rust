@@ -40,6 +40,7 @@ use hal::{clocks, gpio, pac, pwm, sio, timer, usb, watchdog};
 use cortex_m::delay::Delay;
 use critical_section::{Mutex, with};
 use heapless::String;
+use heapless::mpmc::Queue;
 use usb_device::class_prelude::*;
 use usb_device::prelude::*;
 use usbd_serial::SerialPort;
@@ -60,6 +61,9 @@ pub const XOSC_CRYSTAL_FREQ: u32 = 12_000_000; // 12Mhz
 const DEFAULT_PWM_FREQUENCY: u32 = 50; //hz
 
 pub static SYS_CLK_HZ: AtomicU32 = AtomicU32::new(0);
+
+// Multicore MPMC Queue
+pub static CORE0_QUEUE: Queue<EventCore0, 8> = Queue::new();
 
 // Interrupts
 static ALARM_0: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(None));
@@ -241,6 +245,14 @@ impl Device {
       state,
     }
   }
+}
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                             Events
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
+pub enum EventCore0 {
+  Done,
 }
 
 // ————————————————————————————————————————————————————————————————————————————————————————————————
