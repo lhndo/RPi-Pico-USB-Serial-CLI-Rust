@@ -20,6 +20,7 @@ const MAX_VALUE_LENGTH: usize = 64;
 
 const SEPARATOR: char = '\u{001E}';
 const ESCAPE: char = '\u{005C}';
+const CR: char = '\u{000D}';
 const DEFAULT_CMD: &str = "help";
 
 // ——————————————————————————————————————————— Parse —————————————————————————————————————————————
@@ -41,6 +42,7 @@ pub fn parse(input: &str) -> Result<Vec<Argument, MAX_NUMBER_PARAMS>> {
     // Replacing spaces in quotes with SEPARATOR
     for char in input.chars() {
         match char {
+            CR => {}
             '"' => {
                 if escaped && in_quotes {
                     processed_buf.push('"').map_err(|_| Error::CommandTooLong)?;
