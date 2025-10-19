@@ -316,9 +316,11 @@ pub fn device_reset() {
 /// Interrupt 0
 #[pac::interrupt]
 fn TIMER_IRQ_0() {
-    // Do something here in a timed interrupt
+    {
+        // Do something here in a timed interrupt
+    }
 
-    // Reset interrupt timer safely
+    // Reset interrupt timer
     with(|cs| {
         if let Some(alarm) = ALARM_0.borrow_ref_mut(cs).as_mut() {
             alarm.clear_interrupt();

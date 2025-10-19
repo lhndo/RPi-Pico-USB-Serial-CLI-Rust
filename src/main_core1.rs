@@ -4,11 +4,17 @@
 
 #![allow(unused_mut)]
 
+use core::cell::RefCell;
+
 use crate::prelude::*;
+use critical_section::{Mutex, with};
 use hal::multicore::Stack;
 
 use rp2040_hal as hal;
 //
+use hal::fugit::MicrosDurationU32;
+use hal::pac::interrupt;
+use hal::timer::Alarm;
 use hal::{gpio, pac, sio, timer};
 
 use heapless::mpmc::Queue;
@@ -22,6 +28,10 @@ pub static CORE1_STACK: Stack<2048> = Stack::new();
 
 // Multicore MPMC Queue
 pub static CORE1_QUEUE: Queue<EventCore1, 8> = Queue::new();
+
+// Interrupts
+static ALARM_1: Mutex<RefCell<Option<timer::Alarm1>>> = Mutex::new(RefCell::new(None));
+const INTERRUPT_1_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(100_000); // 100ms - 10hz
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                            Core1 Main
@@ -100,4 +110,24 @@ fn sleep() {
 pub enum EventCore1 {
     Blink { times: u16, interval: u16 },
     Sleep,
+}
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                           Interrupts
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
+/// Interrupt 1
+#[pac::interrupt]
+fn TIMER_IRQ_1() {
+    {
+        // Do something here in a timed interrupt
+    }
+
+    // Reset interrupt timer
+    with(|cs| {
+        if let Some(alarm) = ALARM_1.borrow_ref_mut(cs).as_mut() {
+            alarm.clear_interrupt();
+            alarm.schedule(INTERRUPT_1_US).unwrap();
+        };
+    })
 }
