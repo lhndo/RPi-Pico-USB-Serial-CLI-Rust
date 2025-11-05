@@ -499,7 +499,7 @@ pub fn serial_bench_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -
     // Filling buffer
     let mut buffer = [0u8; BYTES];
     for i in 0..BYTES {
-        buffer[i] = if i % 2 == 0 { b'0' } else { b'1' };
+        buffer[i] = (i % (256 - 33)) as u8 + 33;
     }
 
     let exec_time = device.timer.get_counter();
