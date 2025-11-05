@@ -502,12 +502,14 @@ pub fn serial_bench_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -
         buffer[i] = (i % (256 - 33)) as u8 + 33;
     }
 
+    // Starting Benchmark
     let exec_time = device.timer.get_counter();
 
     // Sending data
 
     let _ = SERIAL.write(&buffer);
 
+    // Ending Benchmark
     let exec_time = device
         .timer
         .get_counter()
@@ -518,7 +520,7 @@ pub fn serial_bench_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -
     let bandwidth = (BYTES as f64) / (exec_time as f64) * 1_000_000.0 / (1024.0 * 1024.0);
 
     println!("\n\nTransferred {} bytes in {:.4} s", BYTES, exec_time as f64 / 1_000_000.0);
-    println!("Bandwith:  {:.3} MB/s", bandwidth);
+    println!("Bandwidth:  {:.3} MB/s", bandwidth);
 
     Ok(())
 }
