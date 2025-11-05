@@ -2,14 +2,12 @@
 //! Provides pin initialization, and data regarding aliases, gpio, and function groups
 
 use core::fmt;
-use core::sync::atomic::AtomicBool;
-use core::sync::atomic::Ordering;
+use core::sync::atomic::{AtomicBool, Ordering};
 
 use rp2040_hal as hal;
 //
 use hal::gpio;
-use hal::gpio::{AnyPin, DynPinId, DynPullType};
-use hal::gpio::{FunctionNull, PullDown};
+use hal::gpio::{AnyPin, DynPinId, DynPullType, FunctionNull, PullDown};
 
 use heapless::Vec;
 use once_cell::sync::Lazy;

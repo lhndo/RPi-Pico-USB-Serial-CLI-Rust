@@ -470,3 +470,55 @@ pub fn test_log_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Re
 
     Ok(())
 }
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                          Serial Benchmark
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
+pub fn build_serial_bench_cmd() -> Command {
+    Command {
+        name: "serial_bench",
+        desc: "Benchmark serial transfer speed",
+        help: "serial_bench [help] ",
+        func: serial_bench_cmd,
+    }
+}
+
+pub fn serial_bench_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
+    // Print Help
+    if args.contains_param("help") {
+        cmd.print_help();
+        return Ok(());
+    }
+
+    const BYTES: usize = 2024;
+
+    let _ = SERIAL.write(b"\x1B[2J\x1B[H"); // Clear Screen and Move cursor Top Left
+    println!("Starting Serial Benchmark with {BYTES} bytes\n");
+
+    // Filling buffer
+    let mut buffer = [0u8; BYTES];
+    for i in 0..BYTES {
+        buffer[i] = if i % 2 == 0 { b'0' } else { b'1' };
+    }
+
+    let exec_time = device.timer.get_counter();
+
+    // Sending data
+
+    let _ = SERIAL.write(&buffer);
+
+    let exec_time = device
+        .timer
+        .get_counter()
+        .checked_duration_since(exec_time)
+        .unwrap()
+        .to_micros();
+
+    let bandwidth = (BYTES as f64) / (exec_time as f64) * 1_000_000.0 / (1024.0 * 1024.0);
+
+    println!("\n\nTransferred {} bytes in {:.4} s", BYTES, exec_time as f64 / 1_000_000.0);
+    println!("Bandwith:  {:.3} MB/s", bandwidth);
+
+    Ok(())
+}

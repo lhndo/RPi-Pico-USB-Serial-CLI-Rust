@@ -27,14 +27,16 @@ control_brace_style          = "ClosingNextLine"
 use_try_shorthand            = true
 format_macro_bodies          = true
 brace_style                  = "SameLineWhere"
+group_imports                = "Preserve"
+imports_granularity          = "Module"
 
 
 use_small_heuristics           = "Default"
 fn_call_width                  = 80
 attr_fn_like_width             = 80
 struct_lit_width               = 25
-struct_variant_width           = 60
+struct_variant_width           = 50
 array_width                    = 60
-chain_width                    = 80
+chain_width                    = 60
 single_line_if_else_max_width  = 70
 single_line_let_else_max_width = 70

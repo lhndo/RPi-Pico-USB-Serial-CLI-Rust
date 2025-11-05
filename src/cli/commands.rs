@@ -44,6 +44,7 @@ pub fn build() -> CommandList {
     command_list.register_command(build_test_analog_cmd());
     command_list.register_command(build_test_panic_cmd());
     command_list.register_command(build_test_log_cmd());
+    command_list.register_command(build_serial_bench_cmd());
 
     command_list
 }
@@ -63,7 +64,11 @@ impl CommandList {
     }
 
     pub fn get_command(&self, name: &str) -> Result<&Command> {
-        if let Some(cmd) = self.commands.iter().find(|cmd| cmd.name.eq_ignore_ascii_case(name)) {
+        if let Some(cmd) = self
+            .commands
+            .iter()
+            .find(|cmd| cmd.name.eq_ignore_ascii_case(name))
+        {
             Ok(cmd)
         }
         else {

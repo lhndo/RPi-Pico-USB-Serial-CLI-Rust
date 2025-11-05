@@ -30,6 +30,10 @@ impl SimpleCli {
         // Extracting command name and list of arguments
         let (cmd_name, input_args) = input.split_once(' ').unwrap_or((input, ""));
 
+        // Strip CR
+        const CR: char = '\u{000D}';
+        let cmd_name = cmd_name.trim_end_matches(CR);
+
         // Check if built-in help was called
         if cmd_name.is_empty() || cmd_name == "help" {
             self.built_in_help();

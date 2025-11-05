@@ -72,6 +72,14 @@ opt-level        = "z"
 overflow-checks  = false
 
 
+
 [lints.rust]
 dead_code        = "allow"
 unused_variables = "allow"
+
+
+[lints.clippy]
+needless_return       = "allow"
+new_without_default   = "allow"
+comparison_chain      = "allow"
+manual_range_contains = "allow"
