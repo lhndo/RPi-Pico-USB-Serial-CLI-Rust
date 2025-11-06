@@ -22,20 +22,20 @@ use super::delay::DELAY;
 use super::gpios::{InputType, IoPins, OutputType};
 use super::pwms::Pwms;
 use super::serial_io::{self, SERIAL};
-use crate::main_core1;
+
+use crate::drivers::dht22::DHT22;
 use crate::state::State;
+use crate::{gpio, main_core1};
 
 use rp2040_hal as hal;
 //
-use hal::Adc;
-use hal::Clock;
 use hal::fugit::{Duration, MicrosDurationU32};
 use hal::multicore::Multicore;
 use hal::pac::interrupt;
 use hal::sio::SioFifo;
 use hal::timer::{Alarm, Timer};
 use hal::watchdog::Watchdog;
-use hal::{clocks, gpio, pac, pwm, sio, timer, usb, watchdog};
+use hal::{Adc, Clock, clocks, gpio, pac, pwm, sio, timer, usb, watchdog};
 
 use cortex_m::delay::Delay;
 use critical_section::{Mutex, with};
@@ -70,7 +70,7 @@ static ALARM_0: Mutex<RefCell<Option<timer::Alarm0>>> = Mutex::new(RefCell::new(
 const INTERRUPT_0_US: MicrosDurationU32 = MicrosDurationU32::from_ticks(100_000); // 100ms - 10hz
 
 // ———————————————————————————————————————————————————————————————————————————————————————————————
-//                                         Device Struct
+//                                             Device
 // ———————————————————————————————————————————————————————————————————————————————————————————————
 
 pub struct Device {
@@ -82,6 +82,7 @@ pub struct Device {
     pub inputs:   IoPins<InputType>,
     pub outputs:  IoPins<OutputType>,
     pub state:    State,
+    pub dht:      DHT22,
 }
 
 impl Device {
@@ -127,9 +128,8 @@ impl Device {
         let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio_fifo);
         let cores = mc.cores();
         let core1 = &mut cores[1];
-        let _task = core1.spawn(main_core1::CORE1_STACK.take().unwrap(), move || {
-            main_core1::main_core1(timer.clone())
-        });
+        let _task = core1
+            .spawn(main_core1::CORE1_STACK.take().unwrap(), move || main_core1::main_core1(timer));
 
         // ———————————————————————————————————————— USB Bus ———————————————————————————————————————————
 
@@ -208,7 +208,12 @@ impl Device {
             outputs.register(pin);
         }
 
-        // ————————————————————————————————————————— Interrupts ———————————————————————————————————————
+        // —————————————————————————————————— DHT22 Temp Sensor ————————————————————————————————————
+
+        let dht_pin: OutputType = CONFIG.take_pin(gpio!(DHT22)).unwrap();
+        let dht = DHT22::new(dht_pin, timer);
+
+        // ————————————————————————————————————— Interrupts ————————————————————————————————————————
 
         // ALARM0 interrupt setup
         let mut alarm0 = timer.alarm_0().unwrap();
@@ -243,6 +248,7 @@ impl Device {
             inputs,
             outputs,
             state,
+            dht,
         }
     }
 }

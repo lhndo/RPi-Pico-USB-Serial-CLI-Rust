@@ -38,6 +38,7 @@ pub fn build() -> CommandList {
     command_list.register_command(build_blink_multicore_cmd());
     command_list.register_command(build_sleep_multicore_cmd());
     command_list.register_command(build_servo_cmd());
+    command_list.register_command(build_dht22_cmd());
 
     // Test
     command_list.register_command(build_test_gpio_cmd());

@@ -79,7 +79,10 @@ impl Config {
 
     /// Returns an iterator of GPIO num over all pins belonging to a specific group.
     pub fn get_group_iter(&self, group: Group) -> impl Iterator<Item = u8> {
-        self.pins.iter().filter(move |pin| pin.group.eq(&group)).map(|pin| pin.id)
+        self.pins
+            .iter()
+            .filter(move |pin| pin.group.eq(&group))
+            .map(|pin| pin.id)
     }
 
     /// Gets the pin GPIO number associated with a given string alias.
@@ -102,7 +105,10 @@ impl Config {
 
     /// Get the pin definition struct stored in the config
     pub fn get_pin_def_by_gpio(&self, id: u8) -> Result<&PinDef> {
-        self.pins.iter().find(|pin| pin.id == id).ok_or(Error::GpioNotFound)
+        self.pins
+            .iter()
+            .find(|pin| pin.id == id)
+            .ok_or(Error::GpioNotFound)
     }
 
     /// Get the pin definition struct stored in the config
@@ -115,7 +121,10 @@ impl Config {
 
     /// Gets the `Group` associated with a given pin GPIO number (`u8`).
     pub fn get_group_type(&self, id: u8) -> Option<Group> {
-        self.pins.iter().find(|pin| pin.id == id).map(|def| def.group)
+        self.pins
+            .iter()
+            .find(|pin| pin.id == id)
+            .map(|def| def.group)
     }
 
     /// Getting gpio and alias as a pair based on the inputs provided.
@@ -191,6 +200,7 @@ pub enum Group {
     Uart,
     Inputs,
     Outputs,
+    Other,
     C1_Adc,
     C1_Pwm,
     C1_I2c,
@@ -198,6 +208,7 @@ pub enum Group {
     C1_Uart,
     C1_Inputs,
     C1_Outputs,
+    C1_Other,
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
@@ -255,7 +266,9 @@ impl fmt::Display for Group {
 /// Converts concrete pin into a fully dynamic pin
 pub fn pin_into_full_dynamic<P: AnyPin>(pin: P) -> FullDynPinType {
     let pin: gpio::SpecificPin<P> = pin.into();
-    pin.into_dyn_pin().into_function().into_pull_type::<DynPullType>()
+    pin.into_dyn_pin()
+        .into_function()
+        .into_pull_type::<DynPullType>()
 }
 
 /// Creates a dynamic pin with concrete functions based on gpio id
@@ -278,7 +291,9 @@ where
         })
     };
 
-    pin.try_into_function::<F>().ok().map(|p| p.into_pull_type::<P>())
+    pin.try_into_function::<F>()
+        .ok()
+        .map(|p| p.into_pull_type::<P>())
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
@@ -288,6 +303,8 @@ where
 #[macro_export]
 macro_rules! gpio {
     ($alias:ident) => {
-        $crate::system::config::CONFIG.get_gpio(stringify!($alias)).unwrap()
+        $crate::system::config::CONFIG
+            .get_gpio(stringify!($alias))
+            .unwrap()
     };
 }

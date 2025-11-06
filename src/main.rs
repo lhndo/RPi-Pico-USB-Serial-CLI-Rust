@@ -9,6 +9,7 @@ mod system;
 mod utils;
 
 mod cli;
+mod drivers;
 mod main_core1;
 mod pin_config;
 mod prelude;

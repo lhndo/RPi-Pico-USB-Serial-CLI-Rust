@@ -127,10 +127,7 @@ pub fn blink_multicore_cmd(cmd: &Command, args: &[Argument], device: &mut Device
     println!("---- Blinking Led using Core1! ----\n");
 
     CORE1_QUEUE
-        .enqueue(EventCore1::Blink {
-            times:    times,
-            interval: interval,
-        })
+        .enqueue(EventCore1::Blink { times, interval })
         .ok();
 
     // We wait since we don't have a done callback implemented
@@ -521,6 +518,39 @@ pub fn serial_bench_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -
 
     println!("\n\nTransferred {} bytes in {:.4} s", BYTES, exec_time as f64 / 1_000_000.0);
     println!("Bandwidth:  {:.3} MB/s", bandwidth);
+
+    Ok(())
+}
+
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+//                                       DHT22 Temperature Sensor
+// —————————————————————————————————————————————————————————————————————————————————————————————————
+
+pub fn build_dht22_cmd() -> Command {
+    Command {
+        name: "dht22",
+        desc: "Read DHT22 Temperature and Humidity Sensor",
+        help: "dht22 [help]",
+        func: dht22_cmd,
+    }
+}
+
+pub fn dht22_cmd(cmd: &Command, args: &[Argument], device: &mut Device) -> Result<()> {
+    // Print Help
+    if args.contains_param("help") {
+        cmd.print_help();
+        return Ok(());
+    }
+
+    println!("Reading DHT22 Sensor\n");
+
+    let (humidity, temperature) = device.dht.read().map_err(|e| {
+        println!("Err: {e}");
+        Error::CriticalFail
+    })?;
+
+    println!("Humidity   : {:.1} %RH", humidity);
+    println!("Temperature: {:.1} C\n", temperature);
 
     Ok(())
 }

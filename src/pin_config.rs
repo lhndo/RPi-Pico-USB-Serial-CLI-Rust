@@ -1,4 +1,6 @@
-use crate::system::config::{Def, Group::*, PinId::*};
+use crate::system::config::Def;
+use crate::system::config::Group::*;
+use crate::system::config::PinId::*;
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————
 //                                            Reference
@@ -116,6 +118,9 @@ pub const PIN_DEFINITION: &[Def] = {
         Def { alias: "OUT_B",    id: Gpio(1),  group: Outputs },
         Def { alias: "OUT_C",    id: Gpio(3),  group: Outputs },
         Def { alias: "LED",      id: Gpio(25), group: Outputs },
+        
+        // Other
+        Def { alias: "DHT22",    id: Gpio(16), group: Other   },
 
         //           Alias       GPIO            Group           Valid Pins
         // Core1 ————————————————————————————————————————————————————————————
